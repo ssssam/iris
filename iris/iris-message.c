@@ -70,7 +70,7 @@ _iris_message_value_free (gpointer data)
 static void
 _iris_message_init_items (IrisMessage *message)
 {
-	if (!G_LIKELY (message->items))
+	if (G_LIKELY (!message->items))
 		message->items = g_hash_table_new_full (g_str_hash,
 		                                        g_str_equal,
 		                                        g_free,
