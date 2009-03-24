@@ -73,6 +73,25 @@ copy1 (void)
 	g_assert_cmpint (iris_message_get_int (msg2, "id"), ==, 1234567890);
 }
 
+static void
+count_names1 (void)
+{
+	IrisMessage *msg;
+
+	msg = iris_message_new (1);
+	g_assert (msg != NULL);
+	g_assert_cmpint (iris_message_count_names (msg), ==, 0);
+
+	iris_message_set_int (msg, "id", 1234567890);
+	g_assert_cmpint (iris_message_count_names (msg), ==, 1);
+}
+
+static void
+get_type1 (void)
+{
+	g_assert_cmpint (IRIS_TYPE_MESSAGE, !=, G_TYPE_INVALID);
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -80,11 +99,13 @@ main (int   argc,
 	g_type_init ();
 	g_test_init (&argc, &argv, NULL);
 
+	g_test_add_func ("/message/get_type1", get_type1);
 	g_test_add_func ("/message/ref_count1", ref_count1);
 	g_test_add_func ("/message/ref_count2", ref_count2);
 	g_test_add_func ("/message/set_string1", set_string1);
 	g_test_add_func ("/message/set_int1", set_int1);
 	g_test_add_func ("/message/copy1", copy1);
+	g_test_add_func ("/message/count_names1", count_names1);
 
 	return g_test_run ();
 }
