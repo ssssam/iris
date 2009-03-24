@@ -245,6 +245,26 @@ iris_message_count_names (IrisMessage *message)
 }
 
 /**
+ * iris_message_is_empty:
+ * @message: An #IrisMessage
+ *
+ * Checks to see if the message is currently empty, meaning it has no
+ * key/value pairs associated.
+ *
+ * Return value: TRUE if there are no key/value pairs associated.
+ */
+gboolean
+iris_message_is_empty (IrisMessage *message)
+{
+	g_return_val_if_fail (message != NULL, FALSE);
+
+	if (G_UNLIKELY (!message->items))
+		return TRUE;
+
+	return (g_hash_table_size (message->items) == 0);
+}
+
+/**
  * iris_message_get_value:
  * @message: An #IrisMessage
  * @name: the name of the value to retrieve

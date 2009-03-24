@@ -48,6 +48,7 @@ void         iris_message_unref       (IrisMessage *message);
 IrisMessage* iris_message_copy        (IrisMessage *message);
 
 guint        iris_message_count_names (IrisMessage *message);
+gboolean     iris_message_is_empty    (IrisMessage *message);
 
 void         iris_message_get_value   (IrisMessage *message, const gchar *name, GValue *value);
 void         iris_message_set_value   (IrisMessage *message, const gchar *name, const GValue *value);

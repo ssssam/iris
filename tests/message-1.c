@@ -92,6 +92,19 @@ get_type1 (void)
 	g_assert_cmpint (IRIS_TYPE_MESSAGE, !=, G_TYPE_INVALID);
 }
 
+static void
+is_empty1 (void)
+{
+	IrisMessage *msg;
+
+	msg = iris_message_new (1);
+	g_assert (msg != NULL);
+	g_assert (iris_message_is_empty (msg));
+
+	iris_message_set_int (msg, "id", 1234567890);
+	g_assert (!iris_message_is_empty (msg));
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -106,6 +119,7 @@ main (int   argc,
 	g_test_add_func ("/message/set_int1", set_int1);
 	g_test_add_func ("/message/copy1", copy1);
 	g_test_add_func ("/message/count_names1", count_names1);
+	g_test_add_func ("/message/is_empty1", count_names1);
 
 	return g_test_run ();
 }
