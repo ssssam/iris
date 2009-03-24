@@ -141,6 +141,17 @@ flattened_size1 (void)
 	                           + 4 + strlen ("name"));
 }
 
+static void
+contains1 (void)
+{
+	IrisMessage *msg;
+
+	msg = iris_message_new_full (1, "id", G_TYPE_INT, 0, NULL);
+	g_assert (msg != NULL);
+	g_assert (iris_message_contains (msg, "id"));
+	g_assert (!iris_message_contains (msg, "name"));
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -158,6 +169,7 @@ main (int   argc,
 	g_test_add_func ("/message/is_empty1", count_names1);
 	g_test_add_func ("/message/new_full1", count_names1);
 	g_test_add_func ("/message/flattened_size1", flattened_size1);
+	g_test_add_func ("/message/contains1", flattened_size1);
 
 	return g_test_run ();
 }

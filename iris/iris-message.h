@@ -50,6 +50,7 @@ IrisMessage* iris_message_copy           (IrisMessage *message);
 
 guint        iris_message_count_names    (IrisMessage *message);
 gboolean     iris_message_is_empty       (IrisMessage *message);
+gboolean     iris_message_contains       (IrisMessage *message, const gchar *name);
 
 void         iris_message_get_value      (IrisMessage *message, const gchar *name, GValue *value);
 void         iris_message_set_value      (IrisMessage *message, const gchar *name, const GValue *value);

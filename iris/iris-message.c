@@ -302,6 +302,25 @@ iris_message_count_names (IrisMessage *message)
 }
 
 /**
+ * iris_message_contains:
+ * @message: An #IrisMessage
+ * @name: the name to lookup
+ *
+ * Checks to see if @message contains a field named @name.
+ *
+ * Return value: TRUE if the message contains @name
+ */
+gboolean
+iris_message_contains (IrisMessage *message,
+                       const gchar *name)
+{
+	g_return_val_if_fail (message != NULL, FALSE);
+	if (G_UNLIKELY (!message->items))
+		return FALSE;
+	return (NULL != g_hash_table_lookup (message->items, name));
+}
+
+/**
  * iris_message_is_empty:
  * @message: An #IrisMessage
  *
