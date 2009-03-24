@@ -227,6 +227,24 @@ iris_message_copy (IrisMessage *message)
 }
 
 /**
+ * iris_message_count_names:
+ * @message: An #IrisMessage
+ *
+ * Retrieves the number of key/value pairs that are currently stored within
+ * the message.
+ *
+ * Return value: the number of key/value pairs
+ */
+guint
+iris_message_count_names (IrisMessage *message)
+{
+	g_return_val_if_fail (message != NULL, 0);
+	if (G_UNLIKELY (!message->items))
+		return 0;
+	return g_hash_table_size (message->items);
+}
+
+/**
  * iris_message_get_value:
  * @message: An #IrisMessage
  * @name: the name of the value to retrieve

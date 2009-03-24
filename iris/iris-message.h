@@ -39,22 +39,24 @@ struct _IrisMessage
 	GHashTable     *items;
 };
 
-GType        iris_message_get_type   (void);
+GType        iris_message_get_type    (void);
 
-IrisMessage* iris_message_new        (gint what);
+IrisMessage* iris_message_new         (gint what);
+ 
+IrisMessage* iris_message_ref         (IrisMessage *message);
+void         iris_message_unref       (IrisMessage *message);
+IrisMessage* iris_message_copy        (IrisMessage *message);
 
-IrisMessage* iris_message_ref        (IrisMessage *message);
-void         iris_message_unref      (IrisMessage *message);
-IrisMessage* iris_message_copy       (IrisMessage *message);
+guint        iris_message_count_names (IrisMessage *message);
 
-void         iris_message_get_value  (IrisMessage *message, const gchar *name, GValue *value);
-void         iris_message_set_value  (IrisMessage *message, const gchar *name, const GValue *value);
+void         iris_message_get_value   (IrisMessage *message, const gchar *name, GValue *value);
+void         iris_message_set_value   (IrisMessage *message, const gchar *name, const GValue *value);
 
-const gchar* iris_message_get_string (IrisMessage *message, const gchar *name);
-void         iris_message_set_string (IrisMessage *message, const gchar *name, const gchar *value);
+const gchar* iris_message_get_string  (IrisMessage *message, const gchar *name);
+void         iris_message_set_string  (IrisMessage *message, const gchar *name, const gchar *value);
 
-gint         iris_message_get_int    (IrisMessage *message, const gchar *name);
-void         iris_message_set_int    (IrisMessage *message, const gchar *name, gint value);
+gint         iris_message_get_int     (IrisMessage *message, const gchar *name);
+void         iris_message_set_int     (IrisMessage *message, const gchar *name, gint value);
 
 G_END_DECLS
 
