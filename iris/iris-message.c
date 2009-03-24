@@ -117,6 +117,19 @@ _iris_message_free (IrisMessage *message)
 	g_slice_free (IrisMessage, message);
 }
 
+GType
+iris_message_get_type (void)
+{
+	static GType message_type = 0;
+
+	if (G_UNLIKELY (!message_type))
+		message_type = g_boxed_type_register_static ("IrisMessage",
+		                                             (GBoxedCopyFunc) iris_message_ref,
+		                                             (GBoxedFreeFunc) iris_message_unref);
+
+	return message_type;
+}
+
 /**
  * iris_message_new:
  * @what: the message type
