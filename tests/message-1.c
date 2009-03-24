@@ -105,6 +105,21 @@ is_empty1 (void)
 	g_assert (!iris_message_is_empty (msg));
 }
 
+static void
+new_full1 (void)
+{
+	IrisMessage *msg;
+
+	msg = iris_message_new_full (1,
+	                             "id", G_TYPE_INT, 1234567890,
+	                             "name", G_TYPE_STRING, "Christian",
+	                             NULL);
+	g_assert (msg != NULL);
+
+	g_assert_cmpint (iris_message_get_int (msg, "id"), ==, 1234567890);
+	g_assert_cmpstr (iris_message_get_string (msg, "name"), ==, "Christian");
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -120,6 +135,7 @@ main (int   argc,
 	g_test_add_func ("/message/copy1", copy1);
 	g_test_add_func ("/message/count_names1", count_names1);
 	g_test_add_func ("/message/is_empty1", count_names1);
+	g_test_add_func ("/message/new_full1", count_names1);
 
 	return g_test_run ();
 }

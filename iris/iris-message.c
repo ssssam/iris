@@ -18,6 +18,9 @@
  * 02110-1301 USA
  */
 
+#include <string.h>
+#include <gobject/gvaluecollector.h>
+
 #include "iris-message.h"
 
 /**
@@ -148,6 +151,60 @@ iris_message_new (gint what)
 	message = g_slice_new0 (IrisMessage);
 	message->what = what;
 	message->ref_count = 1;
+
+	return message;
+}
+
+/**
+ * iris_message_new_full:
+ * @what: the message type
+ * @first_name: the name of the first field in the message
+ * @...: the GType and value for the first property, followed optionally
+ *   by more name/type/value triplets, follwed by %NULL
+ *
+ * Creates a new instance of a #IrisMessage and sets its fields.
+ *
+ * Return value: a new instance of #IrisMessage.
+ */
+IrisMessage*
+iris_message_new_full (gint         what,
+                       const gchar *first_name,
+                       ...)
+{
+	IrisMessage *message;
+	va_list      args;
+	const gchar *name;
+	GType        g_type;
+	GValue       g_value = {0,};
+	gchar       *error   = NULL;
+
+	message = iris_message_new (what);
+
+	if (first_name == NULL)
+		return message;
+
+	name = first_name;
+	va_start (args, first_name);
+
+	while (name != NULL) {
+		g_type = va_arg (args, GType);
+		g_value_init (&g_value, g_type);
+		G_VALUE_COLLECT (&g_value, args, 0, &error);
+
+		if (error) {
+			g_warning ("%s: %s", G_STRFUNC, error);
+			g_free (error);
+			g_value_unset (&g_value);
+			break;
+		}
+
+		iris_message_set_value (message, name, &g_value);
+
+		g_value_unset (&g_value);
+		name = va_arg (args, const gchar*);
+	}
+
+	va_end (args);
 
 	return message;
 }

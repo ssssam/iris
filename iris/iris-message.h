@@ -42,6 +42,7 @@ struct _IrisMessage
 GType        iris_message_get_type    (void);
 
 IrisMessage* iris_message_new         (gint what);
+IrisMessage* iris_message_new_full    (gint what, const gchar *first_name, ...);
  
 IrisMessage* iris_message_ref         (IrisMessage *message);
 void         iris_message_unref       (IrisMessage *message);
