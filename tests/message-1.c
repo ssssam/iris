@@ -1,4 +1,5 @@
 #include <iris/iris.h>
+#include <string.h>
 
 static void
 ref_count1 (void)
@@ -120,6 +121,26 @@ new_full1 (void)
 	g_assert_cmpstr (iris_message_get_string (msg, "name"), ==, "Christian");
 }
 
+static void
+flattened_size1 (void)
+{
+	IrisMessage *msg;
+	gsize length;
+
+	msg = iris_message_new_full (1,
+	                             "id", G_TYPE_INT, 1234567890,
+	                             "name", G_TYPE_STRING, "Christian",
+	                             NULL);
+	g_assert (msg != NULL);
+
+	length = iris_message_flattened_size (msg);
+	g_assert_cmpint (length, ==, 4         /* Message Type */
+	                           + 2 + 4     /* Id Value Type and Size */
+	                           + 2 + 4 + 9 /* Name Value Type and Size and Content */
+	                           + 4 + strlen ("id")
+	                           + 4 + strlen ("name"));
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -136,6 +157,7 @@ main (int   argc,
 	g_test_add_func ("/message/count_names1", count_names1);
 	g_test_add_func ("/message/is_empty1", count_names1);
 	g_test_add_func ("/message/new_full1", count_names1);
+	g_test_add_func ("/message/flattened_size1", flattened_size1);
 
 	return g_test_run ();
 }

@@ -452,3 +452,84 @@ iris_message_set_int (IrisMessage *message,
 
 	_iris_message_set_value_internal (message, name, real_value);
 }
+
+/**
+ * iris_message_flattened_size:
+ * @message: A #IrisMessage
+ *
+ * Determines the size in bytes that would be required to flatten the
+ * message.
+ *
+ * Return value: the size in bytes
+ */
+gsize
+iris_message_flattened_size (IrisMessage *message)
+{
+	GHashTableIter  iter;
+	gsize           length = 4;
+	gpointer        keyptr, valueptr;
+	const gchar    *key;
+	const GValue   *value;
+	gboolean        can_flatten;
+
+	g_return_val_if_fail (message != NULL, 0);
+
+	if (G_UNLIKELY (!message->items))
+		return length;
+
+	g_hash_table_iter_init (&iter, message->items);
+	while (g_hash_table_iter_next (&iter, &keyptr, &valueptr)) {
+		key = (const gchar*) keyptr;
+		value = (const GValue*) valueptr;
+
+		if (G_UNLIKELY (!key || !value))
+			continue;
+
+		/* We are hard coding our protocol sizes here since
+		 * something like sizeof (int) would not be safe over
+		 * machine boundries.
+		 */
+
+		can_flatten = FALSE;
+
+		switch (G_VALUE_TYPE (value)) {
+		case G_TYPE_FLOAT:
+		case G_TYPE_INT:
+		case G_TYPE_UINT:
+		case G_TYPE_LONG:
+		case G_TYPE_ULONG:
+			length += 2; // TYPE ID
+			length += 4;
+			can_flatten = TRUE;
+			break;
+		case G_TYPE_DOUBLE:
+		case G_TYPE_INT64:
+		case G_TYPE_UINT64:
+			length += 2; // TYPE ID
+			length += 8;
+			can_flatten = TRUE;
+			break;
+		case G_TYPE_STRING:
+			length += 2; // TYPE ID
+			length += 4; // String Length
+			if (g_value_get_string (value) != NULL)
+				length += strlen (g_value_get_string (value));
+			can_flatten = TRUE;
+			break;
+		case G_TYPE_CHAR:
+		case G_TYPE_UCHAR:
+		case G_TYPE_BOOLEAN:
+			length += 2; // TYPE ID
+			length += 1;
+			can_flatten = TRUE;
+			break;
+		}
+
+		if (G_LIKELY (can_flatten)) {
+			length += 4; // Key size
+			length += strlen (key);
+		}
+	}
+
+	return length;
+}
