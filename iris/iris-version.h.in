@@ -1,0 +1,78 @@
+#ifndef __IRIS_VERSION_H__
+#define __IRIS_VERSION_H__
+
+/**
+ * SECTION:iris-version
+ * @short_description: Versioning API
+ *
+ * Iris provides some API and definitions for compile-time
+ * version checking.
+ */
+
+/**
+ * IRIS_MAJOR_VERSION:
+ *
+ * Major version of Iris, e.g. 1 in "1.2.3"
+ */
+#define IRIS_MAJOR_VERSION      (@IRIS_MAJOR_VERSION@)
+
+/**
+ * IRIS_MINOR_VERSION:
+ *
+ * Minor version of Iris, e.g. 2 in "1.2.3"
+ */
+#define IRIS_MINOR_VERSION      (@IRIS_MINOR_VERSION@)
+
+/**
+ * IRIS_MICRO_VERSION:
+ *
+ * Micro version of Iris, e.g. 3 in "1.2.3"
+ */
+#define IRIS_MICRO_VERSION      (@IRIS_MICRO_VERSION@)
+
+/**
+ * IRIS_API_VERSION_S:
+ *
+ * Version of the API of Iris
+ */
+#define IRIS_API_VERSION_S      "@IRIS_API_VERSION@"
+
+/**
+ * IRIS_VERSION_S:
+ *
+ * Stringified version of Iris, e.g. "1.2.3".
+ *
+ * Useful for display.
+ */
+#define IRIS_VERSION_S          "@IRIS_VERSION@"
+
+/**
+ * IRIS_VERSION_HEX:
+ *
+ * Hexadecimally encoded version of Iris, e.g. 0x01020300"
+ *
+ * Useful for comparisons.
+ */
+#define IRIS_VERSION_HEX        (IRIS_MAJOR_VERSION << 24 | \
+                                         IRIS_MINOR_VERSION << 16 | \
+                                         IRIS_MICRO_VERSION <<  8)
+
+/**
+ * IRIS_CHECK_VERSION:
+ * @major: major component of the version to check
+ * @minor: minor component of the version to check
+ * @micro: micro component of the version to check
+ *
+ * Checks whether the decomposed version (@major, @minor, @micro) is
+ * bigger than the version of Iris. This is a compile-time
+ * check only.
+ */
+#define IRIS_CHECK_VERSION(major,minor,micro)   \
+        (IRIS_MAJOR_VERSION >= (major) ||       \
+         (IRIS_MAJOR_VERSION == (major) &&      \
+          IRIS_MINOR_VERSION > (minor)) ||      \
+         (IRIS_MAJOR_VERSION == (major) &&      \
+          IRIS_MINOR_VERSION == (minor) &&      \
+          IRIS_MICRO_VERSION >= (micro)))
+
+#endif /* __IRIS_VERSION_H__ */
