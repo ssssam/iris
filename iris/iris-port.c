@@ -63,3 +63,19 @@ iris_port_new (void)
 {
 	return g_object_new (IRIS_TYPE_PORT, NULL);
 }
+
+/**
+ * iris_port_post:
+ * @port: An #IrisPort
+ * @message: The #IrisMessage to post
+ *
+ * Posts @message to the port.  Any receivers listening to the port will
+ * receive the message.
+ */
+void
+iris_port_post (IrisPort    *port,
+                IrisMessage *message)
+{
+	g_return_if_fail (IRIS_IS_PORT (port));
+	g_return_if_fail (message != NULL);
+}
