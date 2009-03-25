@@ -17,3 +17,16 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 
  * 02110-1301 USA
  */
+
+#ifndef __IRIS_SCHEDULER_MANAGER_H__
+#define __IRIS_SCHEDULER_MANAGER_H__
+
+#include <glib-object.h>
+
+G_BEGIN_DECLS
+
+
+
+G_END_DECLS
+
+#endif /* __IRIS_SCHEDULER_MANAGER_H__ */
