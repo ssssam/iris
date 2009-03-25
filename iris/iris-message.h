@@ -70,6 +70,18 @@ void         iris_message_set_float      (IrisMessage *message, const gchar *nam
 gdouble      iris_message_get_double     (IrisMessage *message, const gchar *name);
 void         iris_message_set_double     (IrisMessage *message, const gchar *name, gdouble value);
 
+glong        iris_message_get_long       (IrisMessage *message, const gchar *name);
+void         iris_message_set_long       (IrisMessage *message, const gchar *name, glong value);
+
+gulong       iris_message_get_ulong      (IrisMessage *message, const gchar *name);
+void         iris_message_set_ulong      (IrisMessage *message, const gchar *name, gulong value);
+
+gchar        iris_message_get_char       (IrisMessage *message, const gchar *name);
+void         iris_message_set_char       (IrisMessage *message, const gchar *name, gchar value);
+
+guchar       iris_message_get_uchar      (IrisMessage *message, const gchar *name);
+void         iris_message_set_uchar      (IrisMessage *message, const gchar *name, guchar value);
+
 gsize        iris_message_flattened_size (IrisMessage *message);
 gboolean     iris_message_flatten        (IrisMessage *message, gchar **buffer, gsize *length);
 gboolean     iris_message_unflatten      (IrisMessage *message, gchar  *buffer, gsize  length);

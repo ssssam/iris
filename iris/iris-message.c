@@ -434,7 +434,7 @@ iris_message_set_string (IrisMessage *message,
  * @message: An #IrisMessage
  * @name: the key
  *
- * Retrieves the value for @key.  The key/value pair stored must be an int.
+ * Retrieves the value for @key.
  *
  * Return value: the value for @key as a #gint.
  */
@@ -477,7 +477,7 @@ iris_message_set_int (IrisMessage *message,
  * @message: An #IrisMessage
  * @name: the key
  *
- * Retrieves the value for @key.  The key/value pair stored must be an int.
+ * Retrieves the value for @key.
  *
  * Return value: the value for @key as a #gint64.
  */
@@ -520,7 +520,7 @@ iris_message_set_int64 (IrisMessage *message,
  * @message: An #IrisMessage
  * @name: the key
  *
- * Retrieves the value for @key.  The key/value pair stored must be an int.
+ * Retrieves the value for @key.
  *
  * Return value: the value for @key as a #gfloat.
  */
@@ -563,7 +563,7 @@ iris_message_set_float (IrisMessage *message,
  * @message: An #IrisMessage
  * @name: the key
  *
- * Retrieves the value for @key.  The key/value pair stored must be an int.
+ * Retrieves the value for @key.
  *
  * Return value: the value for @key as a #gdouble.
  */
@@ -597,6 +597,178 @@ iris_message_set_double (IrisMessage *message,
 	real_value = _iris_message_value_new (NULL);
 	g_value_init (real_value, G_TYPE_DOUBLE);
 	g_value_set_double (real_value, value);
+
+	_iris_message_set_value_internal (message, name, real_value);
+}
+
+/**
+ * iris_message_get_long:
+ * @message: An #IrisMessage
+ * @name: the key
+ *
+ * Retrieves the value for @key.
+ *
+ * Return value: the value for @key
+ */
+glong
+iris_message_get_long (IrisMessage *message,
+                       const gchar *name)
+{
+	const GValue *value;
+	value = _iris_message_get_value_internal (message, name);
+	g_return_val_if_fail (value != NULL, 0);
+	return g_value_get_long (value);
+}
+
+/**
+ * iris_message_set_long:
+ * @message: An #IrisMessage
+ * @name: the key
+ * @value: the value
+ *
+ * Updates @message to use @value as the value for @key.
+ */
+void
+iris_message_set_long (IrisMessage *message,
+                       const gchar *name,
+                       glong        value)
+{
+	GValue *real_value;
+
+	g_return_if_fail (message != NULL);
+
+	real_value = _iris_message_value_new (NULL);
+	g_value_init (real_value, G_TYPE_LONG);
+	g_value_set_long (real_value, value);
+
+	_iris_message_set_value_internal (message, name, real_value);
+}
+
+/**
+ * iris_message_get_ulong:
+ * @message: An #IrisMessage
+ * @name: the key
+ *
+ * Retrieves the value for @key.
+ *
+ * Return value: the value for @key
+ */
+gulong
+iris_message_get_ulong (IrisMessage *message,
+                       const gchar *name)
+{
+	const GValue *value;
+	value = _iris_message_get_value_internal (message, name);
+	g_return_val_if_fail (value != NULL, 0);
+	return g_value_get_ulong (value);
+}
+
+/**
+ * iris_message_set_ulong:
+ * @message: An #IrisMessage
+ * @name: the key
+ * @value: the value
+ *
+ * Updates @message to use @value as the value for @key.
+ */
+void
+iris_message_set_ulong (IrisMessage *message,
+                        const gchar *name,
+                        gulong       value)
+{
+	GValue *real_value;
+
+	g_return_if_fail (message != NULL);
+
+	real_value = _iris_message_value_new (NULL);
+	g_value_init (real_value, G_TYPE_ULONG);
+	g_value_set_ulong (real_value, value);
+
+	_iris_message_set_value_internal (message, name, real_value);
+}
+
+/**
+ * iris_message_get_char:
+ * @message: An #IrisMessage
+ * @name: the key
+ *
+ * Retrieves the value for @key.
+ *
+ * Return value: the value for @key
+ */
+gchar
+iris_message_get_char (IrisMessage *message,
+                       const gchar *name)
+{
+	const GValue *value;
+	value = _iris_message_get_value_internal (message, name);
+	g_return_val_if_fail (value != NULL, 0);
+	return g_value_get_char (value);
+}
+
+/**
+ * iris_message_set_char:
+ * @message: An #IrisMessage
+ * @name: the key
+ * @value: the value
+ *
+ * Updates @message to use @value as the value for @key.
+ */
+void
+iris_message_set_char (IrisMessage *message,
+                       const gchar *name,
+                       gchar        value)
+{
+	GValue *real_value;
+
+	g_return_if_fail (message != NULL);
+
+	real_value = _iris_message_value_new (NULL);
+	g_value_init (real_value, G_TYPE_CHAR);
+	g_value_set_char (real_value, value);
+
+	_iris_message_set_value_internal (message, name, real_value);
+}
+
+/**
+ * iris_message_get_uchar:
+ * @message: An #IrisMessage
+ * @name: the key
+ *
+ * Retrieves the value for @key.
+ *
+ * Return value: the value for @key
+ */
+guchar
+iris_message_get_uchar (IrisMessage *message,
+                        const gchar *name)
+{
+	const GValue *value;
+	value = _iris_message_get_value_internal (message, name);
+	g_return_val_if_fail (value != NULL, 0);
+	return g_value_get_uchar (value);
+}
+
+/**
+ * iris_message_set_uchar:
+ * @message: An #IrisMessage
+ * @name: the key
+ * @value: the value
+ *
+ * Updates @message to use @value as the value for @key.
+ */
+void
+iris_message_set_uchar (IrisMessage *message,
+                        const gchar *name,
+                        guchar       value)
+{
+	GValue *real_value;
+
+	g_return_if_fail (message != NULL);
+
+	real_value = _iris_message_value_new (NULL);
+	g_value_init (real_value, G_TYPE_UCHAR);
+	g_value_set_uchar (real_value, value);
 
 	_iris_message_set_value_internal (message, name, real_value);
 }

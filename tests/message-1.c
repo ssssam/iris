@@ -182,6 +182,46 @@ set_double1 (void)
 	g_assert (iris_message_get_double (msg, "id") == 21.123456);
 }
 
+static void
+set_long1 (void)
+{
+	IrisMessage *msg;
+
+	msg = iris_message_new_full (1, "id", G_TYPE_LONG, 123123l, NULL);
+	g_assert (msg != NULL);
+	g_assert (iris_message_get_long (msg, "id") == 123123l);
+}
+
+static void
+set_ulong1 (void)
+{
+	IrisMessage *msg;
+
+	msg = iris_message_new_full (1, "id", G_TYPE_ULONG, 123123ul, NULL);
+	g_assert (msg != NULL);
+	g_assert (iris_message_get_ulong (msg, "id") == 123123ul);
+}
+
+static void
+set_char1 (void)
+{
+	IrisMessage *msg;
+
+	msg = iris_message_new_full (1, "id", G_TYPE_CHAR, 'A', NULL);
+	g_assert (msg != NULL);
+	g_assert (iris_message_get_char (msg, "id") == 'A');
+}
+
+static void
+set_uchar1 (void)
+{
+	IrisMessage *msg;
+
+	msg = iris_message_new_full (1, "id", G_TYPE_UCHAR, 'A', NULL);
+	g_assert (msg != NULL);
+	g_assert (iris_message_get_uchar (msg, "id") == 'A');
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -203,6 +243,10 @@ main (int   argc,
 	g_test_add_func ("/message/set_int641", set_int641);
 	g_test_add_func ("/message/set_float1", set_float1);
 	g_test_add_func ("/message/set_double1", set_double1);
+	g_test_add_func ("/message/set_long1", set_long1);
+	g_test_add_func ("/message/set_ulong1", set_ulong1);
+	g_test_add_func ("/message/set_char1", set_char1);
+	g_test_add_func ("/message/set_uchar1", set_uchar1);
 
 	return g_test_run ();
 }
