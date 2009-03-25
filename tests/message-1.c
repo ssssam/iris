@@ -152,6 +152,36 @@ contains1 (void)
 	g_assert (!iris_message_contains (msg, "name"));
 }
 
+static void
+set_int641 (void)
+{
+	IrisMessage *msg;
+
+	msg = iris_message_new_full (1, "id", G_TYPE_INT64, G_MAXINT64, NULL);
+	g_assert (msg != NULL);
+	g_assert (iris_message_get_int64 (msg, "id") == G_MAXINT64);
+}
+
+static void
+set_float1 (void)
+{
+	IrisMessage *msg;
+
+	msg = iris_message_new_full (1, "id", G_TYPE_FLOAT, 1.2345f, NULL);
+	g_assert (msg != NULL);
+	g_assert (iris_message_get_float (msg, "id") == 1.2345f);
+}
+
+static void
+set_double1 (void)
+{
+	IrisMessage *msg;
+
+	msg = iris_message_new_full (1, "id", G_TYPE_DOUBLE, 21.123456, NULL);
+	g_assert (msg != NULL);
+	g_assert (iris_message_get_double (msg, "id") == 21.123456);
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -170,6 +200,9 @@ main (int   argc,
 	g_test_add_func ("/message/new_full1", count_names1);
 	g_test_add_func ("/message/flattened_size1", flattened_size1);
 	g_test_add_func ("/message/contains1", flattened_size1);
+	g_test_add_func ("/message/set_int641", set_int641);
+	g_test_add_func ("/message/set_float1", set_float1);
+	g_test_add_func ("/message/set_double1", set_double1);
 
 	return g_test_run ();
 }
