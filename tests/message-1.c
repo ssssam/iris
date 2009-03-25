@@ -222,6 +222,16 @@ set_uchar1 (void)
 	g_assert (iris_message_get_uchar (msg, "id") == 'A');
 }
 
+static void
+set_boolean1 (void)
+{
+	IrisMessage *msg;
+
+	msg = iris_message_new_full (1, "id", G_TYPE_BOOLEAN, TRUE, NULL);
+	g_assert (msg != NULL);
+	g_assert (iris_message_get_boolean (msg, "id") == TRUE);
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -247,6 +257,7 @@ main (int   argc,
 	g_test_add_func ("/message/set_ulong1", set_ulong1);
 	g_test_add_func ("/message/set_char1", set_char1);
 	g_test_add_func ("/message/set_uchar1", set_uchar1);
+	g_test_add_func ("/message/set_boolean1", set_boolean1);
 
 	return g_test_run ();
 }

@@ -774,6 +774,49 @@ iris_message_set_uchar (IrisMessage *message,
 }
 
 /**
+ * iris_message_get_boolean:
+ * @message: An #IrisMessage
+ * @name: the key
+ *
+ * Retrieves the value for @key.
+ *
+ * Return value: the value for @key
+ */
+gboolean
+iris_message_get_boolean (IrisMessage *message,
+                          const gchar *name)
+{
+	const GValue *value;
+	value = _iris_message_get_value_internal (message, name);
+	g_return_val_if_fail (value != NULL, 0);
+	return g_value_get_boolean (value);
+}
+
+/**
+ * iris_message_set_boolean:
+ * @message: An #IrisMessage
+ * @name: the key
+ * @value: the value
+ *
+ * Updates @message to use @value as the value for @key.
+ */
+void
+iris_message_set_boolean (IrisMessage *message,
+                          const gchar *name,
+                          gboolean     value)
+{
+	GValue *real_value;
+
+	g_return_if_fail (message != NULL);
+
+	real_value = _iris_message_value_new (NULL);
+	g_value_init (real_value, G_TYPE_BOOLEAN);
+	g_value_set_boolean (real_value, value);
+
+	_iris_message_set_value_internal (message, name, real_value);
+}
+
+/**
  * iris_message_flattened_size:
  * @message: A #IrisMessage
  *
