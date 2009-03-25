@@ -17,3 +17,74 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 
  * 02110-1301 USA
  */
+
+#ifndef __IRIS_PORT_H__
+#define __IRIS_PORT_H__
+
+#include <glib-object.h>
+#include "iris-message.h"
+
+G_BEGIN_DECLS
+
+#define IRIS_TYPE_PORT (iris_port_get_type ())
+
+#define IRIS_PORT(obj)                  \
+    (G_TYPE_CHECK_INSTANCE_CAST ((obj), \
+     IRIS_TYPE_PORT, IrisPort))
+
+#define IRIS_PORT_CONST(obj)            \
+    (G_TYPE_CHECK_INSTANCE_CAST ((obj), \
+     IRIS_TYPE_PORT, IrisPort const))
+
+#define IRIS_PORT_CLASS(klass)          \
+    (G_TYPE_CHECK_CLASS_CAST ((klass),  \
+     IRIS_TYPE_PORT, IrisPortClass))
+
+#define IRIS_IS_PORT(obj)               \
+    (G_TYPE_CHECK_INSTANCE_TYPE ((obj), \
+     IRIS_TYPE_PORT))
+
+#define IRIS_IS_PORT_CLASS(klass)       \
+    (G_TYPE_CHECK_CLASS_TYPE ((klass),  \
+     IRIS_TYPE_PORT))
+
+#define IRIS_PORT_GET_CLASS(obj)        \
+    (G_TYPE_INSTANCE_GET_CLASS ((obj),  \
+     IRIS_TYPE_PORT, IrisPortClass))
+
+typedef struct _IrisPort        IrisPort;
+typedef struct _IrisPortClass   IrisPortClass;
+typedef struct _IrisPortPrivate IrisPortPrivate;
+
+struct _IrisPort
+{
+	GObject parent;
+
+	IrisPortPrivate *priv;
+};
+
+struct _IrisPortClass
+{
+	GObjectClass parent_class;
+
+	void (*post)   (IrisPort *port, IrisMessage *message);
+
+	/*
+	void (*hook)   (IrisPort *port, IrisReceiver *receiver);
+	void (*unhook) (IrisPort *port, IrisReceiver *receiver);
+	*/
+};
+
+GType     iris_port_get_type (void) G_GNUC_CONST;
+IrisPort *iris_port_new      (void);
+
+void      iris_port_post     (IrisPort *port, IrisMessage *message);
+
+/*
+void      iris_port_hook     (IrisPort *port, IrisReceiver *receiver);
+void      iris_port_unhook   (IrisPort *port, IrisReceiver *receiver);
+*/
+
+G_END_DECLS
+
+#endif /* __IRIS_PORT_H__ */
