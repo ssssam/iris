@@ -19,3 +19,67 @@
  */
 
 #include "iris-receiver.h"
+
+struct _IrisReceiverPrivate
+{
+};
+
+G_DEFINE_TYPE (IrisReceiver, iris_receiver, G_TYPE_OBJECT);
+
+static void
+_iris_receiver_deliver_real (IrisReceiver *receiver,
+                             IrisMessage  *message)
+{
+	/* NOTE: receiver is gauranteed to be valid since we call it from
+	 *   iris_receiver_deliver(). Therefore, just save the time and
+	 *   not check it.
+	 */
+
+	g_return_if_fail (message != NULL);
+}
+
+static void
+iris_receiver_finalize (GObject *object)
+{
+	G_OBJECT_CLASS (iris_receiver_parent_class)->finalize (object);
+}
+
+static void
+iris_receiver_class_init (IrisReceiverClass *klass)
+{
+	GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+	object_class->finalize = iris_receiver_finalize;
+
+	g_type_class_add_private (object_class, sizeof (IrisReceiverPrivate));
+}
+
+static void
+iris_receiver_init (IrisReceiver *receiver)
+{
+	receiver->priv = G_TYPE_INSTANCE_GET_PRIVATE (receiver,
+	                                              IRIS_TYPE_RECEIVER,
+	                                              IrisReceiverPrivate);
+}
+
+/**
+ * iris_receiver_deliver:
+ * @receiver: An #IrisReceiver
+ * @message: An #IrisMessage
+ *
+ * Delivers a message to the receiver so that the receiver may take an
+ * action on the message.
+ */
+void
+iris_receiver_deliver (IrisReceiver *receiver,
+                       IrisMessage  *message)
+{
+	g_return_if_fail (IRIS_IS_RECEIVER (receiver));
+	IRIS_RECEIVER_GET_CLASS (receiver)->deliver (receiver, message);
+}
+
+void
+iris_receiver_start (IrisReceiver *receiver)
+{
+	
+}
