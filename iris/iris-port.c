@@ -20,9 +20,18 @@
 
 #include "iris-port.h"
 
+#define IRIS_PORT_STATE_PAUSED 1 << 0
+
+#define PORT_PAUSED(port)                         \
+	((g_atomic_int_get (&port->priv->state)   \
+	  & IRIS_PORT_STATE_PAUSED) != 0)
+
 struct _IrisPortPrivate
 {
-	GAsyncQueue *queue;
+	GQueue       *queue;
+	IrisReceiver *receiver;
+	GMutex       *mutex;
+	gint          state;
 };
 
 G_DEFINE_TYPE (IrisPort, iris_port, G_TYPE_OBJECT);
@@ -49,6 +58,8 @@ iris_port_init (IrisPort *port)
 	port->priv = G_TYPE_INSTANCE_GET_PRIVATE (port,
 	                                          IRIS_TYPE_PORT,
 	                                          IrisPortPrivate);
+
+	port->priv->mutex = g_mutex_new ();
 }
 
 /**
@@ -76,6 +87,48 @@ void
 iris_port_post (IrisPort    *port,
                 IrisMessage *message)
 {
+	IrisPortPrivate    *priv;
+	IrisReceiver       *receiver    = NULL;
+	IrisDeliveryStatus  delivered;
+	gint                state;
+
 	g_return_if_fail (IRIS_IS_PORT (port));
 	g_return_if_fail (message != NULL);
+
+	priv = port->priv;
+
+	if (PORT_PAUSED (port) || !priv->receiver) {
+		g_mutex_lock (priv->mutex);
+		if (PORT_PAUSED (port) || !priv->receiver) {
+			g_queue_push_head (priv->queue, message);
+		}
+		else {
+			receiver = priv->receiver;
+			state = priv->state;
+		}
+		g_mutex_unlock (priv->mutex);
+	}
+
+	if (receiver) {
+		delivered = iris_receiver_deliver (receiver, message);
+
+		switch (delivered) {
+		case IRIS_DELIVERY_ACCEPTED:
+			break;
+		case IRIS_DELIVERY_ACCEPTED_PAUSE:
+			g_mutex_lock (priv->mutex);
+			priv->state |= IRIS_PORT_STATE_PAUSED;
+			g_mutex_unlock (priv->mutex);
+			break;
+		case IRIS_DELIVERY_REMOVE:
+		case IRIS_DELIVERY_ACCEPTED_REMOVE:
+			g_mutex_lock (priv->mutex);
+			if (priv->receiver == receiver)
+				priv->receiver = NULL;
+			g_mutex_unlock (priv->mutex);
+			break;
+		default:
+			g_assert_not_reached ();
+		}
+	}
 }

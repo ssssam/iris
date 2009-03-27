@@ -26,7 +26,7 @@ struct _IrisReceiverPrivate
 
 G_DEFINE_TYPE (IrisReceiver, iris_receiver, G_TYPE_OBJECT);
 
-static void
+static IrisDeliveryStatus
 _iris_receiver_deliver_real (IrisReceiver *receiver,
                              IrisMessage  *message)
 {
@@ -35,7 +35,9 @@ _iris_receiver_deliver_real (IrisReceiver *receiver,
 	 *   not check it.
 	 */
 
-	g_return_if_fail (message != NULL);
+	g_return_val_if_fail (message != NULL, IRIS_DELIVERY_REMOVE);
+
+	return IRIS_DELIVERY_ACCEPTED;
 }
 
 static void
@@ -49,6 +51,7 @@ iris_receiver_class_init (IrisReceiverClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
+	klass->deliver = _iris_receiver_deliver_real;
 	object_class->finalize = iris_receiver_finalize;
 
 	g_type_class_add_private (object_class, sizeof (IrisReceiverPrivate));
@@ -70,16 +73,10 @@ iris_receiver_init (IrisReceiver *receiver)
  * Delivers a message to the receiver so that the receiver may take an
  * action on the message.
  */
-void
+IrisDeliveryStatus
 iris_receiver_deliver (IrisReceiver *receiver,
                        IrisMessage  *message)
 {
-	g_return_if_fail (IRIS_IS_RECEIVER (receiver));
-	IRIS_RECEIVER_GET_CLASS (receiver)->deliver (receiver, message);
-}
-
-void
-iris_receiver_start (IrisReceiver *receiver)
-{
-	
+	g_return_val_if_fail (IRIS_IS_RECEIVER (receiver), IRIS_DELIVERY_REMOVE);
+	return IRIS_RECEIVER_GET_CLASS (receiver)->deliver (receiver, message);
 }

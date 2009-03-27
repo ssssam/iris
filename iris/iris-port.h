@@ -22,7 +22,9 @@
 #define __IRIS_PORT_H__
 
 #include <glib-object.h>
+
 #include "iris-message.h"
+#include "iris-receiver.h"
 
 G_BEGIN_DECLS
 
@@ -69,21 +71,18 @@ struct _IrisPortClass
 
 	void (*post)   (IrisPort *port, IrisMessage *message);
 
-	/*
 	void (*hook)   (IrisPort *port, IrisReceiver *receiver);
 	void (*unhook) (IrisPort *port, IrisReceiver *receiver);
-	*/
 };
 
 GType     iris_port_get_type (void) G_GNUC_CONST;
 IrisPort *iris_port_new      (void);
 
 void      iris_port_post     (IrisPort *port, IrisMessage *message);
+void      iris_port_return   (IrisPort *port, IrisMessage *message);
 
-/*
 void      iris_port_hook     (IrisPort *port, IrisReceiver *receiver);
 void      iris_port_unhook   (IrisPort *port, IrisReceiver *receiver);
-*/
 
 G_END_DECLS
 

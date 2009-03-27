@@ -52,10 +52,12 @@ G_BEGIN_DECLS
     (G_TYPE_INSTANCE_GET_CLASS ((obj),      \
      IRIS_TYPE_RECEIVER, IrisReceiverClass))
 
-enum
+typedef enum
 {
-	IRIS_DELIVERY_ACCEPTED;
-	IRIS_DELIVER_
+	IRIS_DELIVERY_ACCEPTED,
+	IRIS_DELIVERY_ACCEPTED_PAUSE,
+	IRIS_DELIVERY_ACCEPTED_REMOVE,
+	IRIS_DELIVERY_REMOVE,
 } IrisDeliveryStatus;
 
 typedef struct _IrisReceiver        IrisReceiver;
@@ -73,13 +75,12 @@ struct _IrisReceiverClass
 {
 	GObjectClass parent_class;
 
-	void (*deliver) (IrisReceiver *receiver, IrisMessage *message);
+	IrisDeliveryStatus (*deliver) (IrisReceiver *receiver, IrisMessage *message);
 };
 
-GType         iris_receiver_get_type (void) G_GNUC_CONST;
-IrisReceiver *iris_receiver_new      (void);
-
-void          iris_receiver_deliver  (IrisReceiver *receiver, IrisMessage *message);
+GType              iris_receiver_get_type (void) G_GNUC_CONST;
+IrisReceiver*      iris_receiver_new      (void);
+IrisDeliveryStatus iris_receiver_deliver  (IrisReceiver *receiver, IrisMessage *message);
 
 G_END_DECLS
 
