@@ -29,6 +29,8 @@ iris-1.0.pc
 *.lo
 tests/message-1
 tests/message-1.o
+tests/port-1
+tests/port-1.o
 doc/reference/html-build.stamp
 doc/reference/html.stamp
 doc/reference/html/

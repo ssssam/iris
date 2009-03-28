@@ -75,14 +75,16 @@ struct _IrisPortClass
 	void (*unhook) (IrisPort *port, IrisReceiver *receiver);
 };
 
-GType     iris_port_get_type (void) G_GNUC_CONST;
-IrisPort *iris_port_new      (void);
+GType     iris_port_get_type     (void) G_GNUC_CONST;
+IrisPort *iris_port_new          (void);
 
-void      iris_port_post     (IrisPort *port, IrisMessage *message);
-void      iris_port_return   (IrisPort *port, IrisMessage *message);
+gboolean  iris_port_has_receiver (IrisPort *port);
 
-void      iris_port_hook     (IrisPort *port, IrisReceiver *receiver);
-void      iris_port_unhook   (IrisPort *port, IrisReceiver *receiver);
+void      iris_port_post         (IrisPort *port, IrisMessage *message);
+void      iris_port_return       (IrisPort *port, IrisMessage *message);
+
+void      iris_port_hook         (IrisPort *port, IrisReceiver *receiver);
+void      iris_port_unhook       (IrisPort *port);
 
 G_END_DECLS
 

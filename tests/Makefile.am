@@ -1,8 +1,8 @@
 include $(top_srcdir)/Makefile.decl
 
-noinst_PROGRAMS = message-1
+noinst_PROGRAMS = message-1 port-1
 
-TEST_PROGS += message-1
+TEST_PROGS += message-1 port-1
 
 INCLUDES = -I$(top_srcdir)
 LDADD = $(top_builddir)/iris/libiris-1.0.la

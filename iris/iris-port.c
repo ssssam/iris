@@ -108,6 +108,9 @@ iris_port_post (IrisPort    *port,
 		}
 		g_mutex_unlock (priv->mutex);
 	}
+	else {
+		receiver = priv->receiver;
+	}
 
 	if (receiver) {
 		delivered = iris_receiver_deliver (receiver, message);
@@ -131,4 +134,43 @@ iris_port_post (IrisPort    *port,
 			g_assert_not_reached ();
 		}
 	}
+}
+
+gboolean
+iris_port_has_receiver (IrisPort *port)
+{
+	g_return_val_if_fail (IRIS_IS_PORT (port), FALSE);
+	return (g_atomic_pointer_get (&port->priv->receiver) != NULL);
+}
+
+void
+iris_port_hook (IrisPort     *port,
+                IrisReceiver *receiver)
+{
+	IrisPortPrivate *priv;
+
+	g_return_if_fail (IRIS_IS_PORT (port));
+	g_return_if_fail (IRIS_IS_RECEIVER (receiver));
+
+	priv = port->priv;
+
+	g_mutex_lock (priv->mutex);
+	if (!priv->receiver)
+		priv->receiver = receiver;
+	g_mutex_unlock (priv->mutex);
+}
+
+void
+iris_port_unhook (IrisPort *port)
+{
+	IrisPortPrivate *priv;
+
+	g_return_if_fail (IRIS_IS_PORT (port));
+
+	priv = port->priv;
+
+	g_mutex_lock (priv->mutex);
+	// FIXME: Call unhook routines
+	priv->receiver = NULL;
+	g_mutex_unlock (priv->mutex);
 }
