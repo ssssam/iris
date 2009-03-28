@@ -11,3 +11,4 @@ AM_CFLAGS = $(IRIS_CFLAGS)
 AM_LDFLAGS = $(IRIS_LIBS)
 
 message_1_sources = message-1.c
+port_1_sources = port-1.c mocks/mock-callback-receiver.c

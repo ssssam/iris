@@ -11,18 +11,13 @@ get_type1 (void)
 }
 
 static void
-has_receiver1_cb (void)
-{
-}
-
-static void
 has_receiver1 (void)
 {
 	IrisPort     *port;
 	IrisReceiver *receiver;
 
 	port = iris_port_new ();
-	receiver = iris_receiver_new (has_receiver1_cb, NULL, NULL);
+	receiver = iris_receiver_new ();
 
 	g_assert (iris_port_has_receiver (port) == FALSE);
 	iris_port_hook (port, receiver);

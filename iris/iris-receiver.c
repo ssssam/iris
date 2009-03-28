@@ -22,6 +22,7 @@
 
 struct _IrisReceiverPrivate
 {
+	GAsyncQueue    *queue;
 };
 
 G_DEFINE_TYPE (IrisReceiver, iris_receiver, G_TYPE_OBJECT);
@@ -30,12 +31,11 @@ static IrisDeliveryStatus
 _iris_receiver_deliver_real (IrisReceiver *receiver,
                              IrisMessage  *message)
 {
-	/* NOTE: receiver is gauranteed to be valid since we call it from
-	 *   iris_receiver_deliver(). Therefore, just save the time and
-	 *   not check it.
-	 */
+	IrisReceiverPrivate *priv;
 
 	g_return_val_if_fail (message != NULL, IRIS_DELIVERY_REMOVE);
+
+	priv = receiver->priv;
 
 	return IRIS_DELIVERY_ACCEPTED;
 }
@@ -63,6 +63,12 @@ iris_receiver_init (IrisReceiver *receiver)
 	receiver->priv = G_TYPE_INSTANCE_GET_PRIVATE (receiver,
 	                                              IRIS_TYPE_RECEIVER,
 	                                              IrisReceiverPrivate);
+}
+
+IrisReceiver*
+iris_receiver_new (void)
+{
+	return g_object_new (IRIS_TYPE_RECEIVER, NULL);
 }
 
 /**
