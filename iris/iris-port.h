@@ -67,24 +67,24 @@ struct _IrisPort
 
 struct _IrisPortClass
 {
-	GObjectClass parent_class;
+	GObjectClass  parent_class;
 
-	void (*post)   (IrisPort *port, IrisMessage *message);
+	void          (*post)         (IrisPort *port, IrisMessage *message);
+	void          (*repost)       (IrisPort *port, IrisMessage *message);
 
-	void (*hook)   (IrisPort *port, IrisReceiver *receiver);
-	void (*unhook) (IrisPort *port, IrisReceiver *receiver);
+	IrisReceiver* (*get_receiver) (IrisPort *port);
+	void          (*set_receiver) (IrisPort *port, IrisReceiver *receiver);
 };
 
-GType     iris_port_get_type     (void) G_GNUC_CONST;
-IrisPort *iris_port_new          (void);
+GType         iris_port_get_type     (void) G_GNUC_CONST;
+IrisPort*     iris_port_new          (void);
 
-gboolean  iris_port_has_receiver (IrisPort *port);
+void          iris_port_post         (IrisPort *port, IrisMessage *message);
+void          iris_port_repost       (IrisPort *port, IrisMessage *message);
 
-void      iris_port_post         (IrisPort *port, IrisMessage *message);
-void      iris_port_return       (IrisPort *port, IrisMessage *message);
-
-void      iris_port_hook         (IrisPort *port, IrisReceiver *receiver);
-void      iris_port_unhook       (IrisPort *port);
+gboolean      iris_port_has_receiver (IrisPort *port);
+IrisReceiver* iris_port_get_receiver (IrisPort *port);
+void          iris_port_set_receiver (IrisPort *port, IrisReceiver *receiver);
 
 G_END_DECLS
 

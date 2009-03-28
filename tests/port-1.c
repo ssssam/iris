@@ -20,8 +20,10 @@ has_receiver1 (void)
 	receiver = iris_receiver_new ();
 
 	g_assert (iris_port_has_receiver (port) == FALSE);
-	iris_port_hook (port, receiver);
+	iris_port_set_receiver (port, receiver);
 	g_assert (iris_port_has_receiver (port) == TRUE);
+	iris_port_set_receiver (port, NULL);
+	g_assert (iris_port_has_receiver (port) == FALSE);
 }
 
 static void
@@ -42,7 +44,7 @@ deliver1 (void)
 
 	port = iris_port_new ();
 	receiver = mock_callback_receiver_new (G_CALLBACK (deliver1_cb), &success);
-	iris_port_hook (port, receiver);
+	iris_port_set_receiver (port, receiver);
 
 	g_assert (success == FALSE);
 	message = iris_message_new (0);

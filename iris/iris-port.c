@@ -37,6 +37,32 @@ struct _IrisPortPrivate
 G_DEFINE_TYPE (IrisPort, iris_port, G_TYPE_OBJECT);
 
 static void
+iris_port_set_receiver_real (IrisPort     *port,
+                             IrisReceiver *receiver)
+{
+	IrisPortPrivate *priv;
+
+	g_return_if_fail (IRIS_IS_PORT (port));
+	g_return_if_fail (receiver == NULL || IRIS_IS_RECEIVER (receiver));
+
+	priv = port->priv;
+
+	g_mutex_lock (priv->mutex);
+
+	if (!priv->receiver) {
+		// FIXME: Unhook current receiver
+	}
+
+	priv->receiver = receiver;
+
+	if (receiver) {
+		// FIXME: Hook current receiver
+	}
+
+	g_mutex_unlock (priv->mutex);
+}
+
+static void
 iris_port_finalize (GObject *object)
 {
 	G_OBJECT_CLASS (iris_port_parent_class)->finalize (object);
@@ -47,6 +73,7 @@ iris_port_class_init (IrisPortClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
+	klass->set_receiver = iris_port_set_receiver_real;
 	object_class->finalize = iris_port_finalize;
 
 	g_type_class_add_private (object_class, sizeof (IrisPortPrivate));
@@ -144,33 +171,18 @@ iris_port_has_receiver (IrisPort *port)
 }
 
 void
-iris_port_hook (IrisPort     *port,
-                IrisReceiver *receiver)
+iris_port_set_receiver (IrisPort     *port,
+                        IrisReceiver *receiver)
 {
-	IrisPortPrivate *priv;
-
 	g_return_if_fail (IRIS_IS_PORT (port));
-	g_return_if_fail (IRIS_IS_RECEIVER (receiver));
 
-	priv = port->priv;
-
-	g_mutex_lock (priv->mutex);
-	if (!priv->receiver)
-		priv->receiver = receiver;
-	g_mutex_unlock (priv->mutex);
+	if (IRIS_PORT_GET_CLASS (port)->set_receiver)
+		IRIS_PORT_GET_CLASS (port)->set_receiver (port, receiver);
 }
 
-void
-iris_port_unhook (IrisPort *port)
+IrisReceiver*
+iris_port_get_receiver (IrisPort *port)
 {
-	IrisPortPrivate *priv;
-
-	g_return_if_fail (IRIS_IS_PORT (port));
-
-	priv = port->priv;
-
-	g_mutex_lock (priv->mutex);
-	// FIXME: Call unhook routines
-	priv->receiver = NULL;
-	g_mutex_unlock (priv->mutex);
+	g_return_val_if_fail (IRIS_IS_PORT (port), NULL);
+	return g_atomic_pointer_get (&port->priv->receiver);
 }
