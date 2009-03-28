@@ -53,10 +53,12 @@ iris_port_set_receiver_real (IrisPort     *port,
 		// FIXME: Unhook current receiver
 	}
 
-	priv->receiver = receiver;
-
 	if (receiver) {
+		priv->receiver = g_object_ref (receiver);
 		// FIXME: Hook current receiver
+	}
+	else {
+		priv->receiver = NULL;
 	}
 
 	g_mutex_unlock (priv->mutex);
@@ -163,6 +165,14 @@ iris_port_post (IrisPort    *port,
 	}
 }
 
+/**
+ * iris_port_has_receiver:
+ * @port: An #IrisPort
+ *
+ * Determines if the port is currently connected to a receiver.
+ *
+ * Return value: TRUE if there is a receiver hooked up.
+ */
 gboolean
 iris_port_has_receiver (IrisPort *port)
 {
@@ -170,6 +180,14 @@ iris_port_has_receiver (IrisPort *port)
 	return (g_atomic_pointer_get (&port->priv->receiver) != NULL);
 }
 
+/**
+ * iris_port_set_receiver:
+ * @port: An #IrisPort
+ * @receiver: An #IrisReceiver
+ *
+ * Sets the current receiver for the port.  If a receiver already
+ * exists, it will be removed.
+ */
 void
 iris_port_set_receiver (IrisPort     *port,
                         IrisReceiver *receiver)
@@ -180,6 +198,14 @@ iris_port_set_receiver (IrisPort     *port,
 		IRIS_PORT_GET_CLASS (port)->set_receiver (port, receiver);
 }
 
+/**
+ * iris_port_get_receiver:
+ * @port: An #IrisPort
+ *
+ * Retreives the currently attached receiver for the port.
+ *
+ * Return value: An #IrisReceiver instance or %NULL.
+ */
 IrisReceiver*
 iris_port_get_receiver (IrisPort *port)
 {
