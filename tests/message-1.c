@@ -232,6 +232,27 @@ set_boolean1 (void)
 	g_assert (iris_message_get_boolean (msg, "id") == TRUE);
 }
 
+static void
+million_create (void)
+{
+	IrisMessage *msg;
+	int i;
+
+	GTimer *timer = g_timer_new ();
+
+	g_timer_start (timer);
+
+	for (i = 0; i < 1000000; i++) {
+		//msg = iris_message_new_full (1, "id", G_TYPE_INT, 1, NULL);
+		msg = iris_message_new (1);
+		//iris_message_unref (msg);
+	}
+
+	g_timer_stop (timer);
+
+	//g_debug ("Ellapsed %lf", g_timer_elapsed (timer, NULL));
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -258,6 +279,7 @@ main (int   argc,
 	g_test_add_func ("/message/set_char1", set_char1);
 	g_test_add_func ("/message/set_uchar1", set_uchar1);
 	g_test_add_func ("/message/set_boolean1", set_boolean1);
+	g_test_add_func ("/message/million_create", million_create);
 
 	return g_test_run ();
 }
