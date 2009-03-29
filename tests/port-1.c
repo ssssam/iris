@@ -5,6 +5,7 @@
 #include "mocks/mock-callback-receiver.c"
 
 #define ITER_COUNT 1000000
+#define SHORT_ITER_COUNT 100
 
 static void
 get_type1 (void)
@@ -83,22 +84,34 @@ many_deliver1 (void)
 }
 
 static void
+queue1_cb (gpointer data)
+{
+	gint *counter = data;
+	g_atomic_int_inc (counter);
+}
+
+static void
 queue1 (void)
 {
 	IrisMessage  *msg;
 	IrisPort     *port;
 	IrisReceiver *receiver;
+	gint          counter = 0;
 	gint          i = 0;
 
 	port = iris_port_new ();
-	receiver = mock_callback_receiver_new (NULL, NULL);
+	receiver = mock_callback_receiver_new (queue1_cb, &counter);
 	iris_port_set_receiver (port, receiver);
 	mock_callback_receiver_block (MOCK_CALLBACK_RECEIVER (receiver));
 
-	for (i = 0; i < 100; i++) {
+	for (i = 0; i < SHORT_ITER_COUNT; i++) {
 		msg = iris_message_new (1);
 		iris_port_post (port, msg);
 	}
+
+	/* queue1_cb should get called once since we queue immediately
+	 * after that. */
+	g_assert_cmpint (counter, ==, 1);
 }
 
 gint
