@@ -31,12 +31,7 @@ static IrisDeliveryStatus
 _iris_receiver_deliver_real (IrisReceiver *receiver,
                              IrisMessage  *message)
 {
-	IrisReceiverPrivate *priv;
-
 	g_return_val_if_fail (message != NULL, IRIS_DELIVERY_REMOVE);
-
-	priv = receiver->priv;
-
 	return IRIS_DELIVERY_ACCEPTED;
 }
 

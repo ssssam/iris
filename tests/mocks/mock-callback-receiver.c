@@ -29,6 +29,8 @@ deliver_impl (IrisReceiver *receiver,
 	if (callback)
 		callback (cbr->priv->data);
 
+	/* just discard the item */
+
 	return IRIS_DELIVERY_ACCEPTED;
 }
 
@@ -61,4 +63,3 @@ mock_callback_receiver_new (GCallback callback,
 
 	return IRIS_RECEIVER (receiver);
 }
-
