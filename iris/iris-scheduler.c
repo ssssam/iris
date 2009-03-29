@@ -19,3 +19,34 @@
  */
 
 #include "iris-scheduler.h"
+
+struct _IrisSchedulerPrivate
+{
+	gpointer dummy;
+};
+
+G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT);
+
+static void
+iris_scheduler_finalize (GObject *object)
+{
+	G_OBJECT_CLASS (iris_scheduler_parent_class)->finalize (object);
+}
+
+static void
+iris_scheduler_class_init (IrisSchedulerClass *klass)
+{
+	GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+	object_class->finalize = iris_scheduler_finalize;
+
+	g_type_class_add_private (object_class, sizeof (IrisSchedulerPrivate));
+}
+
+static void
+iris_scheduler_init (IrisScheduler *scheduler)
+{
+	scheduler->priv = G_TYPE_INSTANCE_GET_PRIVATE (scheduler,
+	                                          IRIS_TYPE_SCHEDULER,
+	                                          IrisSchedulerPrivate);
+}

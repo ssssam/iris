@@ -25,7 +25,50 @@
 
 G_BEGIN_DECLS
 
+#define IRIS_TYPE_SCHEDULER (iris_scheduler_get_type ())
 
+#define IRIS_SCHEDULER(obj)                  \
+    (G_TYPE_CHECK_INSTANCE_CAST ((obj),      \
+     IRIS_TYPE_SCHEDULER, IrisScheduler))
+
+#define IRIS_SCHEDULER_CONST(obj)            \
+    (G_TYPE_CHECK_INSTANCE_CAST ((obj),      \
+     IRIS_TYPE_SCHEDULER, IrisScheduler const))
+
+#define IRIS_SCHEDULER_CLASS(klass)          \
+    (G_TYPE_CHECK_CLASS_CAST ((klass),       \
+     IRIS_TYPE_SCHEDULER, IrisSchedulerClass))
+
+#define IRIS_IS_SCHEDULER(obj)               \
+    (G_TYPE_CHECK_INSTANCE_TYPE ((obj),      \
+     IRIS_TYPE_SCHEDULER))
+
+#define IRIS_IS_SCHEDULER_CLASS(klass)       \
+    (G_TYPE_CHECK_CLASS_TYPE ((klass),       \
+     IRIS_TYPE_SCHEDULER))
+
+#define IRIS_SCHEDULER_GET_CLASS(obj)        \
+    (G_TYPE_INSTANCE_GET_CLASS ((obj),       \
+     IRIS_TYPE_SCHEDULER, IrisSchedulerClass))
+
+typedef struct _IrisScheduler        IrisScheduler;
+typedef struct _IrisSchedulerClass   IrisSchedulerClass;
+typedef struct _IrisSchedulerPrivate IrisSchedulerPrivate;
+
+struct _IrisScheduler
+{
+	GObject parent;
+
+	IrisSchedulerPrivate *priv;
+};
+
+struct _IrisSchedulerClass
+{
+	GObjectClass  parent_class;
+};
+
+GType          iris_scheduler_get_type (void) G_GNUC_CONST;
+IrisScheduler* iris_scheduler_new      (void);
 
 G_END_DECLS
 
