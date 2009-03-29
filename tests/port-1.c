@@ -170,6 +170,87 @@ queue3 (void)
 	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT - 1);
 }
 
+static void
+flush1_cb (gpointer data)
+{
+	gint *counter = data;
+	g_atomic_int_inc (counter);
+}
+
+static void
+flush1 (void)
+{
+	IrisMessage  *msg;
+	IrisPort     *port;
+	IrisReceiver *receiver;
+	gint          counter = 0;
+	gint          i;
+
+	port = iris_port_new ();
+	receiver = mock_callback_receiver_new (G_CALLBACK (flush1_cb), &counter);
+	mock_callback_receiver_pause (MOCK_CALLBACK_RECEIVER (receiver));
+	iris_port_set_receiver (port, receiver);
+
+	g_assert (port != NULL);
+	g_assert (receiver != NULL);
+
+	for (i = 0; i < SHORT_ITER_COUNT; i++) {
+		msg = iris_message_new (1);
+		g_assert (msg != NULL);
+		iris_port_post (port, msg);
+	}
+
+	/* the first item is delivered, the rest pause. */
+	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT - 1);
+	mock_callback_receiver_reset (MOCK_CALLBACK_RECEIVER (receiver));
+
+	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT - 1);
+
+	/* normally, we wouldnt need to flush this. but we do for our
+	 * mock receiver since it is not doing it for us.
+	 */
+	iris_port_flush (port);
+
+	g_assert_cmpint (iris_port_get_queue_count (port), ==, 0);
+}
+
+static void
+flush2 (void)
+{
+	IrisMessage  *msg;
+	IrisPort     *port;
+	IrisReceiver *receiver;
+	gint          counter = 0;
+	gint          i;
+
+	port = iris_port_new ();
+	receiver = mock_callback_receiver_new (G_CALLBACK (flush1_cb), &counter);
+	mock_callback_receiver_block (MOCK_CALLBACK_RECEIVER (receiver));
+	iris_port_set_receiver (port, receiver);
+
+	g_assert (port != NULL);
+	g_assert (receiver != NULL);
+
+	for (i = 0; i < SHORT_ITER_COUNT; i++) {
+		msg = iris_message_new (1);
+		g_assert (msg != NULL);
+		iris_port_post (port, msg);
+	}
+
+	/* the first item is delivered, the rest pause. */
+	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT);
+
+	/* old receiver was removed, lets create a new one and attach it so
+	 * that everything flushes into the new receiver.
+	 */
+
+	receiver = mock_callback_receiver_new (NULL, NULL);
+	iris_port_set_receiver (port, receiver);
+
+	/* All items should be flushed to new receiver. */
+	g_assert_cmpint (iris_port_get_queue_count (port), ==, 0);
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -185,6 +266,8 @@ main (int   argc,
 	g_test_add_func ("/port/queue1", queue1);
 	g_test_add_func ("/port/queue2", queue2);
 	g_test_add_func ("/port/queue3", queue3);
+	g_test_add_func ("/port/flush1", flush1);
+	g_test_add_func ("/port/flush2", flush2);
 
 	return g_test_run ();
 }
