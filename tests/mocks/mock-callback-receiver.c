@@ -34,13 +34,13 @@ deliver_impl (IrisReceiver *receiver,
 
 	/* just discard the item */
 
-	if (cbr->priv->block)
+	if (g_atomic_int_get (&cbr->priv->block))
 		return IRIS_DELIVERY_REMOVE;
 
-	if (cbr->priv->pause)
+	if (g_atomic_int_get (&cbr->priv->pause))
 		return IRIS_DELIVERY_ACCEPTED_PAUSE;
 
-	if (cbr->priv->oneshot)
+	if (g_atomic_int_get (&cbr->priv->oneshot))
 		return IRIS_DELIVERY_ACCEPTED_REMOVE;
 
 	return IRIS_DELIVERY_ACCEPTED;
@@ -85,9 +85,9 @@ mock_callback_receiver_block (MockCallbackReceiver *receiver)
 void
 mock_callback_receiver_reset (MockCallbackReceiver *receiver)
 {
-	receiver->priv->block = FALSE;
-	receiver->priv->pause = FALSE;
-	receiver->priv->oneshot = FALSE;
+	g_atomic_int_set (&receiver->priv->block, FALSE);
+	g_atomic_int_set (&receiver->priv->pause, FALSE);
+	g_atomic_int_set (&receiver->priv->oneshot, FALSE);
 }
 
 void
