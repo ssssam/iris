@@ -118,6 +118,58 @@ queue1 (void)
 	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT);
 }
 
+static void
+queue2 (void)
+{
+	IrisMessage  *msg;
+	IrisPort     *port;
+	IrisReceiver *receiver;
+	gint          counter = 0;
+	gint          i = 0;
+
+	port = iris_port_new ();
+	receiver = mock_callback_receiver_new (G_CALLBACK (queue1_cb), &counter);
+	iris_port_set_receiver (port, receiver);
+	mock_callback_receiver_pause (MOCK_CALLBACK_RECEIVER (receiver));
+
+	for (i = 0; i < SHORT_ITER_COUNT; i++) {
+		msg = iris_message_new (1);
+		iris_port_post (port, msg);
+	}
+
+	/* queue1_cb should get called once since we queue immediately after that. */
+	g_assert_cmpint (counter, ==, 1);
+
+	/* receiver is in accept and pause, so total queued should be total-1 */
+	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT - 1);
+}
+
+static void
+queue3 (void)
+{
+	IrisMessage  *msg;
+	IrisPort     *port;
+	IrisReceiver *receiver;
+	gint          counter = 0;
+	gint          i = 0;
+
+	port = iris_port_new ();
+	receiver = mock_callback_receiver_new (G_CALLBACK (queue1_cb), &counter);
+	iris_port_set_receiver (port, receiver);
+	mock_callback_receiver_oneshot (MOCK_CALLBACK_RECEIVER (receiver));
+
+	for (i = 0; i < SHORT_ITER_COUNT; i++) {
+		msg = iris_message_new (1);
+		iris_port_post (port, msg);
+	}
+
+	/* queue1_cb should get called once since we queue immediately after that. */
+	g_assert_cmpint (counter, ==, 1);
+
+	/* receiver is in accept and pause, so total queued should be total-1 */
+	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT - 1);
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -131,6 +183,8 @@ main (int   argc,
 	g_test_add_func ("/port/deliver1", deliver1);
 	g_test_add_func ("/port/many_deliver1", many_deliver1);
 	g_test_add_func ("/port/queue1", queue1);
+	g_test_add_func ("/port/queue2", queue2);
+	g_test_add_func ("/port/queue3", queue3);
 
 	return g_test_run ();
 }
