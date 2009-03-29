@@ -82,6 +82,25 @@ many_deliver1 (void)
 	g_assert_cmpint (counter, ==, ITER_COUNT);
 }
 
+static void
+queue1 (void)
+{
+	IrisMessage  *msg;
+	IrisPort     *port;
+	IrisReceiver *receiver;
+	gint          i = 0;
+
+	port = iris_port_new ();
+	receiver = mock_callback_receiver_new (NULL, NULL);
+	iris_port_set_receiver (port, receiver);
+	mock_callback_receiver_block (MOCK_CALLBACK_RECEIVER (receiver));
+
+	for (i = 0; i < 100; i++) {
+		msg = iris_message_new (1);
+		iris_port_post (port, msg);
+	}
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -94,6 +113,7 @@ main (int   argc,
 	g_test_add_func ("/port/has_receiver1", has_receiver1);
 	g_test_add_func ("/port/deliver1", deliver1);
 	g_test_add_func ("/port/many_deliver1", many_deliver1);
+	g_test_add_func ("/port/queue1", queue1);
 
 	return g_test_run ();
 }
