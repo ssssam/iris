@@ -32,6 +32,7 @@ struct _IrisPortPrivate
 	IrisReceiver *receiver;
 	GMutex       *mutex;
 	gint          state;
+	IrisMessage  *current;
 };
 
 G_DEFINE_TYPE (IrisPort, iris_port, G_TYPE_OBJECT);
@@ -155,6 +156,8 @@ iris_port_post (IrisPort    *port,
 			g_mutex_unlock (priv->mutex);
 			break;
 		case IRIS_DELIVERY_REMOVE:
+			/* store message and fall-through */
+			priv->current = message;
 		case IRIS_DELIVERY_ACCEPTED_REMOVE:
 			g_mutex_lock (priv->mutex);
 			if (priv->receiver == receiver)
