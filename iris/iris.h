@@ -21,6 +21,7 @@
 #ifndef __IRIS_H__
 #define __IRIS_H__
 
+#include "iris-arbiter.h"
 #include "iris-message.h"
 #include "iris-port.h"
 #include "iris-receiver.h"
