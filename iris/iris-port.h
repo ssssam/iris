@@ -81,6 +81,7 @@ IrisPort*     iris_port_new          (void);
 
 void          iris_port_post         (IrisPort *port, IrisMessage *message);
 void          iris_port_repost       (IrisPort *port, IrisMessage *message);
+void          iris_port_flush        (IrisPort *port);
 
 gboolean      iris_port_has_receiver (IrisPort *port);
 IrisReceiver* iris_port_get_receiver (IrisPort *port);

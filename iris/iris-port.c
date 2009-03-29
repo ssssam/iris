@@ -61,6 +61,7 @@ iris_port_set_receiver_real (IrisPort     *port,
                              IrisReceiver *receiver)
 {
 	IrisPortPrivate *priv;
+	gboolean         flush = FALSE;
 
 	g_return_if_fail (IRIS_IS_PORT (port));
 	g_return_if_fail (receiver == NULL || IRIS_IS_RECEIVER (receiver));
@@ -75,6 +76,7 @@ iris_port_set_receiver_real (IrisPort     *port,
 
 	if (receiver) {
 		priv->receiver = g_object_ref (receiver);
+		flush = TRUE;
 		// FIXME: Hook current receiver
 	}
 	else {
@@ -82,6 +84,9 @@ iris_port_set_receiver_real (IrisPort     *port,
 	}
 
 	g_mutex_unlock (priv->mutex);
+
+	if (flush)
+		iris_port_flush (port);
 }
 
 static void
@@ -263,4 +268,57 @@ iris_port_get_queue_count (IrisPort *port)
 	g_mutex_unlock (priv->mutex);
 
 	return queue_count;
+}
+
+void
+iris_port_flush (IrisPort *port)
+{
+	IrisPortPrivate *priv;
+	GQueue          *queue   = NULL;
+	IrisMessage     *message = NULL;
+
+	g_return_if_fail (IRIS_IS_PORT (port));
+
+	priv = port->priv;
+
+	/* FIXME: To save time while prototyping, I'm going to do a bad
+	 *   bad thing.  We will pull all of the items out of the port
+	 *   that currently exist and simply try to post them again to
+	 *   the port.  This is bad because if many one-shot receivers
+	 *   are used then we could potentially have a LOT of extra
+	 *   queue's created and time spent locking to re-push back in.
+	 *   However, there should not contention on the locks.
+	 */
+
+	g_mutex_lock (priv->mutex);
+
+	/* Unpause if we are currently paused. */
+	priv->state = priv->state & ~IRIS_PORT_STATE_PAUSED;
+	g_assert ((priv->state & IRIS_PORT_STATE_PAUSED) == 0);
+
+	/* Copy our current held message and queue */
+	message = priv->current;
+	queue = priv->queue;
+
+	/* Unset them, they will get recreated by iris_port_post() if
+	 * needed during our flush.
+	 */
+	priv->current = NULL;
+	priv->queue = NULL;
+
+	g_mutex_unlock (priv->mutex);
+
+	if (message) {
+		iris_port_post (port, message);
+		iris_message_unref (message);
+	}
+
+	if (queue) {
+		while ((message = g_queue_pop_head (queue)) != NULL) {
+			iris_port_post (port, message);
+			iris_message_unref (message);
+		}
+
+		g_queue_free (queue);
+	}
 }
