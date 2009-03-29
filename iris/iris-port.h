@@ -76,16 +76,16 @@ struct _IrisPortClass
 	void          (*set_receiver) (IrisPort *port, IrisReceiver *receiver);
 };
 
-GType         iris_port_get_type     (void) G_GNUC_CONST;
-IrisPort*     iris_port_new          (void);
+GType         iris_port_get_type        (void) G_GNUC_CONST;
+IrisPort*     iris_port_new             (void);
 
-void          iris_port_post         (IrisPort *port, IrisMessage *message);
-void          iris_port_repost       (IrisPort *port, IrisMessage *message);
-void          iris_port_flush        (IrisPort *port);
+void          iris_port_post            (IrisPort *port, IrisMessage *message);
+void          iris_port_repost          (IrisPort *port, IrisMessage *message);
+void          iris_port_flush           (IrisPort *port);
 
-gboolean      iris_port_has_receiver (IrisPort *port);
-IrisReceiver* iris_port_get_receiver (IrisPort *port);
-void          iris_port_set_receiver (IrisPort *port, IrisReceiver *receiver);
+gboolean      iris_port_has_receiver    (IrisPort *port);
+IrisReceiver* iris_port_get_receiver    (IrisPort *port);
+void          iris_port_set_receiver    (IrisPort *port, IrisReceiver *receiver);
 
 guint         iris_port_get_queue_count (IrisPort *port);
 
