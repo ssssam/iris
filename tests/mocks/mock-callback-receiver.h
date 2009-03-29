@@ -34,7 +34,9 @@ GType         mock_callback_receiver_get_type (void) G_GNUC_CONST;
 IrisReceiver *mock_callback_receiver_new      (GCallback callback, gpointer data);
 
 void          mock_callback_receiver_block    (MockCallbackReceiver *receiver);
-void          mock_callback_receiver_unblock  (MockCallbackReceiver *receiver);
+void          mock_callback_receiver_oneshot  (MockCallbackReceiver *receiver);
+void          mock_callback_receiver_pause    (MockCallbackReceiver *receiver);
+void          mock_callback_receiver_reset    (MockCallbackReceiver *receiver);
 
 G_END_DECLS
 

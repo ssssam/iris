@@ -10,6 +10,8 @@ struct _MockCallbackReceiverPrivate
 	GCallback callback;
 	gpointer  data;
 	gboolean  block;
+	gboolean  pause;
+	gboolean  oneshot;
 };
 
 G_DEFINE_TYPE (MockCallbackReceiver, mock_callback_receiver, IRIS_TYPE_RECEIVER);
@@ -34,6 +36,12 @@ deliver_impl (IrisReceiver *receiver,
 
 	if (cbr->priv->block)
 		return IRIS_DELIVERY_REMOVE;
+
+	if (cbr->priv->pause)
+		return IRIS_DELIVERY_ACCEPTED_PAUSE;
+
+	if (cbr->priv->oneshot)
+		return IRIS_DELIVERY_ACCEPTED_REMOVE;
 
 	return IRIS_DELIVERY_ACCEPTED;
 }
@@ -75,7 +83,21 @@ mock_callback_receiver_block (MockCallbackReceiver *receiver)
 }
 
 void
-mock_callback_receiver_unblock (MockCallbackReceiver *receiver)
+mock_callback_receiver_reset (MockCallbackReceiver *receiver)
 {
 	receiver->priv->block = FALSE;
+	receiver->priv->pause = FALSE;
+	receiver->priv->oneshot = FALSE;
+}
+
+void
+mock_callback_receiver_pause (MockCallbackReceiver *receiver)
+{
+	receiver->priv->pause = TRUE;
+}
+
+void
+mock_callback_receiver_oneshot (MockCallbackReceiver *receiver)
+{
+	receiver->priv->oneshot = TRUE;
 }
