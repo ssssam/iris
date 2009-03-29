@@ -22,7 +22,10 @@
 #define __IRIS_RECEIVER_H__
 
 #include <glib-object.h>
+
+#include "iris-arbiter.h"
 #include "iris-message.h"
+#include "iris-scheduler.h"
 
 G_BEGIN_DECLS
 
@@ -80,7 +83,9 @@ struct _IrisReceiverClass
 
 GType              iris_receiver_get_type (void) G_GNUC_CONST;
 IrisReceiver*      iris_receiver_new      (void);
+IrisReceiver*      iris_receiver_new_full (IrisScheduler *scheduler, IrisArbiter *arbiter);
 IrisDeliveryStatus iris_receiver_deliver  (IrisReceiver *receiver, IrisMessage *message);
+gboolean           iris_receiver_has_arbiter (IrisReceiver *receiver);
 
 G_END_DECLS
 
