@@ -68,7 +68,6 @@ struct _IrisSchedulerClass
 };
 
 GType          iris_scheduler_get_type (void) G_GNUC_CONST;
-IrisScheduler* iris_scheduler_new      (void);
 
 G_END_DECLS
 

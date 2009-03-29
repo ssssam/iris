@@ -68,7 +68,6 @@ struct _IrisArbiterClass
 };
 
 GType          iris_arbiter_get_type (void) G_GNUC_CONST;
-IrisArbiter*   iris_arbiter_new      (void);
 
 G_END_DECLS
 

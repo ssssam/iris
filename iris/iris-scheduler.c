@@ -19,6 +19,7 @@
  */
 
 #include "iris-scheduler.h"
+#include "iris-scheduler-private.h"
 
 struct _IrisSchedulerPrivate
 {
@@ -49,4 +50,10 @@ iris_scheduler_init (IrisScheduler *scheduler)
 	scheduler->priv = G_TYPE_INSTANCE_GET_PRIVATE (scheduler,
 	                                          IRIS_TYPE_SCHEDULER,
 	                                          IrisSchedulerPrivate);
+}
+
+IrisScheduler*
+iris_scheduler_new (void)
+{
+	return g_object_new (IRIS_TYPE_SCHEDULER, NULL);
 }

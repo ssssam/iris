@@ -19,6 +19,7 @@
  */
 
 #include "iris-receiver.h"
+#include "iris-receiver-private.h"
 
 struct _IrisReceiverPrivate
 {
@@ -135,6 +136,8 @@ iris_receiver_new_full (IrisScheduler *scheduler,
  * iris_receiver_has_arbiter:
  * @receiver: An #IrisReceiver
  *
+ * Private, used by unit tests and internally only.
+ *
  * Determines if the receiver currently has an arbiter attached.
  *
  * Return value: TRUE if an arbiter exists.
@@ -149,4 +152,26 @@ iris_receiver_has_arbiter (IrisReceiver *receiver)
 	priv = receiver->priv;
 
 	return g_atomic_pointer_get (&priv->arbiter) != NULL;
+}
+
+/**
+ * iris_receiver_has_scheduler:
+ * @receiver: An #IrisReceiver
+ *
+ * Private, used by unit tests and internally only.
+ *
+ * Determines if the receiver currently has a scheduler attached.
+ *
+ * Return value: TRUE if a scheduler exists.
+ */
+gboolean
+iris_receiver_has_scheduler (IrisReceiver *receiver)
+{
+	IrisReceiverPrivate *priv;
+
+	g_return_val_if_fail (IRIS_IS_RECEIVER (receiver), FALSE);
+
+	priv = receiver->priv;
+
+	return g_atomic_pointer_get (&priv->scheduler) != NULL;
 }

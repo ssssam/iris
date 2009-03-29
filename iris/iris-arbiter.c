@@ -19,6 +19,7 @@
  */
 
 #include "iris-arbiter.h"
+#include "iris-arbiter-private.h"
 
 struct _IrisArbiterPrivate
 {
@@ -49,4 +50,10 @@ iris_arbiter_init (IrisArbiter *arbiter)
 	arbiter->priv = G_TYPE_INSTANCE_GET_PRIVATE (arbiter,
 	                                          IRIS_TYPE_ARBITER,
 	                                          IrisArbiterPrivate);
+}
+
+IrisArbiter*
+iris_arbiter_new (void)
+{
+	return g_object_new (IRIS_TYPE_ARBITER, NULL);
 }
