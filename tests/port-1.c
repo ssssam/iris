@@ -100,7 +100,7 @@ queue1 (void)
 	gint          i = 0;
 
 	port = iris_port_new ();
-	receiver = mock_callback_receiver_new (queue1_cb, &counter);
+	receiver = mock_callback_receiver_new (G_CALLBACK (queue1_cb), &counter);
 	iris_port_set_receiver (port, receiver);
 	mock_callback_receiver_block (MOCK_CALLBACK_RECEIVER (receiver));
 
@@ -112,6 +112,10 @@ queue1 (void)
 	/* queue1_cb should get called once since we queue immediately
 	 * after that. */
 	g_assert_cmpint (counter, ==, 1);
+
+	/* make sure the queue size + waiting in port is the same as
+	 * we delivered. */
+	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT);
 }
 
 gint
