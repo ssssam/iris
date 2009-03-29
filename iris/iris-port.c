@@ -129,6 +129,8 @@ iris_port_post (IrisPort    *port,
 	if (PORT_PAUSED (port) || !priv->receiver) {
 		g_mutex_lock (priv->mutex);
 		if (PORT_PAUSED (port) || !priv->receiver) {
+			if (!priv->queue)
+				priv->queue = g_queue_new ();
 			g_queue_push_head (priv->queue, message);
 		}
 		else {
