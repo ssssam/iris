@@ -86,6 +86,8 @@ gboolean      iris_port_has_receiver (IrisPort *port);
 IrisReceiver* iris_port_get_receiver (IrisPort *port);
 void          iris_port_set_receiver (IrisPort *port, IrisReceiver *receiver);
 
+guint         iris_port_get_queue_count (IrisPort *port);
+
 G_END_DECLS
 
 #endif /* __IRIS_PORT_H__ */

@@ -217,3 +217,31 @@ iris_port_get_receiver (IrisPort *port)
 	g_return_val_if_fail (IRIS_IS_PORT (port), NULL);
 	return g_atomic_pointer_get (&port->priv->receiver);
 }
+
+/**
+ * iris_port_get_queue_count:
+ * @port: An #IrisPort
+ *
+ * Retreives the count of queued items still waiting to be delivered to
+ * a receiver.
+ *
+ * Return value: a #gint of the number of queued messages.
+ */
+guint
+iris_port_get_queue_count (IrisPort *port)
+{
+	IrisPortPrivate *priv;
+	guint            queue_count;
+
+	g_return_val_if_fail (IRIS_IS_PORT (port), 0);
+
+	priv = port->priv;
+
+	g_mutex_lock (priv->mutex);
+	queue_count = priv->current != NULL ? 1 : 0;
+	if (priv->queue)
+		queue_count += g_queue_get_length (priv->queue);
+	g_mutex_unlock (priv->mutex);
+
+	return queue_count;
+}
