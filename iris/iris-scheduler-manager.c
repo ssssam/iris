@@ -26,6 +26,21 @@
  * they will call the manager to take them back and rebalance.
  */
 
+/* When a thread is created, we use our management function as the
+ * delegate and for data a queue of commands for managing the thread
+ * lifetime.
+ *
+ * The out function to the add_thread method should set the queue
+ * that is used by the thread to get new work items.  The scheduler
+ * manager can then send that new queue over the command queue so
+ * that the thread can get worker methods.  We should grab workers
+ * using a try_get() so that if we time out, we can ask the
+ * scheduler manager to remove us.  If removed, the scheduler manager
+ * will send a command telling the thread to clear its state. Then
+ * the thread can block on a get() for a further command. If the
+ * shutdown command is called, then the thread should exit.
+ */
+
 #define TIMEOUT_THRESHOLD (G_USEC_PER_SEC * 5) /* 5 seconds */
 
 static gboolean prepare_func  (GSource *source, gint *timeout_);
