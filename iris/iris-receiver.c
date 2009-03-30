@@ -273,20 +273,24 @@ iris_receiver_deliver (IrisReceiver *receiver,
  * Return value: The newly created #IrisReceiver instance.
  */
 IrisReceiver*
-iris_receiver_new_full (IrisScheduler *scheduler,
-                        IrisArbiter   *arbiter)
+iris_receiver_new_full (IrisScheduler      *scheduler,
+                        IrisArbiter        *arbiter,
+                        IrisMessageHandler  callback,
+                        gpointer            data)
 {
 	IrisReceiver        *receiver;
 	IrisReceiverPrivate *priv;
 
 	g_return_val_if_fail (IRIS_IS_SCHEDULER (scheduler), NULL);
-	g_return_val_if_fail (IRIS_IS_ARBITER (arbiter), NULL);
+	g_return_val_if_fail (arbiter == NULL || IRIS_IS_ARBITER (arbiter), NULL);
 
 	receiver = iris_receiver_new ();
 	priv = receiver->priv;
 
 	priv->scheduler = scheduler;
 	priv->arbiter = arbiter;
+	priv->callback = callback;
+	priv->data = data;
 
 	return receiver;
 }
