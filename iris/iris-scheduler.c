@@ -18,6 +18,10 @@
  * 02110-1301 USA
  */
 
+#ifdef LINUX
+#include <sys/sysinfo.h>
+#endif
+
 #include "iris-scheduler.h"
 #include "iris-scheduler-private.h"
 
@@ -45,6 +49,47 @@ iris_scheduler_queue_real (IrisScheduler     *scheduler,
 		notify (data);
 }
 
+guint
+get_n_cpu (void)
+{
+#ifdef Linux
+	return get_nprocs ();
+#else
+	/* FIXME: Support more than Linux. */
+	return 1;
+#endif
+}
+
+static guint
+iris_scheduler_get_min_threads_real (IrisScheduler *scheduler)
+{
+	/* min-thread of 0 means the scheduler can yield all of
+	 * its threads until it needs one. at which point it needs
+	 * to request a thread from the manager.
+	 */
+	return 0;
+}
+
+static guint
+iris_scheduler_get_max_threads_real (IrisScheduler *scheduler)
+{
+	/* A max threads of 0 means unlimited. By default, we ask
+	 * for no more than n_cpu. If there is only one cpu, we
+	 * will default to 2.
+	 */
+	guint n_cpu       = get_n_cpu ();
+	guint max_threads = 0;
+
+	if (n_cpu == 1)
+		max_threads = 2;
+	else
+		max_threads = n_cpu;
+
+	g_assert (max_threads > 0);
+
+	return max_threads;
+}
+
 static void
 iris_scheduler_finalize (GObject *object)
 {
@@ -57,6 +102,9 @@ iris_scheduler_class_init (IrisSchedulerClass *klass)
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
 	klass->queue = iris_scheduler_queue_real;
+	klass->get_min_threads = iris_scheduler_get_min_threads_real;
+	klass->get_max_threads = iris_scheduler_get_max_threads_real;
+
 	object_class->finalize = iris_scheduler_finalize;
 
 	g_type_class_add_private (object_class, sizeof (IrisSchedulerPrivate));

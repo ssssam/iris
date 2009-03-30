@@ -56,12 +56,17 @@ libiris_@IRIS_API_VERSION@_la_CFLAGS =			\
 	$(IRIS_CFLAGS)					\
 	$(NULL)
 
+if PLATFORM_LINUX
+libiris_@IRIS_API_VERSION@_la_CFLAGS += "-DLINUX"
+endif
+
 libiris_@IRIS_API_VERSION@_la_LDFLAGS =			\
 	$(IRIS_GLIB_LT_LDFLAGS) 			\
 	-export-dynamic 				\
 	-export-symbols-regex "^iris.*" 		\
 	-rpath $(libdir) 				\
 	$(NULL)
+
 
 libiris_@IRIS_API_VERSION@_la_LIBADD = $(IRIS_LIBS)
 

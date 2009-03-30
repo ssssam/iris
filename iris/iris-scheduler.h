@@ -68,18 +68,24 @@ struct _IrisSchedulerClass
 {
 	GObjectClass  parent_class;
 
-	void (*queue) (IrisScheduler     *scheduler,
-	               IrisSchedulerFunc  func,
-	               gpointer           data,
-	               GDestroyNotify     notify);
+	guint (*get_max_threads) (IrisScheduler     *scheduler);
+	guint (*get_min_threads) (IrisScheduler     *scheduler);
+
+	void  (*queue)           (IrisScheduler     *scheduler,
+	                          IrisSchedulerFunc  func,
+	                          gpointer           data,
+	                          GDestroyNotify     notify);
 };
 
 GType          iris_scheduler_get_type (void) G_GNUC_CONST;
 
-void           iris_scheduler_queue    (IrisScheduler     *scheduler,
-                                        IrisSchedulerFunc  func,
-                                        gpointer           data,
-                                        GDestroyNotify     notify);
+guint          iris_scheduler_get_min_threads (IrisScheduler *scheduler);
+guint          iris_scheduler_get_max_threads (IrisScheduler *scheduler);
+
+void           iris_scheduler_queue           (IrisScheduler     *scheduler,
+                                               IrisSchedulerFunc  func,
+                                               gpointer           data,
+                                               GDestroyNotify     notify);
 
 G_END_DECLS
 
