@@ -25,7 +25,9 @@
 
 G_BEGIN_DECLS
 
-
+void iris_scheduler_manager_init (GMainContext *context,
+                                  gboolean      use_main,
+                                  GCallback     callback);
 
 G_END_DECLS
 

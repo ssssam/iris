@@ -33,6 +33,8 @@ tests/port-1
 tests/port-1.o
 tests/receiver-1
 tests/receiver-1.o
+tests/scheduler-manager-1
+tests/scheduler-manager-1.o
 doc/reference/html-build.stamp
 doc/reference/html.stamp
 doc/reference/html/
