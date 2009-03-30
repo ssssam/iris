@@ -57,3 +57,13 @@ iris_arbiter_new (void)
 {
 	return g_object_new (IRIS_TYPE_ARBITER, NULL);
 }
+
+IrisReceiveDecision
+iris_arbiter_can_receive (IrisArbiter  *arbiter,
+                          IrisReceiver *receiver)
+{
+	g_return_val_if_fail (IRIS_IS_ARBITER (arbiter), IRIS_RECEIVE_NEVER);
+	if (IRIS_ARBITER_GET_CLASS (arbiter)->can_receive)
+		return IRIS_ARBITER_GET_CLASS (arbiter)->can_receive (arbiter, receiver);
+	return IRIS_RECEIVE_NOW;
+}

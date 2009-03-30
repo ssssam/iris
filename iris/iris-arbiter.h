@@ -23,6 +23,8 @@
 
 #include <glib-object.h>
 
+#include "iris-receiver.h"
+
 G_BEGIN_DECLS
 
 #define IRIS_TYPE_ARBITER (iris_arbiter_get_type ())
@@ -51,9 +53,16 @@ G_BEGIN_DECLS
     (G_TYPE_INSTANCE_GET_CLASS ((obj),     \
      IRIS_TYPE_ARBITER, IrisArbiterClass))
 
-typedef struct _IrisArbiter        IrisArbiter;
-typedef struct _IrisArbiterClass   IrisArbiterClass;
-typedef struct _IrisArbiterPrivate IrisArbiterPrivate;
+typedef struct _IrisArbiter         IrisArbiter;
+typedef struct _IrisArbiterClass    IrisArbiterClass;
+typedef struct _IrisArbiterPrivate  IrisArbiterPrivate;
+
+typedef enum
+{
+	IRIS_RECEIVE_NOW,
+	IRIS_RECEIVE_LATER,
+	IRIS_RECEIVE_NEVER
+} IrisReceiveDecision;
 
 struct _IrisArbiter
 {
@@ -65,9 +74,17 @@ struct _IrisArbiter
 struct _IrisArbiterClass
 {
 	GObjectClass  parent_class;
+
+	IrisReceiveDecision (*can_receive) (IrisArbiter *arbiter, IrisReceiver *receiver);
 };
 
-GType          iris_arbiter_get_type (void) G_GNUC_CONST;
+GType               iris_arbiter_get_type    (void) G_GNUC_CONST;
+IrisReceiveDecision iris_arbiter_can_receive (IrisArbiter *arbiter, IrisReceiver *receiver);
+
+/* This belongs in iris-receiver.h, but due to cyclic headers,
+ * it is in here for now.
+ */
+IrisReceiver*       iris_receiver_new_full   (IrisScheduler *scheduler, IrisArbiter *arbiter);
 
 G_END_DECLS
 
