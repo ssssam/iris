@@ -84,7 +84,7 @@ IrisReceiveDecision iris_arbiter_can_receive (IrisArbiter *arbiter, IrisReceiver
 /* This belongs in iris-receiver.h, but due to cyclic headers,
  * it is in here for now.
  */
-IrisReceiver*       iris_receiver_new_full   (IrisScheduler *scheduler, IrisArbiter *arbiter);
+IrisReceiver*       iris_receiver_new_full   (IrisScheduler *scheduler, IrisArbiter *arbiter, IrisMessageHandler handler, gpointer data);
 
 G_END_DECLS
 
