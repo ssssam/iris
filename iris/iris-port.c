@@ -179,9 +179,17 @@ iris_port_post (IrisPort    *port,
 			priv->state |= IRIS_PORT_STATE_PAUSED;
 			g_mutex_unlock (priv->mutex);
 			break;
+		case IRIS_DELIVERY_PAUSE:
+			g_mutex_lock (priv->mutex);
+			priv->state |= IRIS_PORT_STATE_PAUSED;
+			g_atomic_pointer_set (&priv->current, message);
+			g_mutex_unlock (priv->mutex);
+			break;
 		case IRIS_DELIVERY_REMOVE:
 			/* store message and fall-through */
-			priv->current = message;
+			g_mutex_lock (priv->mutex);
+			g_atomic_pointer_set (&priv->current, message);
+			g_mutex_unlock (priv->mutex);
 		case IRIS_DELIVERY_ACCEPTED_REMOVE:
 			g_mutex_lock (priv->mutex);
 			if (priv->receiver == receiver)
