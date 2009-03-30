@@ -57,3 +57,20 @@ iris_scheduler_new (void)
 {
 	return g_object_new (IRIS_TYPE_SCHEDULER, NULL);
 }
+
+void
+iris_scheduler_queue (IrisScheduler     *scheduler,
+                      IrisSchedulerFunc  func,
+                      gpointer           data,
+                      GDestroyNotify     notify)
+{
+	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
+	g_return_if_fail (func != NULL);
+
+	// FIXME: Just running synchronously until we get further along in hacking
+
+	func (data);
+
+	if (notify)
+		notify (data);
+}

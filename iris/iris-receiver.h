@@ -23,7 +23,6 @@
 
 #include <glib-object.h>
 
-#include "iris-arbiter.h"
 #include "iris-message.h"
 #include "iris-scheduler.h"
 
@@ -55,17 +54,18 @@ G_BEGIN_DECLS
     (G_TYPE_INSTANCE_GET_CLASS ((obj),      \
      IRIS_TYPE_RECEIVER, IrisReceiverClass))
 
+typedef struct _IrisReceiver        IrisReceiver;
+typedef struct _IrisReceiverClass   IrisReceiverClass;
+typedef struct _IrisReceiverPrivate IrisReceiverPrivate;
+
 typedef enum
 {
 	IRIS_DELIVERY_ACCEPTED          = 1,
 	IRIS_DELIVERY_ACCEPTED_PAUSE    = 2,
 	IRIS_DELIVERY_ACCEPTED_REMOVE   = 3,
-	IRIS_DELIVERY_REMOVE            = 4,
+	IRIS_DELIVERY_PAUSE             = 4,
+	IRIS_DELIVERY_REMOVE            = 5
 } IrisDeliveryStatus;
-
-typedef struct _IrisReceiver        IrisReceiver;
-typedef struct _IrisReceiverClass   IrisReceiverClass;
-typedef struct _IrisReceiverPrivate IrisReceiverPrivate;
 
 struct _IrisReceiver
 {
@@ -84,9 +84,7 @@ struct _IrisReceiverClass
 GType              iris_receiver_get_type (void) G_GNUC_CONST;
 
 IrisReceiver*      iris_receiver_new      (void);
-IrisReceiver*      iris_receiver_new_full (IrisScheduler *scheduler, IrisArbiter *arbiter);
-
-IrisDeliveryStatus iris_receiver_deliver  (IrisReceiver *receiver, IrisMessage *message);
+IrisDeliveryStatus iris_receiver_deliver  (IrisReceiver  *receiver,  IrisMessage *message);
 
 G_END_DECLS
 
