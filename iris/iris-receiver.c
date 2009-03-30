@@ -133,7 +133,9 @@ _iris_receiver_deliver_real (IrisReceiver *receiver,
 		decision = IRIS_DELIVERY_REMOVE;
 		execute = FALSE;
 	}
-	else if (priv->active == priv->max_active || priv->message) {
+	else if ((priv->max_active > 0 && priv->active == priv->max_active)
+	         || g_atomic_pointer_get (&priv->message))
+	{
 		/* We cannot accept an item at this time, so let
 		 * the port queue the item for us.
 		 */
