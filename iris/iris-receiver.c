@@ -166,6 +166,10 @@ _iris_receiver_deliver_real (IrisReceiver *receiver,
 			g_assert_not_reached ();
 		}
 	}
+	else {
+		execute = TRUE;
+		status = IRIS_DELIVERY_ACCEPTED;
+	}
 
 	/* We do this before leaving the lock to prevent a potential
 	 * race condition where we could go over our max concurrent.
