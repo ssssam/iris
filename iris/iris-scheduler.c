@@ -29,6 +29,23 @@ struct _IrisSchedulerPrivate
 G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT);
 
 static void
+iris_scheduler_queue_real (IrisScheduler     *scheduler,
+                           IrisSchedulerFunc  func,
+                           gpointer           data,
+                           GDestroyNotify     notify)
+{
+	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
+	g_return_if_fail (func != NULL);
+
+	// FIXME: Just running synchronously until we get further along in hacking
+
+	func (data);
+
+	if (notify)
+		notify (data);
+}
+
+static void
 iris_scheduler_finalize (GObject *object)
 {
 	G_OBJECT_CLASS (iris_scheduler_parent_class)->finalize (object);
@@ -39,6 +56,7 @@ iris_scheduler_class_init (IrisSchedulerClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
+	klass->queue = iris_scheduler_queue_real;
 	object_class->finalize = iris_scheduler_finalize;
 
 	g_type_class_add_private (object_class, sizeof (IrisSchedulerPrivate));
@@ -64,13 +82,5 @@ iris_scheduler_queue (IrisScheduler     *scheduler,
                       gpointer           data,
                       GDestroyNotify     notify)
 {
-	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
-	g_return_if_fail (func != NULL);
-
-	// FIXME: Just running synchronously until we get further along in hacking
-
-	func (data);
-
-	if (notify)
-		notify (data);
+	IRIS_SCHEDULER_GET_CLASS (scheduler)->queue (scheduler, func, data, notify);
 }

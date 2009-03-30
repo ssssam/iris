@@ -67,6 +67,11 @@ struct _IrisScheduler
 struct _IrisSchedulerClass
 {
 	GObjectClass  parent_class;
+
+	void (*queue) (IrisScheduler     *scheduler,
+	               IrisSchedulerFunc  func,
+	               gpointer           data,
+	               GDestroyNotify     notify);
 };
 
 GType          iris_scheduler_get_type (void) G_GNUC_CONST;
