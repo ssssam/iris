@@ -75,6 +75,12 @@ struct _IrisSchedulerClass
 	                          IrisSchedulerFunc  func,
 	                          gpointer           data,
 	                          GDestroyNotify     notify);
+
+	void (*add_thread)       (IrisScheduler     *scheduler,
+	                          GThread           *thread,
+	                          GAsyncQueue      **queue);
+	void (*remove_thread)    (IrisScheduler     *scheduler,
+	                          GThread           *thread);
 };
 
 GType          iris_scheduler_get_type (void) G_GNUC_CONST;
@@ -86,6 +92,12 @@ void           iris_scheduler_queue           (IrisScheduler     *scheduler,
                                                IrisSchedulerFunc  func,
                                                gpointer           data,
                                                GDestroyNotify     notify);
+
+void           iris_scheduler_add_thread      (IrisScheduler     *scheduler,
+                                               GThread           *thread,
+                                               GAsyncQueue      **queue);
+void           iris_scheduler_remove_thread   (IrisScheduler     *scheduler,
+                                               GThread           *thread);
 
 G_END_DECLS
 
