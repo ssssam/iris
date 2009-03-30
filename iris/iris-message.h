@@ -39,6 +39,8 @@ struct _IrisMessage
 	GHashTable     *items;
 };
 
+typedef void (*IrisMessageHandler) (IrisMessage *message, gpointer data);
+
 GType        iris_message_get_type       (void);
 
 IrisMessage* iris_message_new            (gint what);
