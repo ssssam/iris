@@ -13,6 +13,9 @@ sources_public_h =					\
 	$(NULL)
 
 sources_private_h =					\
+	$(top_srcdir)/iris/iris-arbiter-private.h	\
+	$(top_srcdir)/iris/iris-receiver-private.h	\
+	$(top_srcdir)/iris/iris-scheduler-private.h	\
 	$(NULL)
 
 sources_c = 						\
