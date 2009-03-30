@@ -5,6 +5,8 @@
 #include <iris/iris-receiver-private.h>
 #include <iris/iris-scheduler-private.h>
 
+#include "mocks/mock-scheduler.h"
+
 static void
 get_type1 (void)
 {
@@ -18,7 +20,7 @@ new_full1 (void)
 	IrisScheduler *scheduler;
 	IrisArbiter   *arbiter;
 
-	scheduler = iris_scheduler_new ();
+	scheduler = mock_scheduler_new ();
 	arbiter = iris_arbiter_new ();
 	receiver = iris_receiver_new_full (scheduler, arbiter, NULL, NULL);
 
@@ -48,7 +50,7 @@ message_delivered1 (void)
 	IrisPort      *port;
 	gboolean       completed = FALSE;
 
-	scheduler = iris_scheduler_new ();
+	scheduler = mock_scheduler_new ();
 	receiver = iris_receiver_new_full (scheduler,
 	                                   NULL,
 	                                   message_delivered1_cb,
