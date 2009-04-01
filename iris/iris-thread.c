@@ -189,14 +189,12 @@ iris_thread_shutdown (IrisThread *thread)
  * Queues a work item for the thread to execute when it is ready.
  */
 void
-iris_thread_queue (IrisThread   *thread,
-                   GAsyncQueue  *queue,
+iris_thread_queue (GAsyncQueue  *queue,
                    IrisCallback  callback,
                    gpointer      data)
 {
 	IrisThreadWork *work;
 
-	g_return_if_fail (thread != NULL);
 	g_return_if_fail (callback != NULL);
 
 	work = g_slice_new (IrisThreadWork);

@@ -39,7 +39,7 @@ struct _IrisThread
 IrisThread* iris_thread_new      (gboolean exclusive);
 void        iris_thread_manage   (IrisThread *thread, GAsyncQueue *queue);
 void        iris_thread_shutdown (IrisThread *thread);
-void        iris_thread_queue    (IrisThread *thread, GAsyncQueue *queue, IrisCallback callback, gpointer data);
+void        iris_thread_queue    (GAsyncQueue *queue, IrisCallback callback, gpointer data);
 
 G_END_DECLS
 
