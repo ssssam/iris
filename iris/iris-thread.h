@@ -1,4 +1,4 @@
-/* iris-scheduler-manager.h
+/* iris-thread.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -18,18 +18,29 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_SCHEDULER_MANAGER_H__
-#define __IRIS_SCHEDULER_MANAGER_H__
+#ifndef __IRIS_THREAD_H__
+#define __IRIS_THREAD_H__
 
 #include <glib-object.h>
 
-#include "iris-scheduler.h"
-
 G_BEGIN_DECLS
 
-void iris_scheduler_manager_prepare   (IrisScheduler *scheduler);
-void iris_scheduler_manager_unprepare (IrisScheduler *scheduler);
+typedef void (*IrisCallback) (gpointer data);
+typedef struct _IrisThread IrisThread;
+
+struct _IrisThread
+{
+	gpointer    *scheduler;
+	GThread     *thread;
+	GAsyncQueue *queue;
+	gboolean     exclusive;
+};
+
+IrisThread* iris_thread_new      (gboolean exclusive);
+void        iris_thread_manage   (IrisThread *thread, GAsyncQueue *queue);
+void        iris_thread_shutdown (IrisThread *thread);
+void        iris_thread_queue    (IrisThread *thread, GAsyncQueue *queue, IrisCallback callback, gpointer data);
 
 G_END_DECLS
 
-#endif /* __IRIS_SCHEDULER_MANAGER_H__ */
+#endif /* __IRIS_THREAD_H__ */

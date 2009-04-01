@@ -22,6 +22,7 @@
 #define __IRIS_SCHEDULER_H__
 
 #include <glib-object.h>
+#include "iris-thread.h"
 
 G_BEGIN_DECLS
 
@@ -77,27 +78,21 @@ struct _IrisSchedulerClass
 	                          GDestroyNotify     notify);
 
 	void (*add_thread)       (IrisScheduler     *scheduler,
-	                          GThread           *thread,
-	                          GAsyncQueue      **queue);
+	                          IrisThread        *thread);
 	void (*remove_thread)    (IrisScheduler     *scheduler,
-	                          GThread           *thread);
+	                          IrisThread        *thread);
 };
 
-GType          iris_scheduler_get_type (void) G_GNUC_CONST;
-
-guint          iris_scheduler_get_min_threads (IrisScheduler *scheduler);
-guint          iris_scheduler_get_max_threads (IrisScheduler *scheduler);
-
+GType          iris_scheduler_get_type        (void) G_GNUC_CONST;
+guint          iris_scheduler_get_min_threads (IrisScheduler     *scheduler);
+guint          iris_scheduler_get_max_threads (IrisScheduler     *scheduler);
 void           iris_scheduler_queue           (IrisScheduler     *scheduler,
                                                IrisSchedulerFunc  func,
                                                gpointer           data,
                                                GDestroyNotify     notify);
 
-void           iris_scheduler_add_thread      (IrisScheduler     *scheduler,
-                                               GThread           *thread,
-                                               GAsyncQueue      **queue);
-void           iris_scheduler_remove_thread   (IrisScheduler     *scheduler,
-                                               GThread           *thread);
+void           iris_scheduler_add_thread      (IrisScheduler *scheduler, IrisThread *thread);
+void           iris_scheduler_remove_thread   (IrisScheduler *scheduler, IrisThread *thread);
 
 G_END_DECLS
 

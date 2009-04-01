@@ -19,133 +19,150 @@
  */
 
 #include "iris-scheduler-manager.h"
-
-/* This is going to completely change I think.  The better way to
- * do this is to have the threads do a try_get for their next work
- * item with a timeout.  If they don't get an item within that time,
- * they will call the manager to take them back and rebalance.
- */
-
-/* When a thread is created, we use our management function as the
- * delegate and for data a queue of commands for managing the thread
- * lifetime.
- *
- * The out function to the add_thread method should set the queue
- * that is used by the thread to get new work items.  The scheduler
- * manager can then send that new queue over the command queue so
- * that the thread can get worker methods.  We should grab workers
- * using a try_get() so that if we time out, we can ask the
- * scheduler manager to remove us.  If removed, the scheduler manager
- * will send a command telling the thread to clear its state. Then
- * the thread can block on a get() for a further command. If the
- * shutdown command is called, then the thread should exit.
- */
-
-#define TIMEOUT_THRESHOLD (G_USEC_PER_SEC * 5) /* 5 seconds */
-
-static gboolean prepare_func  (GSource *source, gint *timeout_);
-static gboolean check_func    (GSource *source);
-static gboolean dispatch_func (GSource *source, GSourceFunc callback, gpointer user_data);
-
-GSourceFuncs source_funcs = {
-	prepare_func,
-	check_func,
-	dispatch_func,
-	NULL,
-	NULL,
-	NULL
-};
+#include "iris-thread.h"
 
 typedef struct
 {
-	GSource   source;
-	GTimeVal  last_check;
-	GCallback callback;
-} IrisGSource;
+	GList *free_list;
+	GList *all_list;
+} IrisSchedulerManager;
 
-static gint
-g_time_val_compare (GTimeVal *tv1,
-                    GTimeVal *tv2)
-{
-	if (tv1->tv_sec < tv2->tv_sec)
-		return -1;
-	else if ((tv1->tv_sec > tv2->tv_sec) || (tv1->tv_usec > tv2->tv_usec))
-		return 1;
-	else
-		return (tv1->tv_usec == tv2->tv_usec) ? 0 : -1;
-}
+/* Singleton instance of our scheduler manager struct */
+static IrisSchedulerManager *singleton = NULL;
+
+/* Lock for syncrhonizing intitialization. */
+G_LOCK_DEFINE (singleton);
 
 /**
- * iris_scheduler_manager_init:
- * @context: A #GMainContext
- * @use_main: Use the main-context for watching schedulers.
- * @callback: An optional #GCallback to be called during re-balancing.
+ * iris_scheduler_manager_yield:
  *
- * The scheduler manager is responsible for watching the scheduler
- * instances so that they may have the proper number of threads
- * based on their current workload.
  *
- * If @context is not %NULL and @use_main is %TRUE<!-- -->, then we will
- * hook into the main loop as a GSource to watch our schedulers for load
- * imbalances.
- *
- * If we are not to use the main loop then we create a thread that is
- * dedicated to monitoring the schedulers.
+ * Checks and performs any work required to rebalance the scheduler managers
+ * threads.  If the method returns %TRUE, then the calling thread should
+ * exit its current scheduler and move on to other work.
  */
-void
-iris_scheduler_manager_init (GMainContext *context,
-                             gboolean      use_main,
-                             GCallback     callback)
+gboolean
+iris_scheduler_manager_yield (void)
 {
-	GSource *source;
-
-	if (use_main) {
-		if (!context)
-			context = g_main_context_default ();
-		source = g_source_new (&source_funcs, sizeof (IrisGSource));
-		((IrisGSource*)source)->callback = callback;
-		g_source_attach (source, context);
-	}
-	else {
-	}
-}
-
-static gboolean
-prepare_func  (GSource *source,
-               gint    *timeout_)
-{
-	/* We will only rebalance as often as the main loop wakes up,
-	 * which should be fine in most cases.  This is because it is
-	 * quite likely that there is main loop activity if there are
-	 * many threads active.
-	 */
-	return FALSE;
-}
-
-static gboolean
-check_func (GSource *source)
-{
-	IrisGSource *iris_source = (IrisGSource*)source;
-	GTimeVal     tv;
-
-	g_get_current_time (&tv);
-	g_time_val_add (&tv, -TIMEOUT_THRESHOLD);
-
-	if (g_time_val_compare (&tv, &iris_source->last_check) >= 0)
-		return TRUE;
+	/* return FALSE if the thread can continue handling the scheduler  */
+	//return FALSE;
 
 	return TRUE;
 }
 
-static gboolean
-dispatch_func (GSource     *source,
-               GSourceFunc  callback,
-               gpointer     user_data)
+/**
+ * get_or_create_thread:
+ * @exclusive: if the thread should try to yield when done processing
+ * @queue: a location to store the async queue
+ *
+ * Tries to first retreive a thread from the free thread list.  If that
+ * fails, then a new thread is created.  If @try_yield is %TRUE then
+ * the thread will try to yield itself back to the scheduler if it has
+ * not received a work item within the timeout period.
+ *
+ * See iris_thread_manage()
+ *
+ * Return value: A re-purposed or new IrisThread
+ */
+static IrisThread*
+get_or_create_thread (gboolean exclusive)
 {
-	IrisGSource *iris_source = (IrisGSource*)source;
+	IrisThread *thread;
 
-	if (iris_source->callback)
-		iris_source->callback ();
+	G_LOCK (singleton);
 
-	return FALSE;
+	if (singleton->free_list) {
+		thread = singleton->free_list->data;
+		singleton->free_list = g_list_remove (singleton->free_list,
+		                                      singleton->free_list);
+	}
+
+	G_UNLOCK (singleton);
+
+	if (!thread) {
+		thread = iris_thread_new (exclusive);
+
+		// FIXME: Add proper error handling
+		g_assert (thread != NULL);
+
+		singleton->all_list = g_list_prepend (singleton->all_list, thread);
+	}
+
+	return thread;
+}
+
+/**
+ * iris_scheduler_manager_init:
+ *
+ * Initializes the internal state required for the scheduler manager.
+ */
+static void
+iris_scheduler_manager_init (void)
+{
+	G_LOCK (singleton);
+	if (G_LIKELY (!singleton))
+		singleton = g_slice_new0 (IrisSchedulerManager);
+	G_UNLOCK (singleton);
+}
+
+/**
+ * iris_scheduler_manager_prepare:
+ * @scheduler: An #IrisScheduler
+ *
+ * Prepares a scheduler for execution.  Any required threads for
+ * processing are attached to the scheduler for future use.
+ */
+void
+iris_scheduler_manager_prepare (IrisScheduler *scheduler)
+{
+	IrisThread *thread      = NULL;
+	gint        max_threads = 0;
+	gint        min_threads = 0;
+	gint        i;
+
+	if (G_UNLIKELY (!singleton))
+		iris_scheduler_manager_init ();
+
+	min_threads = iris_scheduler_get_min_threads (scheduler);
+	g_assert (min_threads > 0);
+
+	max_threads = iris_scheduler_get_max_threads (scheduler);
+	g_assert ((max_threads >= min_threads) || max_threads == 0);
+
+	for (i = 0; i < min_threads; i++) {
+		thread = get_or_create_thread (FALSE);
+
+		/* Add proper error handling */
+		g_return_if_fail (thread != NULL);
+
+		thread->scheduler = (gpointer)scheduler;
+
+		iris_scheduler_add_thread (scheduler, thread);
+	}
+}
+
+/**
+ * iris_scheduler_manager_balance:
+ *
+ * Rebalances the threads available to provide more resources to
+ * the schedulers that have not maxed out.  Schedulers that are
+ * getting more backed up will be provided more threads if they
+ * have not reached their thread limit.
+ */
+void
+iris_scheduler_manager_balance (void)
+{
+}
+
+/**
+ * iris_scheduler_manager_unprepare:
+ * @scheduler: An #IrisScheduler
+ *
+ * Unprepares a scheduler by removing all of its active threads
+ * and resources.  The unused threads can then be repurposed to
+ * other schedulers within the system.
+ */
+void
+iris_scheduler_manager_unprepare (IrisScheduler *scheduler)
+{
 }

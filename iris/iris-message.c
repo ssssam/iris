@@ -817,6 +817,49 @@ iris_message_set_boolean (IrisMessage *message,
 }
 
 /**
+ * iris_message_get_pointer:
+ * @message: An #IrisMessage
+ * @name: the key
+ *
+ * Retrieves the value for @key.
+ *
+ * Return value: the value for @key
+ */
+gpointer
+iris_message_get_pointer (IrisMessage *message,
+                          const gchar *name)
+{
+	const GValue *value;
+	value = _iris_message_get_value_internal (message, name);
+	g_return_val_if_fail (value != NULL, 0);
+	return g_value_get_pointer (value);
+}
+
+/**
+ * iris_message_set_pointer:
+ * @message: An #IrisMessage
+ * @name: the key
+ * @value: the value
+ *
+ * Updates @message to use @value as the value for @key.
+ */
+void
+iris_message_set_pointer (IrisMessage *message,
+                          const gchar *name,
+                          gpointer     value)
+{
+	GValue *real_value;
+
+	g_return_if_fail (message != NULL);
+
+	real_value = _iris_message_value_new (NULL);
+	g_value_init (real_value, G_TYPE_POINTER);
+	g_value_set_pointer (real_value, value);
+
+	_iris_message_set_value_internal (message, name, real_value);
+}
+
+/**
  * iris_message_flattened_size:
  * @message: A #IrisMessage
  *

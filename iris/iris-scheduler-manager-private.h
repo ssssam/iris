@@ -1,4 +1,4 @@
-/* iris-scheduler-manager.h
+/* iris-scheduler-manager-private.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -18,18 +18,16 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_SCHEDULER_MANAGER_H__
-#define __IRIS_SCHEDULER_MANAGER_H__
+#ifndef __IRIS_SCHEDULER_MANAGER_PRIVATE_H__
+#define __IRIS_SCHEDULER_MANAGER_PRIVATE_H__
 
-#include <glib-object.h>
-
-#include "iris-scheduler.h"
+#include "iris-thread.h"
 
 G_BEGIN_DECLS
 
-void iris_scheduler_manager_prepare   (IrisScheduler *scheduler);
-void iris_scheduler_manager_unprepare (IrisScheduler *scheduler);
+gboolean iris_scheduler_manager_yield   (IrisThread *thread);
+void     iris_scheduler_manager_balance (void);
 
 G_END_DECLS
 
-#endif /* __IRIS_SCHEDULER_MANAGER_H__ */
+#endif /* __IRIS_SCHEDULER_MANAGER_PRIVATE_H__ */

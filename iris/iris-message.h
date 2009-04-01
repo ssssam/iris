@@ -87,6 +87,9 @@ void         iris_message_set_uchar      (IrisMessage *message, const gchar *nam
 gboolean     iris_message_get_boolean    (IrisMessage *message, const gchar *name);
 void         iris_message_set_boolean    (IrisMessage *message, const gchar *name, gboolean value);
 
+gpointer     iris_message_get_pointer    (IrisMessage *message, const gchar *name);
+void         iris_message_set_pointer    (IrisMessage *message, const gchar *name, gpointer value);
+
 gsize        iris_message_flattened_size (IrisMessage *message);
 gboolean     iris_message_flatten        (IrisMessage *message, gchar **buffer, gsize *length);
 gboolean     iris_message_unflatten      (IrisMessage *message, gchar  *buffer, gsize  length);

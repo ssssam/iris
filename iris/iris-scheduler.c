@@ -24,10 +24,12 @@
 
 #include "iris-scheduler.h"
 #include "iris-scheduler-private.h"
+#include "iris-scheduler-manager.h"
 
 struct _IrisSchedulerPrivate
 {
-	gpointer dummy;
+	GMutex      *mutex;
+	GAsyncQueue *queue;
 };
 
 G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT);
@@ -49,25 +51,20 @@ iris_scheduler_queue_real (IrisScheduler     *scheduler,
 		notify (data);
 }
 
-guint
-get_n_cpu (void)
+static guint
+iris_scheduler_get_n_cpu (void)
 {
 #ifdef Linux
 	return get_nprocs ();
 #else
-	/* FIXME: Support more than Linux. */
-	return 1;
+	return 1; /* FIXME: Support more than Linux. */
 #endif
 }
 
 static guint
 iris_scheduler_get_min_threads_real (IrisScheduler *scheduler)
 {
-	/* min-thread of 0 means the scheduler can yield all of
-	 * its threads until it needs one. at which point it needs
-	 * to request a thread from the manager.
-	 */
-	return 0;
+	return 1;
 }
 
 static guint
@@ -77,22 +74,31 @@ iris_scheduler_get_max_threads_real (IrisScheduler *scheduler)
 	 * for no more than n_cpu. If there is only one cpu, we
 	 * will default to 2.
 	 */
-	guint n_cpu       = get_n_cpu ();
-	guint max_threads = 0;
+	return MAX (2, iris_scheduler_get_n_cpu ());
+}
 
-	if (n_cpu == 1)
-		max_threads = 2;
-	else
-		max_threads = n_cpu;
+static void
+iris_scheduler_add_thread_real (IrisScheduler  *scheduler,
+                                IrisThread     *thread)
+{
+	IrisSchedulerPrivate *priv;
 
-	g_assert (max_threads > 0);
+	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
 
-	return max_threads;
+	priv = scheduler->priv;
+
+	iris_thread_manage (thread, priv->queue);
 }
 
 static void
 iris_scheduler_finalize (GObject *object)
 {
+	IrisSchedulerPrivate *priv;
+
+	priv = IRIS_SCHEDULER (object)->priv;
+
+	g_mutex_free (priv->mutex);
+
 	G_OBJECT_CLASS (iris_scheduler_parent_class)->finalize (object);
 }
 
@@ -104,6 +110,7 @@ iris_scheduler_class_init (IrisSchedulerClass *klass)
 	klass->queue = iris_scheduler_queue_real;
 	klass->get_min_threads = iris_scheduler_get_min_threads_real;
 	klass->get_max_threads = iris_scheduler_get_max_threads_real;
+	klass->add_thread = iris_scheduler_add_thread_real;
 
 	object_class->finalize = iris_scheduler_finalize;
 
@@ -116,6 +123,11 @@ iris_scheduler_init (IrisScheduler *scheduler)
 	scheduler->priv = G_TYPE_INSTANCE_GET_PRIVATE (scheduler,
 	                                          IRIS_TYPE_SCHEDULER,
 	                                          IrisSchedulerPrivate);
+	scheduler->priv->mutex = g_mutex_new ();
+	scheduler->priv->queue = g_async_queue_new ();
+
+	// FIXME: Do this on first work item queue
+	iris_scheduler_manager_prepare (scheduler);
 }
 
 IrisScheduler*
@@ -131,4 +143,30 @@ iris_scheduler_queue (IrisScheduler     *scheduler,
                       GDestroyNotify     notify)
 {
 	IRIS_SCHEDULER_GET_CLASS (scheduler)->queue (scheduler, func, data, notify);
+}
+
+guint
+iris_scheduler_get_max_threads (IrisScheduler *scheduler)
+{
+	return IRIS_SCHEDULER_GET_CLASS (scheduler)->get_max_threads (scheduler);
+}
+
+guint
+iris_scheduler_get_min_threads (IrisScheduler *scheduler)
+{
+	return IRIS_SCHEDULER_GET_CLASS (scheduler)->get_min_threads (scheduler);
+}
+
+void
+iris_scheduler_add_thread (IrisScheduler *scheduler,
+                           IrisThread    *thread)
+{
+	IRIS_SCHEDULER_GET_CLASS (scheduler)->add_thread (scheduler, thread);
+}
+
+void
+iris_scheduler_remove_thread (IrisScheduler *scheduler,
+                              IrisThread    *thread)
+{
+	IRIS_SCHEDULER_GET_CLASS (scheduler)->remove_thread (scheduler, thread);
 }
