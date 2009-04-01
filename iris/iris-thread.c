@@ -108,6 +108,18 @@ next_message:
 	goto next_message;
 }
 
+/**
+ * iris_thread_new:
+ * exclusive: the thread is exclusive
+ *
+ * Createa a new #IrisThread instance that can be used to queue work items
+ * to be processed on the thread.
+ *
+ * If @exclusive, then the thread will not yield to the scheduler and
+ * therefore will not participate in scheduler thread balancing.
+ *
+ * Return value: the newly created #IrisThread instance
+ */
 IrisThread*
 iris_thread_new (gboolean exclusive)
 {
@@ -127,6 +139,13 @@ iris_thread_new (gboolean exclusive)
 	return thread;
 }
 
+/**
+ * iris_thread_manage:
+ * @thread: An #IrisThread
+ *
+ * Sends a message to the thread asking it to retreive work items from
+ * the queue.
+ */
 void
 iris_thread_manage (IrisThread  *thread,
                     GAsyncQueue *queue)
@@ -143,6 +162,12 @@ iris_thread_manage (IrisThread  *thread,
 	g_async_queue_push (thread->queue, message);
 }
 
+/**
+ * iris_thread_shutdown:
+ * @thread: An #IrisThread
+ *
+ * Sends a message to the thread asking it to shutdown.
+ */
 void
 iris_thread_shutdown (IrisThread *thread)
 {
@@ -154,6 +179,15 @@ iris_thread_shutdown (IrisThread *thread)
 	g_async_queue_push (thread->queue, message);
 }
 
+/**
+ * iris_thread_queue:
+ * @thread: An #IrisThread
+ * @queue: A #GAsyncQueue
+ * @callback: A callback to execute
+ * @data: data for the callback
+ *
+ * Queues a work item for the thread to execute when it is ready.
+ */
 void
 iris_thread_queue (IrisThread   *thread,
                    GAsyncQueue  *queue,
