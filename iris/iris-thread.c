@@ -122,6 +122,8 @@ iris_thread_new (gboolean exclusive)
 	IrisThread *thread;
 
 	thread = g_slice_new0 (IrisThread);
+	thread->exclusive = exclusive;
+	thread->queue = g_async_queue_new ();
 	thread->thread  = g_thread_create_full ((GThreadFunc)iris_thread_worker,
 	                                        thread,
 	                                        0,     /* stack size    */
@@ -129,9 +131,6 @@ iris_thread_new (gboolean exclusive)
 	                                        FALSE, /* system thread */
 	                                        G_THREAD_PRIORITY_NORMAL,
 	                                        NULL);
-	thread->exclusive = exclusive;
-	thread->queue = g_async_queue_new ();
-	g_assert (thread->queue != NULL);
 
 	return thread;
 }
