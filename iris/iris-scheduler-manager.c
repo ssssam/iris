@@ -81,10 +81,7 @@ get_or_create_thread (gboolean exclusive)
 
 	if (!thread) {
 		thread = iris_thread_new (exclusive);
-
-		// FIXME: Add proper error handling
-		g_assert (thread != NULL);
-
+		g_assert (thread != NULL); // FIXME: Add proper error handling
 		singleton->all_list = g_list_prepend (singleton->all_list, thread);
 	}
 
@@ -136,7 +133,6 @@ iris_scheduler_manager_prepare (IrisScheduler *scheduler)
 		g_return_if_fail (thread != NULL);
 
 		thread->scheduler = (gpointer)scheduler;
-
 		iris_scheduler_add_thread (scheduler, thread);
 	}
 }
