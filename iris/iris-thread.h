@@ -49,11 +49,13 @@ struct _IrisThreadWork
 	gpointer     data;
 };
 
+/* Thread abstraction for schedulers */
 IrisThread*     iris_thread_new        (gboolean exclusive);
 void            iris_thread_manage     (IrisThread *thread, GAsyncQueue *queue);
 void            iris_thread_shutdown   (IrisThread *thread);
 void            iris_thread_print_stat (IrisThread *thread);
 
+/* Contract for work items performed by IrisThread's */
 IrisThreadWork* iris_thread_work_new   (IrisCallback callback, gpointer data);
 void            iris_thread_work_free  (IrisThreadWork *thread_work);
 void            iris_thread_work_run   (IrisThreadWork *thread_work);
