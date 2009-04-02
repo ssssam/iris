@@ -32,10 +32,15 @@ typedef struct _IrisThreadWork IrisThreadWork;
 
 struct _IrisThread
 {
-	gpointer    *scheduler;
-	GThread     *thread;
-	GAsyncQueue *queue;
-	gboolean     exclusive;
+	/*< private >*/
+	gpointer     *scheduler;  /* Pointer to scheduler       */
+	GThread      *thread;     /* Handle to the thread       */
+	GAsyncQueue  *queue;      /* Command queue              */
+	gboolean      exclusive;  /* Can the thread be removed  *
+	                           * from an active scheduler   */
+	GMutex       *mutex;      /* Mutex for changing thread  *
+	                           * state. e.g. active queue.  */
+	GAsyncQueue  *active;     /* Active processing queue    */
 };
 
 struct _IrisThreadWork
@@ -44,13 +49,14 @@ struct _IrisThreadWork
 	gpointer     data;
 };
 
-IrisThread*     iris_thread_new       (gboolean exclusive);
-void            iris_thread_manage    (IrisThread *thread, GAsyncQueue *queue);
-void            iris_thread_shutdown  (IrisThread *thread);
+IrisThread*     iris_thread_new        (gboolean exclusive);
+void            iris_thread_manage     (IrisThread *thread, GAsyncQueue *queue);
+void            iris_thread_shutdown   (IrisThread *thread);
+void            iris_thread_print_stat (IrisThread *thread);
 
-IrisThreadWork* iris_thread_work_new  (IrisCallback callback, gpointer data);
-void            iris_thread_work_free (IrisThreadWork *thread_work);
-void            iris_thread_work_run  (IrisThreadWork *thread_work);
+IrisThreadWork* iris_thread_work_new   (IrisCallback callback, gpointer data);
+void            iris_thread_work_free  (IrisThreadWork *thread_work);
+void            iris_thread_work_run   (IrisThreadWork *thread_work);
 
 G_END_DECLS
 

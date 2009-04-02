@@ -18,6 +18,8 @@
  * 02110-1301 USA
  */
 
+#include <glib/gprintf.h>
+
 #include "iris-message.h"
 #include "iris-scheduler-manager-private.h"
 #include "iris-thread.h"
@@ -38,6 +40,10 @@ iris_thread_handle_manage (IrisThread  *thread,
 	gint            timeout = POP_WAIT_TIMEOUT;
 
 	g_return_if_fail (queue != NULL);
+
+	g_mutex_lock (thread->mutex);
+	thread->active = g_async_queue_ref (queue);
+	g_mutex_unlock (thread->mutex);
 
 next_item:
 
@@ -67,6 +73,11 @@ next_item:
 		timeout = 0;
 		goto next_item;
 	}
+
+	g_mutex_lock (thread->mutex);
+	g_async_queue_unref (queue);
+	thread->active = NULL;
+	g_mutex_unlock (thread->mutex);
 }
 
 static void
@@ -124,6 +135,7 @@ iris_thread_new (gboolean exclusive)
 	thread = g_slice_new0 (IrisThread);
 	thread->exclusive = exclusive;
 	thread->queue = g_async_queue_new ();
+	thread->mutex = g_mutex_new ();
 	thread->thread  = g_thread_create_full ((GThreadFunc)iris_thread_worker,
 	                                        thread,
 	                                        0,     /* stack size    */
@@ -173,6 +185,25 @@ iris_thread_shutdown (IrisThread *thread)
 
 	message = iris_message_new (MSG_SHUTDOWN);
 	g_async_queue_push (thread->queue, message);
+}
+
+/**
+ * iris_thread_print_stat:
+ * @thread: An #IrisThread
+ *
+ * Prints the stats of an #IrisThread to standard output for analysis.
+ * See iris_thread_stat() for programmatically access the statistics.
+ */
+void
+iris_thread_print_stat (IrisThread *thread)
+{
+	g_mutex_lock (thread->mutex);
+	g_fprintf (stderr,
+	           "Thread 0x%08lx     Active: %s     Queue Size: %d\n",
+	           (long)thread->thread,
+	           thread->active != NULL ? "yes" : "no",
+	           thread->active != NULL ? g_async_queue_length (thread->active) : 0);
+	g_mutex_unlock (thread->mutex);
 }
 
 /**

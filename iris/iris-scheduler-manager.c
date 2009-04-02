@@ -18,6 +18,8 @@
  * 02110-1301 USA
  */
 
+#include <glib/gprintf.h>
+
 #include "iris-scheduler-manager.h"
 #include "iris-thread.h"
 
@@ -81,8 +83,17 @@ get_or_create_thread (gboolean exclusive)
 
 	if (!thread) {
 		thread = iris_thread_new (exclusive);
-		g_assert (thread != NULL); // FIXME: Add proper error handling
+
+		/* FIXME: Add proper error handling. It's probably possible
+		 *        that the system could deny creating us a new thread
+		 *        at some point. I don't know what the limit is
+		 *        currently on some architectures and os versions.
+		 */
+		g_assert (thread != NULL);
+
+		G_LOCK (singleton);
 		singleton->all_list = g_list_prepend (singleton->all_list, thread);
+		G_UNLOCK (singleton);
 	}
 
 	return thread;
@@ -161,4 +172,28 @@ iris_scheduler_manager_balance (void)
 void
 iris_scheduler_manager_unprepare (IrisScheduler *scheduler)
 {
+}
+
+void
+iris_scheduler_manager_print_stat (void)
+{
+	GList *iter;
+
+	g_fprintf (stderr,
+	           "\nIris Thread Status\n"
+	           "======================================================\n");
+
+	if (!singleton) {
+		g_fprintf (stderr, "No iris threads are currently active\n");
+		return;
+	}
+
+	G_LOCK (singleton);
+
+	for (iter = singleton->all_list; iter; iter = iter->next)
+		iris_thread_print_stat (iter->data);
+
+	G_UNLOCK (singleton);
+
+	g_fprintf (stderr, "\n\n");
 }
