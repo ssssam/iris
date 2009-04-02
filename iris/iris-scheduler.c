@@ -34,8 +34,8 @@ struct _IrisSchedulerPrivate
 
 	gboolean     initialized;
 
-	guint        min_threads;
-	guint        max_threads;
+	gint         min_threads;
+	gint         max_threads;
 };
 
 G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT);
@@ -71,7 +71,7 @@ iris_scheduler_get_n_cpu (void)
 #endif
 }
 
-static guint
+static gint
 iris_scheduler_get_min_threads_real (IrisScheduler *scheduler)
 {
 	if (scheduler->priv->min_threads > 0)
@@ -79,7 +79,7 @@ iris_scheduler_get_min_threads_real (IrisScheduler *scheduler)
 	return 1;
 }
 
-static guint
+static gint
 iris_scheduler_get_max_threads_real (IrisScheduler *scheduler)
 {
 	if (scheduler->priv->max_threads > 0)
@@ -173,7 +173,11 @@ iris_scheduler_queue (IrisScheduler     *scheduler,
 
 	priv = scheduler->priv;
 
-	if (!priv->initialized) {
+	/* Lazy initialization of the scheduler. By holding off until we
+	 * need this, we attempt to reduce our total thread usage.
+	 */
+
+	if (G_UNLIKELY (!priv->initialized)) {
 		g_mutex_lock (priv->mutex);
 		if (!priv->initialized) {
 			iris_scheduler_manager_prepare (scheduler);
@@ -185,13 +189,13 @@ iris_scheduler_queue (IrisScheduler     *scheduler,
 	IRIS_SCHEDULER_GET_CLASS (scheduler)->queue (scheduler, func, data, notify);
 }
 
-guint
+gint
 iris_scheduler_get_max_threads (IrisScheduler *scheduler)
 {
 	return IRIS_SCHEDULER_GET_CLASS (scheduler)->get_max_threads (scheduler);
 }
 
-guint
+gint
 iris_scheduler_get_min_threads (IrisScheduler *scheduler)
 {
 	return IRIS_SCHEDULER_GET_CLASS (scheduler)->get_min_threads (scheduler);
