@@ -10,19 +10,44 @@ dummy (gpointer data)
 }
 
 static void
-main_context1_cb (void)
+main_context1_cb (IrisMessage *message,
+                  gpointer     data)
 {
-	g_main_loop_quit (main_loop);
+	gint *counter = data;
+	g_atomic_int_inc (counter);
 }
 
 static void
 main_context1 (void)
 {
 	IrisScheduler *scheduler;
-	gboolean       completed = FALSE;
+	IrisReceiver  *receiver;
+	IrisPort      *port;
+	IrisMessage   *message;
+	gint           counter = 0;
+	gint           i;
 
+	// Use basic scheduler
 	scheduler = iris_scheduler_new ();
 	g_assert (scheduler != NULL);
+	receiver = iris_receiver_new_full (scheduler, NULL, main_context1_cb, &counter);
+	g_assert (receiver != NULL);
+
+	port = iris_port_new ();
+	g_assert (port != NULL);
+	iris_port_set_receiver (port, receiver);
+
+	for (i = 0; i < 100; i++) {
+		message = iris_message_new (1);
+		iris_port_post (port, message);
+	}
+
+	// THIS IS A RACE CONDITION. But seems to be long enough for my
+	// testing so far. Of course, its the entire reason we will be
+	// making IrisTask soon.
+	g_usleep (G_USEC_PER_SEC / 4);
+
+	g_assert (counter == 100);
 }
 
 gint
