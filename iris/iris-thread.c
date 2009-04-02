@@ -27,12 +27,6 @@
 
 #define POP_WAIT_TIMEOUT (G_USEC_PER_SEC * 2)
 
-typedef struct
-{
-	IrisCallback callback;
-	gpointer     data;
-} IrisThreadWork;
-
 static void
 iris_thread_handle_manage (IrisThread  *thread,
                            GAsyncQueue *queue,
@@ -42,6 +36,8 @@ iris_thread_handle_manage (IrisThread  *thread,
 	GTimeVal        tv;
 	gboolean        cleanup = FALSE;
 	gint            timeout = POP_WAIT_TIMEOUT;
+
+	g_return_if_fail (queue != NULL);
 
 next_item:
 
@@ -55,8 +51,8 @@ next_item:
 	}
 
 	if (work) {
-		work->callback (work->data);
-		g_slice_free (IrisThreadWork, work);
+		iris_thread_work_run (work);
+		iris_thread_work_free (work);
 		goto next_item;
 	}
 
@@ -84,9 +80,9 @@ iris_thread_worker (IrisThread *thread)
 	IrisMessage *message;
 
 	g_return_val_if_fail (thread != NULL, NULL);
+	g_return_val_if_fail (thread->queue != NULL, NULL);
 
 next_message:
-
 	message = g_async_queue_pop (thread->queue);
 
 	if (!message)
@@ -135,6 +131,7 @@ iris_thread_new (gboolean exclusive)
 	                                        NULL);
 	thread->exclusive = exclusive;
 	thread->queue = g_async_queue_new ();
+	g_assert (thread->queue != NULL);
 
 	return thread;
 }
@@ -180,26 +177,50 @@ iris_thread_shutdown (IrisThread *thread)
 }
 
 /**
- * iris_thread_queue:
- * @thread: An #IrisThread
- * @queue: A #GAsyncQueue
- * @callback: A callback to execute
- * @data: data for the callback
+ * iris_thread_work_new:
+ * @callback: An #IrisCallback
+ * @data: user supplied data
  *
- * Queues a work item for the thread to execute when it is ready.
+ * Creates a new instance of #IrisThreadWork, which is the negotiated contract
+ * between schedulers and the thread workers themselves.
+ *
+ * Return value: The newly created #IrisThreadWork instance.
+ */
+IrisThreadWork*
+iris_thread_work_new (IrisCallback callback,
+                      gpointer     data)
+{
+	IrisThreadWork *thread_work;
+
+	thread_work = g_slice_new (IrisThreadWork);
+	thread_work->callback = callback;
+	thread_work->data = data;
+
+	return thread_work;
+}
+
+/**
+ * iris_thread_work_run:
+ * @thread_work: An #IrisThreadWork
+ *
+ * Executes the thread work. This method is called from within the worker
+ * thread.
  */
 void
-iris_thread_queue (GAsyncQueue  *queue,
-                   IrisCallback  callback,
-                   gpointer      data)
+iris_thread_work_run (IrisThreadWork *thread_work)
 {
-	IrisThreadWork *work;
+	g_return_if_fail (thread_work != NULL);
+	thread_work->callback (thread_work->data);
+}
 
-	g_return_if_fail (callback != NULL);
-
-	work = g_slice_new (IrisThreadWork);
-	work->callback = callback;
-	work->data = data;
-
-	g_async_queue_push (queue, work);
+/**
+ * iris_thread_work_free:
+ * @thread_work: An #IrisThreadWork
+ *
+ * Frees the resources associated with an #IrisThreadWork.
+ */
+void
+iris_thread_work_free (IrisThreadWork *thread_work)
+{
+	g_slice_free (IrisThreadWork, thread_work);
 }

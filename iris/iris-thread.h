@@ -26,7 +26,9 @@
 G_BEGIN_DECLS
 
 typedef void (*IrisCallback) (gpointer data);
-typedef struct _IrisThread IrisThread;
+
+typedef struct _IrisThread     IrisThread;
+typedef struct _IrisThreadWork IrisThreadWork;
 
 struct _IrisThread
 {
@@ -36,10 +38,19 @@ struct _IrisThread
 	gboolean     exclusive;
 };
 
-IrisThread* iris_thread_new      (gboolean exclusive);
-void        iris_thread_manage   (IrisThread *thread, GAsyncQueue *queue);
-void        iris_thread_shutdown (IrisThread *thread);
-void        iris_thread_queue    (GAsyncQueue *queue, IrisCallback callback, gpointer data);
+struct _IrisThreadWork
+{
+	IrisCallback callback;
+	gpointer     data;
+};
+
+IrisThread*     iris_thread_new       (gboolean exclusive);
+void            iris_thread_manage    (IrisThread *thread, GAsyncQueue *queue);
+void            iris_thread_shutdown  (IrisThread *thread);
+
+IrisThreadWork* iris_thread_work_new  (IrisCallback callback, gpointer data);
+void            iris_thread_work_free (IrisThreadWork *thread_work);
+void            iris_thread_work_run  (IrisThreadWork *thread_work);
 
 G_END_DECLS
 

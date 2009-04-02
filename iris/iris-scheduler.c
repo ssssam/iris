@@ -47,18 +47,21 @@ iris_scheduler_queue_real (IrisScheduler     *scheduler,
                            GDestroyNotify     notify)
 {
 	IrisSchedulerPrivate *priv;
+	IrisThreadWork       *thread_work;
 
 	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
 	g_return_if_fail (func != NULL);
 
 	priv = scheduler->priv;
 
+	g_return_if_fail (priv->queue != NULL);
+
 	/* All of our threads are reading from our one queue.  Probably
 	 * not a good idea for long term.  We should implement the work
 	 * stealing queue for this.
 	 */
-
-	iris_thread_queue (priv->queue, func, data); //, notify);
+	thread_work = iris_thread_work_new (func, data);
+	g_async_queue_push (priv->queue, thread_work);
 }
 
 static guint
