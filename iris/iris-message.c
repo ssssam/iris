@@ -42,6 +42,8 @@
  * iris_message_set_string() and iris_message_set_value().  There are helpers
  * for most base types within GLib.  For complex types, use
  * iris_message_set_value() containing a #GValue with the complex type.
+ *
+ * Setting values *IS NOT* thread safe.
  */
 
 static GValue*

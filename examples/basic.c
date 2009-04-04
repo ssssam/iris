@@ -4,13 +4,24 @@
 #include <glib/gthread.h>
 #include <iris/iris.h>
 
-#define ITER_MAX 100000
+#define ITER_MAX 1000000
 #define MSG_DO_SMTHNG 1
+
+static GCond  *cond  = NULL;
+static GMutex *mutex = NULL;
+static gint    count = 0;
 
 static void
 do_something (IrisMessage *message,
               gpointer     data)
 {
+	g_atomic_int_inc (&count);
+
+	if (count == ITER_MAX) {
+		g_mutex_lock (mutex);
+		g_cond_signal (cond);
+		g_mutex_unlock (mutex);
+	}
 }
 
 static void
@@ -38,8 +49,12 @@ basic (void)
 	/* Attach the receiver to the port */
 	iris_port_set_receiver (port, receiver);
 
+	/* create mutex and cond to wait on for finished */
+	mutex = g_mutex_new ();
+	cond = g_cond_new ();
+
 	/* Add a bunch of work items */
-	for (i = 0; i < ITER_MAX * 10; i++) {
+	for (i = 0; i < ITER_MAX; i++) {
 		/* new message to pass something blah */
 		msg = iris_message_new (MSG_DO_SMTHNG);
 
@@ -50,10 +65,9 @@ basic (void)
 		iris_message_unref (msg);
 	}
 
-	while (TRUE) {
-		iris_scheduler_manager_print_stat ();
-		sleep (1);
-	}
+	g_mutex_lock (mutex);
+	g_cond_wait (cond, mutex);
+	g_mutex_unlock (mutex);
 }
 
 gint
