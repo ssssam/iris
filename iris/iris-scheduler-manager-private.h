@@ -21,7 +21,7 @@
 #ifndef __IRIS_SCHEDULER_MANAGER_PRIVATE_H__
 #define __IRIS_SCHEDULER_MANAGER_PRIVATE_H__
 
-#include "iris-thread.h"
+#include "iris-types.h"
 
 G_BEGIN_DECLS
 

@@ -54,19 +54,6 @@ G_BEGIN_DECLS
     (G_TYPE_INSTANCE_GET_CLASS ((obj),      \
      IRIS_TYPE_RECEIVER, IrisReceiverClass))
 
-typedef struct _IrisReceiver        IrisReceiver;
-typedef struct _IrisReceiverClass   IrisReceiverClass;
-typedef struct _IrisReceiverPrivate IrisReceiverPrivate;
-
-typedef enum
-{
-	IRIS_DELIVERY_ACCEPTED          = 1,
-	IRIS_DELIVERY_ACCEPTED_PAUSE    = 2,
-	IRIS_DELIVERY_ACCEPTED_REMOVE   = 3,
-	IRIS_DELIVERY_PAUSE             = 4,
-	IRIS_DELIVERY_REMOVE            = 5
-} IrisDeliveryStatus;
-
 struct _IrisReceiver
 {
 	GObject parent;

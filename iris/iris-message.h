@@ -21,14 +21,13 @@
 #ifndef __IRIS_MESSAGE_H__
 #define __IRIS_MESSAGE_H__
 
-#include <glib.h>
 #include <glib-object.h>
+
+#include "iris-types.h"
 
 G_BEGIN_DECLS
 
 #define IRIS_TYPE_MESSAGE (iris_message_get_type())
-
-typedef struct _IrisMessage IrisMessage;
 
 struct _IrisMessage
 {
@@ -38,8 +37,6 @@ struct _IrisMessage
 	volatile gint   ref_count;
 	GHashTable     *items;
 };
-
-typedef void (*IrisMessageHandler) (IrisMessage *message, gpointer data);
 
 GType        iris_message_get_type       (void);
 

@@ -23,6 +23,7 @@
 
 #include <glib-object.h>
 
+#include "iris-types.h"
 #include "iris-receiver.h"
 
 G_BEGIN_DECLS
@@ -52,17 +53,6 @@ G_BEGIN_DECLS
 #define IRIS_ARBITER_GET_CLASS(obj)        \
     (G_TYPE_INSTANCE_GET_CLASS ((obj),     \
      IRIS_TYPE_ARBITER, IrisArbiterClass))
-
-typedef struct _IrisArbiter         IrisArbiter;
-typedef struct _IrisArbiterClass    IrisArbiterClass;
-typedef struct _IrisArbiterPrivate  IrisArbiterPrivate;
-
-typedef enum
-{
-	IRIS_RECEIVE_NOW,
-	IRIS_RECEIVE_LATER,
-	IRIS_RECEIVE_NEVER
-} IrisReceiveDecision;
 
 struct _IrisArbiter
 {

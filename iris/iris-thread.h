@@ -23,17 +23,15 @@
 
 #include <glib-object.h>
 
+#include "iris-types.h"
+#include "iris-scheduler.h"
+
 G_BEGIN_DECLS
-
-typedef void (*IrisCallback) (gpointer data);
-
-typedef struct _IrisThread     IrisThread;
-typedef struct _IrisThreadWork IrisThreadWork;
 
 struct _IrisThread
 {
 	/*< private >*/
-	gpointer     *scheduler;  /* Pointer to scheduler       */
+	IrisScheduler *scheduler;  /* Pointer to scheduler       */
 	GThread      *thread;     /* Handle to the thread       */
 	GAsyncQueue  *queue;      /* Command queue              */
 	gboolean      exclusive;  /* Can the thread be removed  *

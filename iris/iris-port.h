@@ -54,10 +54,6 @@ G_BEGIN_DECLS
     (G_TYPE_INSTANCE_GET_CLASS ((obj),  \
      IRIS_TYPE_PORT, IrisPortClass))
 
-typedef struct _IrisPort        IrisPort;
-typedef struct _IrisPortClass   IrisPortClass;
-typedef struct _IrisPortPrivate IrisPortPrivate;
-
 struct _IrisPort
 {
 	GObject parent;
