@@ -60,8 +60,14 @@ gint
 main (gint  argc,
       char *argv[])
 {
+	/* Initialize the type system */
 	g_type_init ();
+
+	/* Initialize gthread, our threading core */
 	g_thread_init (NULL);
+
+	/* Run the test */
 	basic ();
+
 	return EXIT_SUCCESS;
 }
