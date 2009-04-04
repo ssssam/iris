@@ -70,17 +70,20 @@ iris_port_set_receiver_real (IrisPort     *port,
 
 	g_mutex_lock (priv->mutex);
 
-	if (!priv->receiver) {
-		// FIXME: Unhook current receiver
-	}
+	if (receiver != priv->receiver) {
+		if (!priv->receiver) {
+			// FIXME: Unhook current receiver
+			g_object_unref (priv->receiver);
+		}
 
-	if (receiver) {
-		priv->receiver = g_object_ref (receiver);
-		flush = TRUE;
-		// FIXME: Hook current receiver
-	}
-	else {
-		priv->receiver = NULL;
+		if (receiver) {
+			priv->receiver = g_object_ref (receiver);
+			flush = TRUE;
+			// FIXME: Hook current receiver
+		}
+		else {
+			priv->receiver = NULL;
+		}
 	}
 
 	g_mutex_unlock (priv->mutex);
