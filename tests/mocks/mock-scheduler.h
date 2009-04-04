@@ -5,10 +5,10 @@
 IrisScheduler* mock_scheduler_new (void);
 
 static void
-queue_sync (IrisScheduler     *scheduler,
-            IrisSchedulerFunc  func,
-            gpointer           data,
-            GDestroyNotify     notify)
+queue_sync (IrisScheduler  *scheduler,
+            IrisCallback    func,
+            gpointer        data,
+            GDestroyNotify  notify)
 {
 	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
 	g_return_if_fail (func != NULL);

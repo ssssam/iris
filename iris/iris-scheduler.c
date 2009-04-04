@@ -41,10 +41,10 @@ struct _IrisSchedulerPrivate
 G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT);
 
 static void
-iris_scheduler_queue_real (IrisScheduler     *scheduler,
-                           IrisSchedulerFunc  func,
-                           gpointer           data,
-                           GDestroyNotify     notify)
+iris_scheduler_queue_real (IrisScheduler  *scheduler,
+                           IrisCallback    func,
+                           gpointer        data,
+                           GDestroyNotify  notify)
 {
 	IrisSchedulerPrivate *priv;
 	IrisThreadWork       *thread_work;
@@ -167,10 +167,10 @@ iris_scheduler_new_full (guint min_threads,
 }
 
 void
-iris_scheduler_queue (IrisScheduler     *scheduler,
-                      IrisSchedulerFunc  func,
-                      gpointer           data,
-                      GDestroyNotify     notify)
+iris_scheduler_queue (IrisScheduler  *scheduler,
+                      IrisCallback    func,
+                      gpointer        data,
+                      GDestroyNotify  notify)
 {
 	IrisSchedulerPrivate *priv;
 

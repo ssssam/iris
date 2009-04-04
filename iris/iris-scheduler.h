@@ -56,8 +56,6 @@ typedef struct _IrisScheduler        IrisScheduler;
 typedef struct _IrisSchedulerClass   IrisSchedulerClass;
 typedef struct _IrisSchedulerPrivate IrisSchedulerPrivate;
 
-typedef void (*IrisSchedulerFunc) (gpointer data);
-
 struct _IrisScheduler
 {
 	GObject parent;
@@ -69,34 +67,37 @@ struct _IrisSchedulerClass
 {
 	GObjectClass  parent_class;
 
-	gint  (*get_max_threads) (IrisScheduler     *scheduler);
-	gint  (*get_min_threads) (IrisScheduler     *scheduler);
+	gint  (*get_max_threads) (IrisScheduler  *scheduler);
+	gint  (*get_min_threads) (IrisScheduler  *scheduler);
 
-	void  (*queue)           (IrisScheduler     *scheduler,
-	                          IrisSchedulerFunc  func,
-	                          gpointer           data,
-	                          GDestroyNotify     notify);
+	void  (*queue)           (IrisScheduler  *scheduler,
+	                          IrisCallback    func,
+	                          gpointer        data,
+	                          GDestroyNotify  notify);
 
-	void (*add_thread)       (IrisScheduler     *scheduler,
-	                          IrisThread        *thread);
-	void (*remove_thread)    (IrisScheduler     *scheduler,
-	                          IrisThread        *thread);
+	void (*add_thread)       (IrisScheduler  *scheduler,
+	                          IrisThread     *thread);
+	void (*remove_thread)    (IrisScheduler  *scheduler,
+	                          IrisThread     *thread);
 };
 
 GType          iris_scheduler_get_type        (void) G_GNUC_CONST;
 
 IrisScheduler* iris_scheduler_new             (void);
-IrisScheduler* iris_scheduler_new_full        (guint min_threads, guint max_threads);
+IrisScheduler* iris_scheduler_new_full        (guint           min_threads,
+                                               guint           max_threads);
 
-gint           iris_scheduler_get_min_threads (IrisScheduler     *scheduler);
-gint           iris_scheduler_get_max_threads (IrisScheduler     *scheduler);
-void           iris_scheduler_queue           (IrisScheduler     *scheduler,
-                                               IrisSchedulerFunc  func,
-                                               gpointer           data,
-                                               GDestroyNotify     notify);
+gint           iris_scheduler_get_min_threads (IrisScheduler  *scheduler);
+gint           iris_scheduler_get_max_threads (IrisScheduler  *scheduler);
+void           iris_scheduler_queue           (IrisScheduler  *scheduler,
+                                               IrisCallback    func,
+                                               gpointer        data,
+                                               GDestroyNotify  notify);
 
-void           iris_scheduler_add_thread      (IrisScheduler *scheduler, IrisThread *thread);
-void           iris_scheduler_remove_thread   (IrisScheduler *scheduler, IrisThread *thread);
+void           iris_scheduler_add_thread      (IrisScheduler  *scheduler,
+                                               IrisThread     *thread);
+void           iris_scheduler_remove_thread   (IrisScheduler  *scheduler,
+                                               IrisThread     *thread);
 
 G_END_DECLS
 

@@ -75,7 +75,8 @@ struct _IrisArbiterClass
 {
 	GObjectClass  parent_class;
 
-	IrisReceiveDecision (*can_receive) (IrisArbiter *arbiter, IrisReceiver *receiver);
+	IrisReceiveDecision (*can_receive) (IrisArbiter  *arbiter,
+	                                    IrisReceiver *receiver);
 };
 
 GType               iris_arbiter_get_type    (void) G_GNUC_CONST;
