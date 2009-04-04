@@ -59,3 +59,5 @@ doc/reference/xml/
 *.bak
 build/autotools/shave
 build/autotools/shave-libtool
+examples/basic
+examples/basic.o

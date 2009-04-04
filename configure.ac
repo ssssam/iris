@@ -114,6 +114,7 @@ AC_CONFIG_FILES([
         Makefile
         iris/Makefile
         iris/iris-version.h
+        examples/Makefile
         tests/Makefile
         doc/Makefile
         doc/reference/Makefile

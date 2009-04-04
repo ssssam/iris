@@ -180,11 +180,11 @@ iris_scheduler_manager_print_stat (void)
 	GList *iter;
 
 	g_fprintf (stderr,
-	           "\nIris Thread Status\n"
-	           "======================================================\n");
+	           "\n    Iris Thread Status\n"
+	           "  ============================================================\n");
 
 	if (!singleton) {
-		g_fprintf (stderr, "No iris threads are currently active\n");
+		g_fprintf (stderr, "    No iris threads are currently active\n");
 		return;
 	}
 
@@ -195,5 +195,5 @@ iris_scheduler_manager_print_stat (void)
 
 	G_UNLOCK (singleton);
 
-	g_fprintf (stderr, "\n\n");
+	g_fprintf (stderr, "\n");
 }

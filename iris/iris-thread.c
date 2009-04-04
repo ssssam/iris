@@ -199,7 +199,7 @@ iris_thread_print_stat (IrisThread *thread)
 {
 	g_mutex_lock (thread->mutex);
 	g_fprintf (stderr,
-	           "Thread 0x%08lx     Active: %s     Queue Size: %d\n",
+	           "    Thread 0x%08lx     Active: %s     Queue Size: %d\n",
 	           (long)thread->thread,
 	           thread->active != NULL ? "yes" : "no",
 	           thread->active != NULL ? g_async_queue_length (thread->active) : 0);

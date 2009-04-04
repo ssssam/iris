@@ -1,4 +1,4 @@
-SUBDIRS = iris doc
+SUBDIRS = iris doc examples
 
 if ENABLE_GLIB_TEST
 SUBDIRS += tests
