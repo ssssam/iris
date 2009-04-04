@@ -12,7 +12,7 @@ is task management for building asynchronous workflows.
  II.  API Overview
 III.  Message Delivery Cycle
  IV.  Concurrent vs Exclusive
-  V.  
+  V.  Notes
 
 ---------------------------------------------------------------------------
 I. Introduction
@@ -55,3 +55,23 @@ iris_port_set_receiver (port, receiver);
 ---------------------------------------------------------------------------
 IV. 
 ---------------------------------------------------------------------------
+
+
+---------------------------------------------------------------------------
+V. Notes
+---------------------------------------------------------------------------
+
+The GSlice allocator is used for the most part throughout iris.  This could
+cause a problem as we start scaling out threads due to the thread-local
+caches of allocations that are used.  If the creator of these allocations
+is not the destroyer of the the allocations, many extra locks can be taken.
+Pulse audio has worked around this to a degree using their own free-lists
+for allocations.  After the API is in good shape we should look at tuning
+this as well.
+
+Right now both ports and receivers could be heavy consumers of locks.  We
+need a good lock-free queue to utilize here to reduce the time spent in
+the kernel.  Right now, in the early API scoping phase, that is pretty
+significantly high.  Again, Pulse audio has a lock-free queue we should
+look at for use instead of the GAsyncQueue used currently.  Perhaps this
+can also be the base queue for our work-stealing scheduler implementation.
