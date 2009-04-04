@@ -71,7 +71,7 @@ iris_port_set_receiver_real (IrisPort     *port,
 	g_mutex_lock (priv->mutex);
 
 	if (receiver != priv->receiver) {
-		if (!priv->receiver) {
+		if (priv->receiver) {
 			// FIXME: Unhook current receiver
 			g_object_unref (priv->receiver);
 		}
