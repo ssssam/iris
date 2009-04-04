@@ -1,0 +1,57 @@
+---------------------------------------------------------------------------
+        Iris - Message Passing and Asynchronous Toolkit for GLib
+---------------------------------------------------------------------------
+
+                                     Last Updated: Saturday April 4th, 2009
+
+Iris is an asynchronous toolkit for GLib to ease development of concurrent
+applications through message passing.  Ontop of the message passing core,
+is task management for building asynchronous workflows.
+
+  I.  Introduction
+ II.  API Overview
+III.  Message Delivery Cycle
+ IV.  Concurrent vs Exclusive
+  V.  
+
+---------------------------------------------------------------------------
+I. Introduction
+---------------------------------------------------------------------------
+
+Right now there are a couple constructs you need to be familiar with.  At
+the most basic, is the IrisMessage.  It encapsulates your data or operation
+that is to be performed.  The messages must be delivered somewhere.  That is
+what IrisPort is for.  It is the post office you post your messages to.
+
+IrisPort's are lightweight delivery mechanisms for your messages.  Port's
+will attempt to send the message to a receiver, which is repsonsible for
+turning a message into an actionable work item.  The receiver can push the
+work-item onto a scheduler who will actually manage executing the action.
+
+Another neat feature is the Scheduler Manager.  This system allows you to
+have many well-purposed schedulers based on what work you are trying to
+perform.  The scheduler manager will move threads between schedulers based
+on the scheduler's requirements to attempt to balance the active threads
+to the schedulers who need it.
+
+---------------------------------------------------------------------------
+II. API Overview
+---------------------------------------------------------------------------
+
+
+---------------------------------------------------------------------------
+III. Message Delivery Cycle
+---------------------------------------------------------------------------
+
+IrisPort     *port;
+IrisReceiver *receiver;
+
+port = iris_port_new ();
+receiver = iris_receiver_new ();
+iris_port_set_receiver (port, receiver);
+
+
+
+---------------------------------------------------------------------------
+IV. 
+---------------------------------------------------------------------------
