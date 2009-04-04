@@ -21,6 +21,8 @@
 #ifndef __IRIS_TYPES_H__
 #define __IRIS_TYPES_H__
 
+#include <glib.h>
+
 typedef enum
 {
 	IRIS_RECEIVE_NOW,
