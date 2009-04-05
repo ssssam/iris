@@ -18,6 +18,7 @@ sources_private_h =						\
 	$(top_srcdir)/iris/iris-receiver-private.h		\
 	$(top_srcdir)/iris/iris-scheduler-private.h		\
 	$(top_srcdir)/iris/iris-scheduler-manager-private.h	\
+	$(top_srcdir)/iris/iris-util.h				\
 	$(NULL)
 
 sources_c = 						\
@@ -29,6 +30,7 @@ sources_c = 						\
 	iris-scheduler-manager.c			\
 	iris-task.c					\
 	iris-thread.c					\
+	iris-util.c					\
 	$(NULL)
 
 irisincludedir = $(includedir)/iris-$(IRIS_API_VERSION)/iris
