@@ -67,10 +67,13 @@ iris_scheduler_queue_real (IrisScheduler  *scheduler,
 static guint
 iris_scheduler_get_n_cpu (void)
 {
-#ifdef Linux
-	return get_nprocs ();
+#ifdef LINUX
+	static gint n_cpu = 0;
+	if (G_UNLIKELY (n_cpu == 0))
+		n_cpu = get_nprocs ();
+	return n_cpu;
 #else
-	return 1; /* FIXME: Support more than Linux. */
+	return 1;
 #endif
 }
 
