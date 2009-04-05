@@ -32,13 +32,13 @@ struct _IrisThread
 {
 	/*< private >*/
 	IrisScheduler *scheduler;  /* Pointer to scheduler       */
-	GThread      *thread;     /* Handle to the thread       */
-	GAsyncQueue  *queue;      /* Command queue              */
-	gboolean      exclusive;  /* Can the thread be removed  *
-	                           * from an active scheduler   */
-	GMutex       *mutex;      /* Mutex for changing thread  *
-	                           * state. e.g. active queue.  */
-	GAsyncQueue  *active;     /* Active processing queue    */
+	GThread       *thread;     /* Handle to the thread       */
+	GAsyncQueue   *queue;      /* Command queue              */
+	gboolean       exclusive;  /* Can the thread be removed  *
+	                            * from an active scheduler   */
+	GMutex        *mutex;      /* Mutex for changing thread  *
+	                            * state. e.g. active queue.  */
+	GAsyncQueue   *active;     /* Active processing queue    */
 };
 
 struct _IrisThreadWork
