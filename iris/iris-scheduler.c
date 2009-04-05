@@ -34,8 +34,8 @@ struct _IrisSchedulerPrivate
 
 	gboolean     initialized;
 
-	gint         min_threads;
-	gint         max_threads;
+	guint        min_threads;
+	guint        max_threads;
 };
 
 G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT);
@@ -77,21 +77,17 @@ iris_scheduler_get_n_cpu (void)
 static gint
 iris_scheduler_get_min_threads_real (IrisScheduler *scheduler)
 {
-	if (scheduler->priv->min_threads > 0)
-		return scheduler->priv->min_threads;
-	return 1;
+	gint min_threads;
+	min_threads = scheduler->priv->min_threads;
+	return (min_threads > 0) ? min_threads : 1;
 }
 
 static gint
 iris_scheduler_get_max_threads_real (IrisScheduler *scheduler)
 {
-	if (scheduler->priv->max_threads > 0)
-		return scheduler->priv->max_threads;
-
-	/* A max threads of 0 means unlimited. By default, we ask
-	 * for no more than n_cpu. If there is only one cpu, we
-	 * will default to 2.
-	 */
+	gint max_threads;
+	if ((max_threads = scheduler->priv->max_threads))
+		return max_threads;
 	return MAX (2, iris_scheduler_get_n_cpu ());
 }
 
@@ -143,8 +139,8 @@ iris_scheduler_init (IrisScheduler *scheduler)
 	                                          IrisSchedulerPrivate);
 	scheduler->priv->mutex = g_mutex_new ();
 	scheduler->priv->queue = g_async_queue_new ();
-	scheduler->priv->min_threads = -1;
-	scheduler->priv->max_threads = -1;
+	scheduler->priv->min_threads = 0;
+	scheduler->priv->max_threads = 0;
 }
 
 IrisScheduler*
@@ -182,9 +178,9 @@ iris_scheduler_queue (IrisScheduler  *scheduler,
 
 	if (G_UNLIKELY (!priv->initialized)) {
 		g_mutex_lock (priv->mutex);
-		if (!priv->initialized) {
+		if (G_LIKELY (!priv->initialized)) {
 			iris_scheduler_manager_prepare (scheduler);
-			priv->initialized = TRUE;
+			g_atomic_int_set (&priv->initialized, TRUE);
 		}
 		g_mutex_unlock (priv->mutex);
 	}
