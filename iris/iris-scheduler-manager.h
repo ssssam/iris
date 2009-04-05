@@ -29,7 +29,9 @@ G_BEGIN_DECLS
 
 void iris_scheduler_manager_prepare    (IrisScheduler *scheduler);
 void iris_scheduler_manager_unprepare  (IrisScheduler *scheduler);
-void iris_scheduler_manager_balance    (void);
+void iris_scheduler_manager_request    (IrisScheduler *scheduler,
+                                        guint          per_quantum,
+                                        guint          total);
 void iris_scheduler_manager_print_stat (void);
 
 G_END_DECLS

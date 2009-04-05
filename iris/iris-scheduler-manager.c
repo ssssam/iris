@@ -149,19 +149,6 @@ iris_scheduler_manager_prepare (IrisScheduler *scheduler)
 }
 
 /**
- * iris_scheduler_manager_balance:
- *
- * Rebalances the threads available to provide more resources to
- * the schedulers that have not maxed out.  Schedulers that are
- * getting more backed up will be provided more threads if they
- * have not reached their thread limit.
- */
-void
-iris_scheduler_manager_balance (void)
-{
-}
-
-/**
  * iris_scheduler_manager_unprepare:
  * @scheduler: An #IrisScheduler
  *
@@ -174,6 +161,28 @@ iris_scheduler_manager_unprepare (IrisScheduler *scheduler)
 {
 }
 
+/**
+ * iris_scheduler_manager_request:
+ * @scheduler: An #IrisScheduler
+ * @per_quantum: The number of items processed in last quantum
+ * @total: the total number of work items left
+ *
+ * Request that more workers be added to a scheduler. If @per_quantum
+ * is > 0, then it will be used to try to maximize the number of threads
+ * that can be added to minimize the time to process the queue.
+ */
+void
+iris_scheduler_manager_request (IrisScheduler *scheduler,
+                                guint          per_quantum,
+                                guint          total)
+{
+}
+
+/**
+ * iris_scheduler_manager_print_stat:
+ *
+ * Prints out information on the threads within iris to standard error.
+ */
 void
 iris_scheduler_manager_print_stat (void)
 {

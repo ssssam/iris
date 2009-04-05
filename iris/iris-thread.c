@@ -21,63 +21,34 @@
 #include <glib/gprintf.h>
 
 #include "iris-message.h"
+#include "iris-scheduler-manager.h"
 #include "iris-scheduler-manager-private.h"
 #include "iris-thread.h"
+#include "iris-util.h"
 
-#define MSG_MANAGE   1
-#define MSG_SHUTDOWN 2
-
+#define MSG_MANAGE       (1)
+#define MSG_SHUTDOWN     (2)
+#define QUANTUM_USECS    (G_USEC_PER_SEC * 1)
 #define POP_WAIT_TIMEOUT (G_USEC_PER_SEC * 2)
+
+static void iris_thread_worker_exclusive (IrisThread *thread, GAsyncQueue *queue);
+static void iris_thread_worker_transient (IrisThread *thread, GAsyncQueue *queue);
 
 static void
 iris_thread_handle_manage (IrisThread  *thread,
                            GAsyncQueue *queue,
                            gboolean     exclusive)
 {
-	IrisThreadWork *work;
-	GTimeVal        tv;
-	gboolean        cleanup = FALSE;
-	gint            timeout = POP_WAIT_TIMEOUT;
-
 	g_return_if_fail (queue != NULL);
 
 	g_mutex_lock (thread->mutex);
 	thread->active = g_async_queue_ref (queue);
 	g_mutex_unlock (thread->mutex);
 
-next_item:
-
-	if (exclusive) {
-		work = g_async_queue_pop (queue);
-	}
-	else {
-		g_get_current_time (&tv);
-		g_time_val_add (&tv, timeout);
-		work = g_async_queue_timed_pop (queue, &tv);
-	}
-
-	if (work) {
-		iris_thread_work_run (work);
-		iris_thread_work_free (work);
-		goto next_item;
-	}
-
-	/* If we havent already been yielded then we will ask the scheduler
-	 * manager if there it would like to replace us into another
-	 * scheduler.  If so TRUE is returned and we need to finish any new
-	 * work items that have come in during our time in yield.
-	 */
-	if (!cleanup && iris_scheduler_manager_yield (thread)) {
-		exclusive = FALSE;
-		cleanup = TRUE;
-		timeout = 0;
-		goto next_item;
-	}
-
-	g_mutex_lock (thread->mutex);
-	g_async_queue_unref (queue);
-	thread->active = NULL;
-	g_mutex_unlock (thread->mutex);
+	if (G_UNLIKELY (exclusive))
+		iris_thread_worker_exclusive (thread, queue);
+	else
+		iris_thread_worker_transient (thread, queue);
 }
 
 static void
@@ -253,4 +224,122 @@ void
 iris_thread_work_free (IrisThreadWork *thread_work)
 {
 	g_slice_free (IrisThreadWork, thread_work);
+}
+
+static gboolean
+timeout_elapsed (GTimeVal *tv1,
+                 GTimeVal *tv2)
+{
+	GTimeVal tv_quantum = *tv1;
+	g_time_val_add (&tv_quantum, QUANTUM_USECS);
+	return (g_time_val_compare (&tv_quantum, tv2) == 1);
+}
+
+static void
+iris_thread_worker_exclusive (IrisThread  *thread,
+                              GAsyncQueue *queue)
+{
+	GTimeVal        tv_now      = {0,0};
+	GTimeVal        tv_req      = {0,0};
+	IrisThreadWork *thread_work = NULL;
+	gint            per_quantum = 0;     /* Completed items within the
+	                                      * last quantum.
+	                                      */
+	guint           count       = 0;     /* Items left in the queue at */
+	guint           tmp         = 0;     /* the last check.            */
+	gboolean        growing     = FALSE; /* If we are growing faster than
+	                                      * than we can process items.
+	                                      */
+
+	g_get_current_time (&tv_now);
+	g_get_current_time (&tv_req);
+	count = g_async_queue_length (queue);
+
+	/* Since our thread is in exclusive mode, we are responsible for
+	 * asking the scheduler manager to add or remove threads based
+	 * on the demand of our work queue.
+	 *
+	 * If the scheduler has maxed out the number of threads it is
+	 * allowed, then we will not ask the scheduler to add more
+	 * threads and rebalance.
+	 */
+
+get_next_item:
+
+	if (G_LIKELY ((thread_work = g_async_queue_pop (queue)) != NULL)) {
+		iris_thread_work_run (thread_work);
+		iris_thread_work_free (thread_work);
+		per_quantum++;
+	}
+
+	g_get_current_time (&tv_now);
+
+	if (G_UNLIKELY (timeout_elapsed (&tv_req, &tv_now))) {
+		tmp = g_async_queue_length (queue);
+		growing = tmp > 0 && tmp > count;
+		count = tmp;
+
+		/* if we will be done within one more quantum, then its
+		 * not essential to add the other thread.
+		 */
+		if (per_quantum < count) {
+			/* make sure we are not maxed before asking */
+			if (!g_atomic_int_get (&thread->scheduler->maxed))
+				iris_scheduler_manager_request (thread->scheduler,
+				                                per_quantum,
+				                                count);
+		}
+
+		per_quantum = 0;
+		tv_req = tv_now;
+	}
+
+	goto get_next_item;
+}
+
+static void
+iris_thread_worker_transient (IrisThread  *thread,
+                              GAsyncQueue *queue)
+{
+	IrisThreadWork *thread_work = NULL;
+	GTimeVal        tv_timeout = {0,0};
+
+	/* The transient mode worker is responsible for helping finish off as
+	 * many of the work items as fast as possible.  It is not responsible
+	 * for asking for more helpers, just processing work items.  When done
+	 * processing work items, it will yield itself back to the scheduler
+	 * manager.
+	 */
+
+	do {
+		g_get_current_time (&tv_timeout);
+		g_time_val_add (&tv_timeout, POP_WAIT_TIMEOUT);
+
+		if ((thread_work = g_async_queue_timed_pop (queue, &tv_timeout)) != NULL) {
+			iris_thread_work_run (thread_work);
+			iris_thread_work_free (thread_work);
+		}
+	} while (thread_work != NULL);
+
+	/* Yield our thread back to the scheduler manager */
+	iris_scheduler_manager_yield (thread);
+
+	/* We are now done processing for the thread, but we need to finish
+	 * off any pending work items that were delivered while yielding
+	 * ourself back to the manager.
+	 */
+
+	/* Disable the thread access to the queue. Although its been removed
+	 * and shouldn't be set anymore anyway.
+	 */
+	g_mutex_lock (thread->mutex);
+	thread->queue = NULL;
+	g_mutex_unlock (thread->mutex);
+
+	while ((thread_work = g_async_queue_try_pop (queue)) != NULL) {
+		iris_thread_work_run (thread_work);
+		iris_thread_work_free (thread_work);
+	}
+
+	g_async_queue_unref (queue);
 }

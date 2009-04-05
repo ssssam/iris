@@ -58,7 +58,9 @@ struct _IrisScheduler
 {
 	GObject parent;
 
+	/*< private >*/
 	IrisSchedulerPrivate *priv;
+	gboolean              maxed;
 };
 
 struct _IrisSchedulerClass
