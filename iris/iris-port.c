@@ -154,7 +154,7 @@ iris_port_post (IrisPort    *port,
 
 	priv = port->priv;
 
-	if (PORT_PAUSED (port) || !priv->receiver) {
+	if (PORT_PAUSED (port) || !(receiver = priv->receiver)) {
 		g_mutex_lock (priv->mutex);
 		if (PORT_PAUSED (port) || !priv->receiver) {
 			if (!priv->queue)
@@ -166,9 +166,6 @@ iris_port_post (IrisPort    *port,
 			state = priv->state;
 		}
 		g_mutex_unlock (priv->mutex);
-	}
-	else {
-		receiver = priv->receiver;
 	}
 
 	if (receiver) {
