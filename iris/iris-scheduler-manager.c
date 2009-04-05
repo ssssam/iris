@@ -23,6 +23,8 @@
 #include "iris-scheduler-manager.h"
 #include "iris-thread.h"
 
+#define THREAD_KEY ("__iris_threads")
+
 typedef struct
 {
 	GList *free_list;
@@ -37,23 +39,27 @@ G_LOCK_DEFINE (singleton);
 
 /**
  * iris_scheduler_manager_yield:
+ * @thread: The thread to yield
  *
- *
- * Checks and performs any work required to rebalance the scheduler managers
- * threads.  If the method returns %TRUE, then the calling thread should
- * exit its current scheduler and move on to other work.
+ * Yields a thread back to a scheduler.
  */
-gboolean
-iris_scheduler_manager_yield (void)
+void
+iris_scheduler_manager_yield (IrisThread *thread)
 {
-	/* return FALSE if the thread can continue handling the scheduler  */
-	//return FALSE;
+	g_return_if_fail (thread->scheduler != NULL);
 
-	return TRUE;
+	/* Remove the thread from the scheduler. */
+	iris_scheduler_remove_thread (thread->scheduler, thread);
+
+	/* We know that the threads scheduler definitely is no longer
+	 * maxed out since this thread is ending.
+	 */
+	g_atomic_int_set (&thread->scheduler->maxed, FALSE);
+	g_atomic_pointer_set (&thread->scheduler, NULL);
 }
 
 /**
- * get_or_create_thread:
+ * get_or_create_thread_unlocked:
  * @exclusive: if the thread should try to yield when done processing
  * @queue: a location to store the async queue
  *
@@ -67,19 +73,15 @@ iris_scheduler_manager_yield (void)
  * Return value: A re-purposed or new IrisThread
  */
 static IrisThread*
-get_or_create_thread (gboolean exclusive)
+get_or_create_thread_unlocked (gboolean exclusive)
 {
-	IrisThread *thread;
-
-	G_LOCK (singleton);
+	IrisThread *thread = NULL;
 
 	if (singleton->free_list) {
 		thread = singleton->free_list->data;
 		singleton->free_list = g_list_remove (singleton->free_list,
 		                                      singleton->free_list);
 	}
-
-	G_UNLOCK (singleton);
 
 	if (!thread) {
 		thread = iris_thread_new (exclusive);
@@ -90,10 +92,9 @@ get_or_create_thread (gboolean exclusive)
 		 *        currently on some architectures and os versions.
 		 */
 		g_assert (thread != NULL);
+		g_assert (thread->thread != NULL);
 
-		G_LOCK (singleton);
 		singleton->all_list = g_list_prepend (singleton->all_list, thread);
-		G_UNLOCK (singleton);
 	}
 
 	return thread;
@@ -137,15 +138,20 @@ iris_scheduler_manager_prepare (IrisScheduler *scheduler)
 	max_threads = iris_scheduler_get_max_threads (scheduler);
 	g_assert ((max_threads >= min_threads) || max_threads == 0);
 
+	G_LOCK (singleton);
+
 	for (i = 0; i < min_threads; i++) {
-		thread = get_or_create_thread (FALSE);
+		thread = get_or_create_thread_unlocked (TRUE);
+		g_assert (thread != NULL);
 
 		/* Add proper error handling */
 		g_return_if_fail (thread != NULL);
 
-		thread->scheduler = (gpointer)scheduler;
+		thread->scheduler = scheduler;
 		iris_scheduler_add_thread (scheduler, thread);
 	}
+
+	G_UNLOCK (singleton);
 }
 
 /**
@@ -176,6 +182,39 @@ iris_scheduler_manager_request (IrisScheduler *scheduler,
                                 guint          per_quantum,
                                 guint          total)
 {
+	IrisThread *thread      = NULL;
+	gint        requested   = 0;
+	guint       n_threads   = 0;
+	guint       max_threads = 0;
+	gint        i;
+
+	g_return_if_fail (scheduler != NULL);
+
+	/* Only continue if the scheduler is not maxed out */
+	if (g_atomic_int_get (&scheduler->maxed))
+		return;
+
+	if (!per_quantum)
+		per_quantum = 1;
+
+	requested = MAX (total / per_quantum, 1);
+	max_threads = iris_scheduler_get_max_threads (scheduler);
+	requested = MAX (requested, max_threads);
+
+	G_LOCK (singleton);
+
+	n_threads = GPOINTER_TO_INT (
+		g_object_get_data (G_OBJECT (scheduler),
+		                   THREAD_KEY));
+
+	if (n_threads <= max_threads) {
+		for (i = n_threads; i < requested; i++) {
+			thread = get_or_create_thread_unlocked (FALSE);
+			iris_scheduler_add_thread (scheduler, thread);
+		}
+	}
+
+	G_UNLOCK (singleton);
 }
 
 /**
