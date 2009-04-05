@@ -22,6 +22,8 @@
 #include <sys/sysinfo.h>
 #endif
 
+#include "stdlib.h"
+
 #include "iris-scheduler.h"
 #include "iris-scheduler-private.h"
 #include "iris-scheduler-manager.h"
@@ -69,8 +71,12 @@ iris_scheduler_get_n_cpu (void)
 {
 #ifdef LINUX
 	static gint n_cpu = 0;
-	if (G_UNLIKELY (n_cpu == 0))
-		n_cpu = get_nprocs ();
+	if (G_UNLIKELY (n_cpu == 0)) {
+		if (g_getenv ("IRIS_SCHED_MAX") != NULL)
+			n_cpu = atoi (g_getenv ("IRIS_SCHED_MAX"));
+		if (n_cpu == 0)
+			n_cpu = get_nprocs ();
+	}
 	return n_cpu;
 #else
 	return 1;
