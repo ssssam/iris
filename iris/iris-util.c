@@ -20,15 +20,26 @@
 
 #include <glib.h>
 
+/**
+ * g_time_val_compare:
+ * @tv1: A pointer to a GTimeVal
+ * @tv2: A pointer to a GTimeVal
+ *
+ * Compare two #GTimeVal and return -1, 0, or 1,
+ * depending on whether the first is less than, equal to, or greater
+ * than, the last.
+ */
 gint
 g_time_val_compare (GTimeVal *tv1,
                     GTimeVal *tv2)
 {
+	/* Licensed under LGPL-2.1
+	 * Evan Nemerson <evan@polussystems.com>
+	 * http://github.com/nemequ/vendy/blob/e59a392a53050f00b9b175552eb95c8fde2277a9/vendy/Vendy.Util.vala
+	 */
 	if (tv1->tv_sec < tv2->tv_sec)
 		return -1;
 	else if ((tv1->tv_sec > tv2->tv_sec) || (tv1->tv_usec > tv2->tv_usec))
 		return 1;
-	else if (tv1->tv_usec == tv2->tv_usec)
-		return 0;
-	return -1;
+	return (tv1->tv_usec == tv2->tv_usec) ? 0 : -1;
 }
