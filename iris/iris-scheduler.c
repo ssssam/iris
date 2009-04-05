@@ -146,12 +146,28 @@ iris_scheduler_init (IrisScheduler *scheduler)
 	scheduler->priv->max_threads = 0;
 }
 
+/**
+ * iris_scheduler_new:
+ *
+ * Creates a new instance of #IrisScheduler with the defaults.
+ *
+ * Return value: the newly created #IrisScheduler instance.
+ */
 IrisScheduler*
 iris_scheduler_new (void)
 {
 	return g_object_new (IRIS_TYPE_SCHEDULER, NULL);
 }
 
+/**
+ * iris_scheduler_new_full:
+ * @min_threads: The minimum number of threads to allocate
+ * @max_threads: The maximum number of threads to allocate
+ *
+ * Creates a new scheduler with a defined set of thread ratios.
+ *
+ * Return value: the newly created scheduler instance.
+ */
 IrisScheduler*
 iris_scheduler_new_full (guint min_threads,
                          guint max_threads)
@@ -165,6 +181,18 @@ iris_scheduler_new_full (guint min_threads,
 	return scheduler;
 }
 
+/**
+ * iris_scheduler_queue:
+ * @scheduler: An #IrisScheduler
+ * @func: An #IrisCallback
+ * @data: data for @func
+ * @notify: an optional callback after execution
+ *
+ * NOTE: notify will probably disappear soon
+ *
+ * Queues a new work item to be executed by one of the schedulers work
+ * threads.
+ */
 void
 iris_scheduler_queue (IrisScheduler  *scheduler,
                       IrisCallback    func,
@@ -193,18 +221,51 @@ iris_scheduler_queue (IrisScheduler  *scheduler,
 	IRIS_SCHEDULER_GET_CLASS (scheduler)->queue (scheduler, func, data, notify);
 }
 
+/**
+ * iris_scheduler_get_max_threads:
+ * @scheduler: An #IrisScheduler
+ *
+ * Retrieves the maximum number of threads the scheduler should be allocated.
+ * The default is equal to the number of cpus unless there is only a single
+ * cpu, in which case the default is 2.
+ *
+ * Currently, only Linux is supported for the number of cpus.  If you
+ * would like another OS supported, please send an email with the method
+ * to retreive the number of cpus (get_nprocs() on Linux).
+ *
+ * Return value: the maximum number of threads to allocate.
+ */
 gint
 iris_scheduler_get_max_threads (IrisScheduler *scheduler)
 {
 	return IRIS_SCHEDULER_GET_CLASS (scheduler)->get_max_threads (scheduler);
 }
 
+/**
+ * iris_scheduler_get_min_threads:
+ * @scheduler: An #IrisScheduler
+ *
+ * Requests the minimum number of threads that the scheduler needs to
+ * execute efficiently. This value should never change, and should always
+ * be greater or equal to 1.
+ *
+ * Return value: the minimum number of threads to allocate to the scheduler.
+ */
 gint
 iris_scheduler_get_min_threads (IrisScheduler *scheduler)
 {
 	return IRIS_SCHEDULER_GET_CLASS (scheduler)->get_min_threads (scheduler);
 }
 
+/**
+ * iris_scheduler_add_thread:
+ * @scheduler: An #IrisScheduler
+ * @thread: An #IrisThread
+ *
+ * Requests that the scheduler add the thread to its set of executing
+ * threads. It is the responsibility of the scheduler to tell the thread
+ * to start managing a work queue with iris_thread_manage().
+ */
 void
 iris_scheduler_add_thread (IrisScheduler *scheduler,
                            IrisThread    *thread)
@@ -212,6 +273,15 @@ iris_scheduler_add_thread (IrisScheduler *scheduler,
 	IRIS_SCHEDULER_GET_CLASS (scheduler)->add_thread (scheduler, thread);
 }
 
+/**
+ * iris_scheduler_remove_thread:
+ * @scheduler: An #IrisScheduler
+ * @thread: An #IrisThread
+ *
+ * Requests that a scheduler remove the thread from current activity. If the
+ * scheduler has a dedicated queue for the thread, it should flush the items
+ * into another threads or set of threads queues.
+ */
 void
 iris_scheduler_remove_thread (IrisScheduler *scheduler,
                               IrisThread    *thread)
