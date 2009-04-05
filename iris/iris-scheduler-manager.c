@@ -202,7 +202,7 @@ iris_scheduler_manager_request (IrisScheduler *scheduler,
 
 	requested = MAX (total / per_quantum, 1);
 	max_threads = iris_scheduler_get_max_threads (scheduler);
-	requested = MAX (requested, max_threads);
+	requested = MIN (requested, max_threads);
 
 	G_LOCK (singleton);
 
