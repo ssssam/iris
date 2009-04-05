@@ -88,10 +88,10 @@ iris_scheduler_get_min_threads_real (IrisScheduler *scheduler)
 static gint
 iris_scheduler_get_max_threads_real (IrisScheduler *scheduler)
 {
-	gint max_threads;
-	if ((max_threads = scheduler->priv->max_threads))
-		return max_threads;
-	return MAX (2, iris_scheduler_get_n_cpu ());
+	IrisSchedulerPrivate *priv = scheduler->priv;
+	if (G_UNLIKELY (priv->max_threads == 0))
+		priv->max_threads = MAX (2, iris_scheduler_get_n_cpu ());
+	return priv->max_threads;
 }
 
 static void
