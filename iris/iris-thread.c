@@ -42,7 +42,8 @@ timeout_elapsed (GTimeVal *tv1,
 
 static void
 iris_thread_worker_exclusive (IrisThread  *thread,
-                              GAsyncQueue *queue)
+                              GAsyncQueue *queue,
+                              gboolean     leader)
 {
 	GTimeVal        tv_now      = {0,0};
 	GTimeVal        tv_req      = {0,0};
@@ -76,27 +77,30 @@ get_next_item:
 		iris_thread_work_free (thread_work);
 		per_quantum++;
 	}
+	else return;
 
-	g_get_current_time (&tv_now);
+	if (G_LIKELY (leader)) {
+		g_get_current_time (&tv_now);
 
-	if (G_UNLIKELY (timeout_elapsed (&tv_req, &tv_now))) {
-		tmp = g_async_queue_length (queue);
-		growing = tmp > 0 && tmp > count;
-		count = tmp;
+		if (G_UNLIKELY (timeout_elapsed (&tv_req, &tv_now))) {
+			tmp = g_async_queue_length (queue);
+			growing = tmp > 0 && tmp > count;
+			count = tmp;
 
-		/* if we will be done within one more quantum, then its
-		 * not essential to add the other thread.
-		 */
-		if (per_quantum < count) {
-			/* make sure we are not maxed before asking */
-			if (!g_atomic_int_get (&thread->scheduler->maxed))
-				iris_scheduler_manager_request (thread->scheduler,
-				                                per_quantum,
-				                                count);
+			/* if we will be done within one more quantum, then its
+			 * not essential to add the other thread.
+			 */
+			if (per_quantum < count) {
+				/* make sure we are not maxed before asking */
+				if (!g_atomic_int_get (&thread->scheduler->maxed))
+					iris_scheduler_manager_request (thread->scheduler,
+									per_quantum,
+									count);
+			}
+
+			per_quantum = 0;
+			tv_req = tv_now;
 		}
-
-		per_quantum = 0;
-		tv_req = tv_now;
 	}
 
 	goto get_next_item;
@@ -141,7 +145,8 @@ iris_thread_worker_transient (IrisThread  *thread,
 static void
 iris_thread_handle_manage (IrisThread  *thread,
                            GAsyncQueue *queue,
-                           gboolean     exclusive)
+                           gboolean     exclusive,
+                           gboolean     leader)
 {
 	g_return_if_fail (queue != NULL);
 
@@ -150,7 +155,7 @@ iris_thread_handle_manage (IrisThread  *thread,
 	g_mutex_unlock (thread->mutex);
 
 	if (G_UNLIKELY (exclusive))
-		iris_thread_worker_exclusive (thread, queue);
+		iris_thread_worker_exclusive (thread, queue, leader);
 	else
 		iris_thread_worker_transient (thread, queue);
 }
@@ -178,7 +183,8 @@ next_message:
 	case MSG_MANAGE:
 		iris_thread_handle_manage (thread,
 		                           iris_message_get_pointer (message, "queue"),
-		                           iris_message_get_boolean (message, "exclusive"));
+		                           iris_message_get_boolean (message, "exclusive"),
+		                           iris_message_get_boolean (message, "leader"));
 		break;
 	case MSG_SHUTDOWN:
 		iris_thread_handle_shutdown (thread);
@@ -207,6 +213,10 @@ iris_thread_new (gboolean exclusive)
 {
 	IrisThread *thread;
 
+#ifdef IRIS_ENABLE_DEBUG
+	g_debug ("%s(exclusive=%s)", __func__, exclusive ? "TRUE" : "FALSE");
+#endif
+
 	thread = g_slice_new0 (IrisThread);
 	thread->exclusive = exclusive;
 	thread->queue = g_async_queue_new ();
@@ -226,22 +236,33 @@ iris_thread_new (gboolean exclusive)
 /**
  * iris_thread_manage:
  * @thread: An #IrisThread
+ * @queue: A #GAsyncQueue
+ * @leader: If the thread is responsible for asking for more threads
  *
  * Sends a message to the thread asking it to retreive work items from
  * the queue.
+ *
+ * If @leader is %TRUE, then the thread will periodically ask the scheduler
+ * manager to ask for more threads.
  */
 void
-iris_thread_manage (IrisThread  *thread,
-                    GAsyncQueue *queue)
+iris_thread_manage (IrisThread    *thread,
+                    GAsyncQueue   *queue,
+                    gboolean       leader)
 {
 	IrisMessage *message;
 
 	g_return_if_fail (thread != NULL);
 	g_return_if_fail (queue != NULL);
 
+#ifdef IRIS_ENABLE_DEBUG
+	g_debug ("%s(leader=%s)", __func__, leader ? "TRUE" : "FALSE");
+#endif
+
 	message = iris_message_new_full (MSG_MANAGE,
 	                                 "exclusive", G_TYPE_BOOLEAN, thread->exclusive,
 	                                 "queue", G_TYPE_POINTER, queue,
+	                                 "leader", G_TYPE_BOOLEAN, leader,
 	                                 NULL);
 	g_async_queue_push (thread->queue, message);
 }

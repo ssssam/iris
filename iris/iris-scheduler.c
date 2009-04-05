@@ -38,6 +38,8 @@ struct _IrisSchedulerPrivate
 
 	guint        min_threads;
 	guint        max_threads;
+
+	gboolean     has_leader;
 };
 
 G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT);
@@ -105,12 +107,15 @@ iris_scheduler_add_thread_real (IrisScheduler  *scheduler,
                                 IrisThread     *thread)
 {
 	IrisSchedulerPrivate *priv;
+	gboolean              leader;
 
 	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
 
 	priv = scheduler->priv;
 
-	iris_thread_manage (thread, priv->queue);
+	leader = g_atomic_int_compare_and_exchange (&priv->has_leader, FALSE, TRUE);
+
+	iris_thread_manage (thread, priv->queue, leader);
 }
 
 static void
