@@ -151,6 +151,9 @@ iris_scheduler_manager_prepare (IrisScheduler *scheduler)
 		iris_scheduler_add_thread (scheduler, thread);
 	}
 
+	g_object_set_data (G_OBJECT (scheduler), THREAD_KEY,
+	                   GINT_TO_POINTER (min_threads));
+
 	G_UNLOCK (singleton);
 }
 
@@ -211,8 +214,12 @@ iris_scheduler_manager_request (IrisScheduler *scheduler,
 		for (i = n_threads; i < requested; i++) {
 			thread = get_or_create_thread_unlocked (FALSE);
 			iris_scheduler_add_thread (scheduler, thread);
+			n_threads++;
 		}
 	}
+
+	g_object_set_data (G_OBJECT (scheduler), THREAD_KEY,
+	                   GINT_TO_POINTER (n_threads));
 
 	G_UNLOCK (singleton);
 }
