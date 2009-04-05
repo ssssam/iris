@@ -49,7 +49,7 @@ iris_scheduler_queue_real (IrisScheduler  *scheduler,
 	IrisSchedulerPrivate *priv;
 	IrisThreadWork       *thread_work;
 
-	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
+	g_return_if_fail (scheduler != NULL);
 	g_return_if_fail (func != NULL);
 
 	priv = scheduler->priv;
@@ -172,6 +172,8 @@ iris_scheduler_queue (IrisScheduler  *scheduler,
                       GDestroyNotify  notify)
 {
 	IrisSchedulerPrivate *priv;
+
+	g_return_if_fail (scheduler != NULL);
 
 	priv = scheduler->priv;
 

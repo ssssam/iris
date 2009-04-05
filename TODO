@@ -40,6 +40,8 @@ iris_scheduler_get_type()
 	up the threads so that they do not check on every work item
 	iteration.
 
+	PATCHED but not verified.
+
 iris_port_post()
 _iris_receiver_deliver_real()
 
