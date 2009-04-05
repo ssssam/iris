@@ -19,6 +19,11 @@ iris_scheduler_get_max_threads()
 	/ n_threads, its total time is very low. But we should try to avoid
 	the method call all-together.
 
+	PATCHED but not verified. We now store the value from the n cpus
+	within the private structure and branch predict the outcomes.
+	This should mitigate at least the number of calls to the get n
+	cpus method.
+
 g_time_val_compare()
 
 	Shows up on the profile. We are calling this between every work-
