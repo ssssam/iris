@@ -61,12 +61,10 @@ iris_scheduler_manager_yield (IrisThread *thread)
 /**
  * get_or_create_thread_unlocked:
  * @exclusive: if the thread should try to yield when done processing
- * @queue: a location to store the async queue
  *
  * Tries to first retreive a thread from the free thread list.  If that
- * fails, then a new thread is created.  If @try_yield is %TRUE then
- * the thread will try to yield itself back to the scheduler if it has
- * not received a work item within the timeout period.
+ * fails, then a new thread is created.  If @exclusive, then the thread
+ * will stay attached to the scheduler for the life of the scheduler.
  *
  * See iris_thread_manage()
  *
