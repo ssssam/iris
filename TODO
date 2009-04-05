@@ -6,6 +6,14 @@ Remove the methods that use _iris. We should just suffix the internal
 methods for implementations with _real.
 
 ---------------------------------------------------------------------------
+Missing or Incompleteness
+---------------------------------------------------------------------------
+
+We are not currently destroying threads ever. After they are created they
+stay created until the end of the process. We need to find a way to
+periodically walk the free-list to shutdown old threads.
+
+---------------------------------------------------------------------------
 Optimization TODO's
 ---------------------------------------------------------------------------
 
