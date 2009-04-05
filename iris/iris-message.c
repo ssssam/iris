@@ -47,7 +47,7 @@
  */
 
 static GValue*
-_iris_message_value_new (const GValue *src)
+iris_message_value_new (const GValue *src)
 {
 	GValue *dst = g_slice_new0 (GValue);
 	if (G_LIKELY (src)) {
@@ -58,7 +58,7 @@ _iris_message_value_new (const GValue *src)
 }
 
 static void
-_iris_message_value_free (gpointer data)
+iris_message_value_free (gpointer data)
 {
 	GValue *value;
 
@@ -73,18 +73,18 @@ _iris_message_value_free (gpointer data)
 }
 
 static void
-_iris_message_init_items (IrisMessage *message)
+iris_message_init_items (IrisMessage *message)
 {
 	if (G_LIKELY (!message->items))
 		message->items = g_hash_table_new_full (g_str_hash,
 		                                        g_str_equal,
 		                                        g_free,
-		                                        _iris_message_value_free);
+		                                        iris_message_value_free);
 }
 
 static const GValue*
-_iris_message_get_value_internal (IrisMessage *message,
-                                  const gchar *name)
+iris_message_get_value_internal (IrisMessage *message,
+                                 const gchar *name)
 {
 	g_return_val_if_fail (message != NULL, NULL);
 	g_return_val_if_fail (message->items != NULL, NULL);
@@ -93,21 +93,21 @@ _iris_message_get_value_internal (IrisMessage *message,
 }
 
 static void
-_iris_message_set_value_internal (IrisMessage *message,
-                                  const gchar *name,
-                                  GValue      *value)
+iris_message_set_value_internal (IrisMessage *message,
+                                 const gchar *name,
+                                 GValue      *value)
 {
 	g_return_if_fail (message != NULL);
 
 	if (!message->items)
-		_iris_message_init_items (message);
+		iris_message_init_items (message);
 	g_assert (message->items != NULL);
 
 	g_hash_table_insert (message->items, g_strdup (name), value);
 }
 
 static void
-_iris_message_destroy (IrisMessage *message)
+iris_message_destroy (IrisMessage *message)
 {
 	g_return_if_fail (message != NULL);
 	if (message->items) {
@@ -117,7 +117,7 @@ _iris_message_destroy (IrisMessage *message)
 }
 
 static void
-_iris_message_free (IrisMessage *message)
+iris_message_free (IrisMessage *message)
 {
 	g_slice_free (IrisMessage, message);
 }
@@ -246,8 +246,8 @@ iris_message_unref (IrisMessage *message)
 	g_return_if_fail (message->ref_count > 0);
 
 	if (g_atomic_int_dec_and_test (&message->ref_count)) {
-		_iris_message_destroy (message);
-		_iris_message_free (message);
+		iris_message_destroy (message);
+		iris_message_free (message);
 	}
 }
 
@@ -273,11 +273,11 @@ iris_message_copy (IrisMessage *message)
 	dst = iris_message_new (message->what);
 
 	if (message->items) {
-		_iris_message_init_items (dst);
+		iris_message_init_items (dst);
 		g_hash_table_iter_init (&iter, message->items);
 		while (g_hash_table_iter_next (&iter, &key, &value)) {
 			dkey = g_strdup (key);
-			dvalue = _iris_message_value_new ((const GValue*)value);
+			dvalue = iris_message_value_new ((const GValue*)value);
 			g_hash_table_insert (dst->items, dkey, dvalue);
 		}
 	}
@@ -358,7 +358,7 @@ iris_message_get_value (IrisMessage *message,
                         GValue      *value)
 {
 	const GValue *real_value;
-	real_value = _iris_message_get_value_internal (message, name);
+	real_value = iris_message_get_value_internal (message, name);
 	if (!real_value)
 		g_assert_not_reached ();
 	g_value_init (value, G_VALUE_TYPE (real_value));
@@ -382,8 +382,8 @@ iris_message_set_value (IrisMessage  *message,
 
 	g_return_if_fail (message != NULL);
 
-	real_value = _iris_message_value_new (value);
-	_iris_message_set_value_internal (message, name, real_value);
+	real_value = iris_message_value_new (value);
+	iris_message_set_value_internal (message, name, real_value);
 }
 
 /**
@@ -400,7 +400,7 @@ iris_message_get_string (IrisMessage *message,
                          const gchar *name)
 {
 	const GValue *value;
-	value = _iris_message_get_value_internal (message, name);
+	value = iris_message_get_value_internal (message, name);
 	g_return_val_if_fail (value != NULL, NULL);
 	g_return_val_if_fail (G_VALUE_TYPE (value) == G_TYPE_STRING, NULL);
 	return g_value_get_string (value);
@@ -424,11 +424,11 @@ iris_message_set_string (IrisMessage *message,
 
 	g_return_if_fail (message != NULL);
 
-	real_value = _iris_message_value_new (NULL);
+	real_value = iris_message_value_new (NULL);
 	g_value_init (real_value, G_TYPE_STRING);
 	g_value_set_string (real_value, value);
 
-	_iris_message_set_value_internal (message, name, real_value);
+	iris_message_set_value_internal (message, name, real_value);
 }
 
 /**
@@ -445,7 +445,7 @@ iris_message_get_int (IrisMessage *message,
                       const gchar *name)
 {
 	const GValue *value;
-	value = _iris_message_get_value_internal (message, name);
+	value = iris_message_get_value_internal (message, name);
 	g_return_val_if_fail (value != NULL, 0);
 	return g_value_get_int (value);
 }
@@ -467,11 +467,11 @@ iris_message_set_int (IrisMessage *message,
 
 	g_return_if_fail (message != NULL);
 
-	real_value = _iris_message_value_new (NULL);
+	real_value = iris_message_value_new (NULL);
 	g_value_init (real_value, G_TYPE_INT);
 	g_value_set_int (real_value, value);
 
-	_iris_message_set_value_internal (message, name, real_value);
+	iris_message_set_value_internal (message, name, real_value);
 }
 
 /**
@@ -488,7 +488,7 @@ iris_message_get_int64 (IrisMessage *message,
                         const gchar *name)
 {
 	const GValue *value;
-	value = _iris_message_get_value_internal (message, name);
+	value = iris_message_get_value_internal (message, name);
 	g_return_val_if_fail (value != NULL, 0);
 	return g_value_get_int64 (value);
 }
@@ -510,11 +510,11 @@ iris_message_set_int64 (IrisMessage *message,
 
 	g_return_if_fail (message != NULL);
 
-	real_value = _iris_message_value_new (NULL);
+	real_value = iris_message_value_new (NULL);
 	g_value_init (real_value, G_TYPE_INT64);
 	g_value_set_int64 (real_value, value);
 
-	_iris_message_set_value_internal (message, name, real_value);
+	iris_message_set_value_internal (message, name, real_value);
 }
 
 /**
@@ -531,7 +531,7 @@ iris_message_get_float (IrisMessage *message,
                         const gchar *name)
 {
 	const GValue *value;
-	value = _iris_message_get_value_internal (message, name);
+	value = iris_message_get_value_internal (message, name);
 	g_return_val_if_fail (value != NULL, 0);
 	return g_value_get_float (value);
 }
@@ -553,11 +553,11 @@ iris_message_set_float (IrisMessage *message,
 
 	g_return_if_fail (message != NULL);
 
-	real_value = _iris_message_value_new (NULL);
+	real_value = iris_message_value_new (NULL);
 	g_value_init (real_value, G_TYPE_FLOAT);
 	g_value_set_float (real_value, value);
 
-	_iris_message_set_value_internal (message, name, real_value);
+	iris_message_set_value_internal (message, name, real_value);
 }
 
 /**
@@ -574,7 +574,7 @@ iris_message_get_double (IrisMessage *message,
                          const gchar *name)
 {
 	const GValue *value;
-	value = _iris_message_get_value_internal (message, name);
+	value = iris_message_get_value_internal (message, name);
 	g_return_val_if_fail (value != NULL, 0);
 	return g_value_get_double (value);
 }
@@ -596,11 +596,11 @@ iris_message_set_double (IrisMessage *message,
 
 	g_return_if_fail (message != NULL);
 
-	real_value = _iris_message_value_new (NULL);
+	real_value = iris_message_value_new (NULL);
 	g_value_init (real_value, G_TYPE_DOUBLE);
 	g_value_set_double (real_value, value);
 
-	_iris_message_set_value_internal (message, name, real_value);
+	iris_message_set_value_internal (message, name, real_value);
 }
 
 /**
@@ -617,7 +617,7 @@ iris_message_get_long (IrisMessage *message,
                        const gchar *name)
 {
 	const GValue *value;
-	value = _iris_message_get_value_internal (message, name);
+	value = iris_message_get_value_internal (message, name);
 	g_return_val_if_fail (value != NULL, 0);
 	return g_value_get_long (value);
 }
@@ -639,11 +639,11 @@ iris_message_set_long (IrisMessage *message,
 
 	g_return_if_fail (message != NULL);
 
-	real_value = _iris_message_value_new (NULL);
+	real_value = iris_message_value_new (NULL);
 	g_value_init (real_value, G_TYPE_LONG);
 	g_value_set_long (real_value, value);
 
-	_iris_message_set_value_internal (message, name, real_value);
+	iris_message_set_value_internal (message, name, real_value);
 }
 
 /**
@@ -660,7 +660,7 @@ iris_message_get_ulong (IrisMessage *message,
                        const gchar *name)
 {
 	const GValue *value;
-	value = _iris_message_get_value_internal (message, name);
+	value = iris_message_get_value_internal (message, name);
 	g_return_val_if_fail (value != NULL, 0);
 	return g_value_get_ulong (value);
 }
@@ -682,11 +682,11 @@ iris_message_set_ulong (IrisMessage *message,
 
 	g_return_if_fail (message != NULL);
 
-	real_value = _iris_message_value_new (NULL);
+	real_value = iris_message_value_new (NULL);
 	g_value_init (real_value, G_TYPE_ULONG);
 	g_value_set_ulong (real_value, value);
 
-	_iris_message_set_value_internal (message, name, real_value);
+	iris_message_set_value_internal (message, name, real_value);
 }
 
 /**
@@ -703,7 +703,7 @@ iris_message_get_char (IrisMessage *message,
                        const gchar *name)
 {
 	const GValue *value;
-	value = _iris_message_get_value_internal (message, name);
+	value = iris_message_get_value_internal (message, name);
 	g_return_val_if_fail (value != NULL, 0);
 	return g_value_get_char (value);
 }
@@ -725,11 +725,11 @@ iris_message_set_char (IrisMessage *message,
 
 	g_return_if_fail (message != NULL);
 
-	real_value = _iris_message_value_new (NULL);
+	real_value = iris_message_value_new (NULL);
 	g_value_init (real_value, G_TYPE_CHAR);
 	g_value_set_char (real_value, value);
 
-	_iris_message_set_value_internal (message, name, real_value);
+	iris_message_set_value_internal (message, name, real_value);
 }
 
 /**
@@ -746,7 +746,7 @@ iris_message_get_uchar (IrisMessage *message,
                         const gchar *name)
 {
 	const GValue *value;
-	value = _iris_message_get_value_internal (message, name);
+	value = iris_message_get_value_internal (message, name);
 	g_return_val_if_fail (value != NULL, 0);
 	return g_value_get_uchar (value);
 }
@@ -768,11 +768,11 @@ iris_message_set_uchar (IrisMessage *message,
 
 	g_return_if_fail (message != NULL);
 
-	real_value = _iris_message_value_new (NULL);
+	real_value = iris_message_value_new (NULL);
 	g_value_init (real_value, G_TYPE_UCHAR);
 	g_value_set_uchar (real_value, value);
 
-	_iris_message_set_value_internal (message, name, real_value);
+	iris_message_set_value_internal (message, name, real_value);
 }
 
 /**
@@ -789,7 +789,7 @@ iris_message_get_boolean (IrisMessage *message,
                           const gchar *name)
 {
 	const GValue *value;
-	value = _iris_message_get_value_internal (message, name);
+	value = iris_message_get_value_internal (message, name);
 	g_return_val_if_fail (value != NULL, 0);
 	return g_value_get_boolean (value);
 }
@@ -811,11 +811,11 @@ iris_message_set_boolean (IrisMessage *message,
 
 	g_return_if_fail (message != NULL);
 
-	real_value = _iris_message_value_new (NULL);
+	real_value = iris_message_value_new (NULL);
 	g_value_init (real_value, G_TYPE_BOOLEAN);
 	g_value_set_boolean (real_value, value);
 
-	_iris_message_set_value_internal (message, name, real_value);
+	iris_message_set_value_internal (message, name, real_value);
 }
 
 /**
@@ -832,7 +832,7 @@ iris_message_get_pointer (IrisMessage *message,
                           const gchar *name)
 {
 	const GValue *value;
-	value = _iris_message_get_value_internal (message, name);
+	value = iris_message_get_value_internal (message, name);
 	g_return_val_if_fail (value != NULL, 0);
 	return g_value_get_pointer (value);
 }
@@ -854,11 +854,11 @@ iris_message_set_pointer (IrisMessage *message,
 
 	g_return_if_fail (message != NULL);
 
-	real_value = _iris_message_value_new (NULL);
+	real_value = iris_message_value_new (NULL);
 	g_value_init (real_value, G_TYPE_POINTER);
 	g_value_set_pointer (real_value, value);
 
-	_iris_message_set_value_internal (message, name, real_value);
+	iris_message_set_value_internal (message, name, real_value);
 }
 
 /**

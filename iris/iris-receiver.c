@@ -114,8 +114,8 @@ iris_receiver_worker (gpointer data)
 }
 
 static IrisDeliveryStatus
-_iris_receiver_deliver_real (IrisReceiver *receiver,
-                             IrisMessage  *message)
+iris_receiver_deliver_real (IrisReceiver *receiver,
+                            IrisMessage  *message)
 {
 	IrisReceiverPrivate *priv;
 	IrisDeliveryStatus   status;
@@ -213,7 +213,7 @@ iris_receiver_class_init (IrisReceiverClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-	klass->deliver = _iris_receiver_deliver_real;
+	klass->deliver = iris_receiver_deliver_real;
 	object_class->finalize = iris_receiver_finalize;
 
 	g_type_class_add_private (object_class, sizeof (IrisReceiverPrivate));

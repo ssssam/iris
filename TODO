@@ -5,6 +5,8 @@ Code cleanliness TOOD's
 Remove the methods that use _iris. We should just suffix the internal
 methods for implementations with _real.
 
+PATCHED and commited.
+
 ---------------------------------------------------------------------------
 Missing or Incompleteness
 ---------------------------------------------------------------------------
