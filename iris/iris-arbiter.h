@@ -70,12 +70,8 @@ struct _IrisArbiterClass
 };
 
 GType               iris_arbiter_get_type    (void) G_GNUC_CONST;
-IrisReceiveDecision iris_arbiter_can_receive (IrisArbiter *arbiter, IrisReceiver *receiver);
-
-/* This belongs in iris-receiver.h, but due to cyclic headers,
- * it is in here for now.
- */
-IrisReceiver*       iris_receiver_new_full   (IrisScheduler *scheduler, IrisArbiter *arbiter, IrisMessageHandler handler, gpointer data);
+IrisReceiveDecision iris_arbiter_can_receive (IrisArbiter  *arbiter,
+                                              IrisReceiver *receiver);
 
 G_END_DECLS
 

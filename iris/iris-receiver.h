@@ -65,13 +65,19 @@ struct _IrisReceiverClass
 {
 	GObjectClass parent_class;
 
-	IrisDeliveryStatus (*deliver) (IrisReceiver *receiver, IrisMessage *message);
+	IrisDeliveryStatus (*deliver) (IrisReceiver *receiver,
+	                               IrisMessage  *message);
 };
 
 GType              iris_receiver_get_type (void) G_GNUC_CONST;
 
 IrisReceiver*      iris_receiver_new      (void);
-IrisDeliveryStatus iris_receiver_deliver  (IrisReceiver  *receiver,  IrisMessage *message);
+IrisReceiver*      iris_receiver_new_full (IrisScheduler      *scheduler,
+                                           IrisArbiter        *arbiter,
+                                           IrisMessageHandler  handler,
+                                           gpointer            data);
+IrisDeliveryStatus iris_receiver_deliver  (IrisReceiver       *receiver,
+                                           IrisMessage        *message);
 
 G_END_DECLS
 
