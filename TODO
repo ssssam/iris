@@ -1,0 +1,69 @@
+---------------------------------------------------------------------------
+Code cleanliness TOOD's
+---------------------------------------------------------------------------
+
+Remove the methods that use _iris. We should just suffix the internal
+methods for implementations with _real.
+
+---------------------------------------------------------------------------
+Optimization TODO's
+---------------------------------------------------------------------------
+
+iris_scheduler_get_max_threads()
+
+	This method shows up on the profiles as it is called quite often.
+	We should both reduce the number of calls to the method and make
+	sure it reads a cached value when it does.
+
+	While calls to this method are equal to about the total work items
+	/ n_threads, its total time is very low. But we should try to avoid
+	the method call all-together.
+
+g_time_val_compare()
+
+	Shows up on the profile. We are calling this between every work-
+	item in the worker thread. Lets start with inline-ing it, but how
+	can we avoid the need to check the timings at all?
+
+iris_message_unref()
+
+	This method shows up on the profile. It has considerable wait time
+	which is probably attributed to using g_slice_*(). We should look
+	at options from pulse audio which use lock-free algorithms.
+
+	The changes here should also be applied to the IrisThreadWork
+	data structure.
+
+iris_scheduler_get_type()
+
+	This is called for every work item. We should check when setting
+	up the threads so that they do not check on every work item
+	iteration.
+
+iris_port_post()
+_iris_receiver_deliver_real()
+
+	These related methods have significant wait time. This could be
+	both from the atomic operations as well as the locks incurred.
+	How can we reduce the potential for lock in these situations?
+
+iris_thread_worker()
+
+	This method showed up with lots of wait time. This is probably
+	just from the waiting for control messages from the scheduler
+	manager.
+
+g_async_queue_push()
+g_async_queue_pop()
+
+	These methods contain almost all of the wait time for the basic
+	example. They use mutex's to synchronize (last i checked). We should
+	look at what pulse audio is using for a lock-free queue. It might
+	yield a significant speed up and reduction of time spent in kernel
+	for locks.
+
+	It would probably be good to create a basic queue api that can be
+	used within Iris that allows for other implementations of the
+	queue. Such as a work stealing queue where all the work is done in
+	the queue itself.
+
