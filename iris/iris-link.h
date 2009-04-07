@@ -21,8 +21,6 @@
 #ifndef __IRIS_LINK_H__
 #define __IRIS_LINK_H__
 
-typedef struct _IrisLink IrisLink;
-
 struct _IrisLink
 {
 	gpointer  data;

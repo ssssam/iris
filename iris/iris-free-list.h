@@ -23,11 +23,10 @@
 
 #include <glib.h>
 
+#include "iris-types.h"
 #include "iris-link.h"
 
 G_BEGIN_DECLS
-
-typedef struct _IrisFreeList     IrisFreeList;
 
 struct _IrisFreeList
 {

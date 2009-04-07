@@ -56,6 +56,10 @@ typedef struct _IrisScheduler        IrisScheduler;
 typedef struct _IrisSchedulerClass   IrisSchedulerClass;
 typedef struct _IrisSchedulerPrivate IrisSchedulerPrivate;
 
+typedef struct _IrisFreeList         IrisFreeList;
+
+typedef struct _IrisLink             IrisLink;
+
 typedef void (*IrisCallback)       (gpointer data);
 typedef void (*IrisMessageHandler) (IrisMessage *message, gpointer data);
 
