@@ -34,12 +34,14 @@ struct _IrisQueue
 	IrisLink     *head;
 	IrisLink     *tail;
 	IrisFreeList *free_list;
+	guint         length;
 };
 
-IrisQueue* iris_queue_new     (void);
-void       iris_queue_free    (IrisQueue *queue);
-void       iris_queue_enqueue (IrisQueue *queue, gpointer data);
-gpointer   iris_queue_dequeue (IrisQueue *queue);
+IrisQueue* iris_queue_new        (void);
+void       iris_queue_free       (IrisQueue *queue);
+void       iris_queue_enqueue    (IrisQueue *queue, gpointer data);
+gpointer   iris_queue_dequeue    (IrisQueue *queue);
+guint      iris_queue_get_length (IrisQueue *queue);
 
 G_END_DECLS
 

@@ -36,6 +36,7 @@ iris_queue_new (void)
 	queue->head = g_slice_new0 (IrisLink);
 	queue->tail = queue->head;
 	queue->free_list = iris_free_list_new ();
+	queue->length = 0;
 
 	return queue;
 }
@@ -111,6 +112,7 @@ iris_queue_enqueue (IrisQueue *queue,
 	g_atomic_pointer_compare_and_exchange (
 			(gpointer*)&queue->tail,
 			old_tail, link);
+	g_atomic_int_inc ((gint*)&queue->length);
 }
 
 /**
@@ -158,6 +160,22 @@ iris_queue_dequeue (IrisQueue *queue)
 	}
 
 	iris_free_list_put (queue->free_list, old_head);
+	if (g_atomic_int_dec_and_test ((gint*)&queue->length)) {}
 
 	return result;
+}
+
+/**
+ * iris_queue_get_length:
+ * @queue: An #IrisQueue
+ *
+ * Retreives the length of the queue.
+ *
+ * Return value: the length of the queue.
+ */
+guint
+iris_queue_get_length (IrisQueue *queue)
+{
+	g_return_val_if_fail (queue != NULL, 0);
+	return g_atomic_int_get (&queue->length);
 }
