@@ -49,6 +49,21 @@ test5 (void)
 	g_assert (iris_queue_dequeue (queue) == NULL);
 }
 
+static void
+test6 (void)
+{
+	gint i;
+
+	IrisQueue *queue = iris_queue_new ();
+	g_assert (queue != NULL);
+	iris_queue_enqueue (queue, &i);
+	g_assert (iris_queue_get_length (queue) == 1);
+	g_assert (iris_queue_dequeue (queue) == &i);
+	g_assert (iris_queue_get_length (queue) == 0);
+	g_assert (iris_queue_dequeue (queue) == NULL);
+	g_assert (iris_queue_get_length (queue) == 0);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -60,8 +75,9 @@ main (int   argc,
 	g_test_add_func ("/queue/new", test1);
 	g_test_add_func ("/queue/dequeue_empty", test2);
 	g_test_add_func ("/queue/enqueue_dequeue", test3);
-	g_test_add_func ("/queue/enqueue_dequeue_empty", test5);
 	g_test_add_func ("/queue/free", test4);
+	g_test_add_func ("/queue/enqueue_dequeue_empty", test5);
+	g_test_add_func ("/queue/get_length", test6);
 
 	return g_test_run ();
 }
