@@ -43,18 +43,23 @@ typedef enum
 typedef struct _IrisReceiver         IrisReceiver;
 typedef struct _IrisReceiverClass    IrisReceiverClass;
 typedef struct _IrisReceiverPrivate  IrisReceiverPrivate;
+
 typedef struct _IrisPort             IrisPort;
 typedef struct _IrisPortClass        IrisPortClass;
 typedef struct _IrisPortPrivate      IrisPortPrivate;
-typedef struct _IrisThread           IrisThread;
-typedef struct _IrisThreadWork       IrisThreadWork;
+
 typedef struct _IrisArbiter          IrisArbiter;
 typedef struct _IrisArbiterClass     IrisArbiterClass;
 typedef struct _IrisArbiterPrivate   IrisArbiterPrivate;
-typedef struct _IrisMessage          IrisMessage;
+
 typedef struct _IrisScheduler        IrisScheduler;
 typedef struct _IrisSchedulerClass   IrisSchedulerClass;
 typedef struct _IrisSchedulerPrivate IrisSchedulerPrivate;
+
+typedef struct _IrisThread           IrisThread;
+typedef struct _IrisThreadWork       IrisThreadWork;
+
+typedef struct _IrisMessage          IrisMessage;
 
 typedef struct _IrisStack            IrisStack;
 
