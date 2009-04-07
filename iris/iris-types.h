@@ -56,6 +56,8 @@ typedef struct _IrisScheduler        IrisScheduler;
 typedef struct _IrisSchedulerClass   IrisSchedulerClass;
 typedef struct _IrisSchedulerPrivate IrisSchedulerPrivate;
 
+typedef struct _IrisStack            IrisStack;
+
 typedef struct _IrisFreeList         IrisFreeList;
 
 typedef struct _IrisLink             IrisLink;

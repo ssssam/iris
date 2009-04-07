@@ -37,6 +37,8 @@ tests/receiver-1.o
 tests/scheduler-manager-1
 tests/free-list-1
 tests/free-list-1.o
+tests/stack-1
+tests/stack-1.o
 tests/scheduler-manager-1.o
 doc/reference/html-build.stamp
 doc/reference/html.stamp

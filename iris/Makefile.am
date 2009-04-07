@@ -12,6 +12,7 @@ sources_public_h =					\
 	$(top_srcdir)/iris/iris-rrobin.h		\
 	$(top_srcdir)/iris/iris-scheduler.h		\
 	$(top_srcdir)/iris/iris-scheduler-manager.h	\
+	$(top_srcdir)/iris/iris-stack.h			\
 	$(top_srcdir)/iris/iris-task.h			\
 	$(top_srcdir)/iris/iris-thread.h		\
 	$(NULL)
@@ -33,6 +34,7 @@ sources_c = 						\
 	iris-rrobin.c					\
 	iris-scheduler.c				\
 	iris-scheduler-manager.c			\
+	iris-stack.c					\
 	iris-task.c					\
 	iris-thread.c					\
 	iris-util.c					\

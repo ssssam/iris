@@ -1,4 +1,4 @@
-/* iris.h
+/* iris-stack.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -18,19 +18,28 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_H__
-#define __IRIS_H__
+#ifndef __IRIS_STACK_H__
+#define __IRIS_STACK_H__
+
+#include <glib.h>
 
 #include "iris-types.h"
-#include "iris-arbiter.h"
 #include "iris-free-list.h"
 #include "iris-link.h"
-#include "iris-message.h"
-#include "iris-port.h"
-#include "iris-receiver.h"
-#include "iris-scheduler.h"
-#include "iris-scheduler-manager.h"
-#include "iris-stack.h"
-#include "iris-task.h"
 
-#endif /* __IRIS_H__ */
+G_BEGIN_DECLS
+
+struct _IrisStack
+{
+	IrisLink     *head;
+	IrisFreeList *free_list;
+};
+
+IrisStack* iris_stack_new  (void);
+void       iris_stack_push (IrisStack *stack, gpointer data);
+gpointer   iris_stack_pop  (IrisStack *stack);
+void       iris_stack_free (IrisStack *stack);
+
+G_END_DECLS
+
+#endif /* __IRIS_STACK_H__ */
