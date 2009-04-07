@@ -8,6 +8,7 @@ sources_public_h =					\
 	$(top_srcdir)/iris/iris-link.h			\
 	$(top_srcdir)/iris/iris-message.h		\
 	$(top_srcdir)/iris/iris-port.h			\
+	$(top_srcdir)/iris/iris-queue.h			\
 	$(top_srcdir)/iris/iris-receiver.h		\
 	$(top_srcdir)/iris/iris-rrobin.h		\
 	$(top_srcdir)/iris/iris-scheduler.h		\
@@ -30,6 +31,7 @@ sources_c = 						\
 	iris-free-list.c				\
 	iris-message.c					\
 	iris-port.c					\
+	iris-queue.c					\
 	iris-receiver.c					\
 	iris-rrobin.c					\
 	iris-scheduler.c				\

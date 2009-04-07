@@ -67,6 +67,8 @@ typedef struct _IrisFreeList         IrisFreeList;
 
 typedef struct _IrisLink             IrisLink;
 
+typedef struct _IrisQueue            IrisQueue;
+
 typedef void (*IrisCallback)       (gpointer data);
 typedef void (*IrisMessageHandler) (IrisMessage *message, gpointer data);
 
