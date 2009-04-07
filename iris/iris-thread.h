@@ -30,6 +30,10 @@ G_BEGIN_DECLS
 
 struct _IrisThread
 {
+	gpointer       user_data;
+	gpointer       user_data2;
+	gpointer       user_data3;
+
 	/*< private >*/
 	IrisScheduler *scheduler;  /* Pointer to scheduler       */
 	GThread       *thread;     /* Handle to the thread       */

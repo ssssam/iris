@@ -24,6 +24,7 @@
 
 #include "stdlib.h"
 
+#include "iris-rrobin.h"
 #include "iris-scheduler.h"
 #include "iris-scheduler-private.h"
 #include "iris-scheduler-manager.h"
@@ -31,18 +32,30 @@
 struct _IrisSchedulerPrivate
 {
 	GMutex      *mutex;
-
-	GAsyncQueue *queue;
-
+	IrisRRobin  *rrobin;
 	gboolean     initialized;
-
 	guint        min_threads;
 	guint        max_threads;
-
 	gboolean     has_leader;
 };
 
 G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT);
+
+static void
+iris_scheduler_queue_rrobin_cb (gpointer data,
+                                gpointer user_data)
+{
+	GAsyncQueue    *queue;
+	IrisThreadWork *thread_work;
+
+	g_return_if_fail (data != NULL);
+	g_return_if_fail (user_data != NULL);
+
+	queue = data;
+	thread_work = user_data;
+
+	g_async_queue_push (queue, thread_work);
+}
 
 static void
 iris_scheduler_queue_real (IrisScheduler  *scheduler,
@@ -58,14 +71,8 @@ iris_scheduler_queue_real (IrisScheduler  *scheduler,
 
 	priv = scheduler->priv;
 
-	g_return_if_fail (priv->queue != NULL);
-
-	/* All of our threads are reading from our one queue.  Probably
-	 * not a good idea for long term.  We should implement the work
-	 * stealing queue for this.
-	 */
 	thread_work = iris_thread_work_new (func, data);
-	g_async_queue_push (priv->queue, thread_work);
+	iris_rrobin_apply (priv->rrobin, iris_scheduler_queue_rrobin_cb, thread_work);
 }
 
 static guint
@@ -108,14 +115,30 @@ iris_scheduler_add_thread_real (IrisScheduler  *scheduler,
 {
 	IrisSchedulerPrivate *priv;
 	gboolean              leader;
+	GAsyncQueue          *queue;
 
 	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
 
 	priv = scheduler->priv;
 
+	/* create the threads queue for the round robin */
+	queue = g_async_queue_new ();
+	thread->user_data = queue;
+
+	/* add the item to the round robin */
+	if (!iris_rrobin_append (priv->rrobin, queue))
+		goto error;
+
+	/* check if this thread is the leader */
 	leader = g_atomic_int_compare_and_exchange (&priv->has_leader, FALSE, TRUE);
 
-	iris_thread_manage (thread, priv->queue, leader);
+	iris_thread_manage (thread, queue, leader);
+
+	return;
+
+error:
+	g_async_queue_unref (queue);
+	thread->user_data = NULL;
 }
 
 static void
@@ -152,9 +175,10 @@ iris_scheduler_init (IrisScheduler *scheduler)
 	                                          IRIS_TYPE_SCHEDULER,
 	                                          IrisSchedulerPrivate);
 	scheduler->priv->mutex = g_mutex_new ();
-	scheduler->priv->queue = g_async_queue_new ();
 	scheduler->priv->min_threads = 0;
 	scheduler->priv->max_threads = 0;
+	scheduler->priv->rrobin = iris_rrobin_new (iris_scheduler_get_max_threads (scheduler));
+	g_assert (scheduler->priv->rrobin);
 }
 
 /**
