@@ -1,6 +1,7 @@
 Makefile
 Makefile.in
 *.swp
+*~
 compile
 config.guess
 config.h
@@ -34,6 +35,8 @@ tests/port-1.o
 tests/receiver-1
 tests/receiver-1.o
 tests/scheduler-manager-1
+tests/free-list-1
+tests/free-list-1.o
 tests/scheduler-manager-1.o
 doc/reference/html-build.stamp
 doc/reference/html.stamp

@@ -4,6 +4,8 @@ BUILT_SOURCES = iris-version.h
 
 sources_public_h =					\
 	$(top_srcdir)/iris/iris-arbiter.h		\
+	$(top_srcdir)/iris/iris-free-list.h		\
+	$(top_srcdir)/iris/iris-link.h			\
 	$(top_srcdir)/iris/iris-message.h		\
 	$(top_srcdir)/iris/iris-port.h			\
 	$(top_srcdir)/iris/iris-receiver.h		\
@@ -24,6 +26,7 @@ sources_private_h =						\
 
 sources_c = 						\
 	iris-arbiter.c					\
+	iris-free-list.c				\
 	iris-message.c					\
 	iris-port.c					\
 	iris-receiver.c					\

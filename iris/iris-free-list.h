@@ -1,4 +1,4 @@
-/* iris.h
+/* iris-free-list.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -18,18 +18,27 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_H__
-#define __IRIS_H__
+#ifndef __IRIS_FREE_LIST_H__
+#define __IRIS_FREE_LIST_H__
 
-#include "iris-types.h"
-#include "iris-arbiter.h"
-#include "iris-free-list.h"
+#include <glib.h>
+
 #include "iris-link.h"
-#include "iris-message.h"
-#include "iris-port.h"
-#include "iris-receiver.h"
-#include "iris-scheduler.h"
-#include "iris-scheduler-manager.h"
-#include "iris-task.h"
 
-#endif /* __IRIS_H__ */
+G_BEGIN_DECLS
+
+typedef struct _IrisFreeList     IrisFreeList;
+
+struct _IrisFreeList
+{
+	IrisLink *head;
+};
+
+IrisFreeList* iris_free_list_new  (void);
+void          iris_free_list_free (IrisFreeList *free_list);
+IrisLink*     iris_free_list_get  (IrisFreeList *free_list);
+void          iris_free_list_put  (IrisFreeList *free_list, IrisLink *link);
+
+G_END_DECLS
+
+#endif /* __IRIS_FREE_LIST_H__ */

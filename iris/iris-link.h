@@ -1,4 +1,4 @@
-/* iris.h
+/* iris-link.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -18,18 +18,15 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_H__
-#define __IRIS_H__
+#ifndef __IRIS_LINK_H__
+#define __IRIS_LINK_H__
 
-#include "iris-types.h"
-#include "iris-arbiter.h"
-#include "iris-free-list.h"
-#include "iris-link.h"
-#include "iris-message.h"
-#include "iris-port.h"
-#include "iris-receiver.h"
-#include "iris-scheduler.h"
-#include "iris-scheduler-manager.h"
-#include "iris-task.h"
+typedef struct _IrisLink IrisLink;
 
-#endif /* __IRIS_H__ */
+struct _IrisLink
+{
+	gpointer  data;
+	IrisLink *next;
+};
+
+#endif /* __IRIS_LINK_H__ */
