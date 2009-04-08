@@ -29,12 +29,20 @@
 
 G_BEGIN_DECLS
 
+struct _IrisQueueVTable
+{
+	void     (*enqueue)    (IrisQueue *queue, gpointer data);
+	gpointer (*dequeue)    (IrisQueue *queue);
+	guint    (*get_length) (IrisQueue *queue);
+};
+
 struct _IrisQueue
 {
-	IrisLink     *head;
-	IrisLink     *tail;
-	IrisFreeList *free_list;
-	guint         length;
+	IrisQueueVTable *vtable;
+	IrisLink        *head;
+	IrisLink        *tail;
+	IrisFreeList    *free_list;
+	guint            length;
 };
 
 IrisQueue* iris_queue_new        (void);

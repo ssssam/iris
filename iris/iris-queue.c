@@ -21,9 +21,104 @@
 #include "iris-queue.h"
 
 /**
+ * SECTION:iris-queue
+ * @short_description: A concurrent queue data-structure
+ *
+ * #IrisQueue is a lock-free data structure that fits well into highly
+ * concurrent scenarios.  You can create your own queue implementation
+ * by overriding the vtable value in the struct. By adhering to the
+ * #IrisQueue interface for the vtable, you can have alternate queuing
+ * logic for schedulers and the thread workers will still know how to
+ * access your work items.
+ */
+
+static void
+iris_queue_enqueue_real (IrisQueue *queue,
+                         gpointer   data)
+{
+	IrisLink *old_tail = NULL;
+	IrisLink *old_next = NULL;
+	IrisLink *link     = NULL;
+	gboolean  success  = FALSE;
+
+	g_return_if_fail (queue != NULL);
+
+	link = iris_free_list_get (queue->free_list);
+	link->data = data;
+
+	while (!success) {
+		old_tail = queue->tail;
+		old_next = old_tail->next;
+
+		if (queue->tail == old_tail) {
+			if (!old_next) {
+				success = g_atomic_pointer_compare_and_exchange ((gpointer*)&queue->tail->next, NULL, link);
+			}
+		}
+		else {
+			g_atomic_pointer_compare_and_exchange ((gpointer*)&queue->tail, old_tail, old_next);
+		}
+	}
+
+	g_atomic_pointer_compare_and_exchange ((gpointer*)&queue->tail, old_tail, link);
+	g_atomic_int_inc ((gint*)&queue->length);
+}
+
+static gpointer
+iris_queue_dequeue_real (IrisQueue *queue)
+{
+	IrisLink *old_head      = NULL;
+	IrisLink *old_tail      = NULL;
+	IrisLink *old_head_next = NULL;
+	gboolean  success       = FALSE;
+	gpointer  result        = NULL;
+
+	g_return_val_if_fail (queue != NULL, NULL);
+
+	while (!success) {
+		old_head = queue->head;
+		old_tail = queue->tail;
+		old_head_next = old_head->next;
+
+		if (old_head == queue->head) {
+			if (old_head == old_tail) {
+				if (!old_head_next)
+					return NULL;
+
+				g_atomic_pointer_compare_and_exchange ((gpointer*)&queue->tail, old_tail, old_head_next);
+			}
+			else {
+				result = old_head_next->data;
+				success = g_atomic_pointer_compare_and_exchange ((gpointer*)&queue->head, old_head, old_head_next);
+			}
+		}
+	}
+
+	iris_free_list_put (queue->free_list, old_head);
+	if (g_atomic_int_dec_and_test ((gint*)&queue->length)) {}
+
+	return result;
+}
+
+static guint
+iris_queue_get_length_real (IrisQueue *queue)
+{
+	return queue->length;
+}
+
+static IrisQueueVTable queue_vtable = {
+	iris_queue_enqueue_real,
+	iris_queue_dequeue_real,
+	iris_queue_get_length_real,
+};
+
+/**
  * iris_queue_new:
  *
- * Creates a new instance of #IrisQueue, a concurrent, lock-free queue.
+ * Creates a new instance of #IrisQueue.
+ *
+ * The default implementation of #IrisQueue is a lock-free queue that works
+ * well under highly concurrent scenarios.
  *
  * Return value: The newly created #IrisQueue instance.
  */
@@ -33,6 +128,7 @@ iris_queue_new (void)
 	IrisQueue *queue;
 
 	queue = g_slice_new0 (IrisQueue);
+	queue->vtable = &queue_vtable;
 	queue->head = g_slice_new0 (IrisLink);
 	queue->tail = queue->head;
 	queue->free_list = iris_free_list_new ();
@@ -45,9 +141,9 @@ iris_queue_new (void)
  * iris_queue_free:
  * @queue: An #IrisQueue
  *
- * Frees the memory associated with an #IrisQueue. Obviously, this method
- * is not thread-safe, as you should not be accessing the queue when
- * freeing.
+ * Frees the memory associated with an #IrisQueue.
+ *
+ * You should not be accessing this queue concurrently when freeing it.
  */
 void
 iris_queue_free (IrisQueue *queue)
@@ -75,94 +171,31 @@ iris_queue_free (IrisQueue *queue)
  * @queue: An #IrisQueue
  * @data: a gpointer
  *
- * Enqueues a new pointer into the queue atomically.
+ * Enqueues a new pointer into the queue. The default implementation does
+ * this atomically and lock-free.
  */
 void
 iris_queue_enqueue (IrisQueue *queue,
                     gpointer   data)
 {
-	IrisLink *old_tail = NULL;
-	IrisLink *old_next = NULL;
-	IrisLink *link     = NULL;
-	gboolean  success  = FALSE;
-
 	g_return_if_fail (queue != NULL);
-
-	link = iris_free_list_get (queue->free_list);
-	link->data = data;
-
-	while (!success) {
-		old_tail = queue->tail;
-		old_next = old_tail->next;
-
-		if (queue->tail == old_tail) {
-			if (!old_next) {
-				success = g_atomic_pointer_compare_and_exchange (
-						(gpointer*)&queue->tail->next,
-						NULL, link);
-			}
-		}
-		else {
-			g_atomic_pointer_compare_and_exchange (
-					(gpointer*)&queue->tail,
-					old_tail, old_next);
-		}
-	}
-
-	g_atomic_pointer_compare_and_exchange (
-			(gpointer*)&queue->tail,
-			old_tail, link);
-	g_atomic_int_inc ((gint*)&queue->length);
+	queue->vtable->enqueue (queue, data);
 }
 
 /**
  * iris_queue_dequeue:
  * @queue: An #IrisQueue
  *
- * Dequeues the next item from the queue atomically, or %NULL
+ * Dequeues the next item from the queue. The default implementation does
+ * this atomically and lock-free.
  *
  * Return value: the next item from the queue or %NULL
  */
 gpointer
 iris_queue_dequeue (IrisQueue *queue)
 {
-	IrisLink *old_head      = NULL;
-	IrisLink *old_tail      = NULL;
-	IrisLink *old_head_next = NULL;
-	gboolean  success       = FALSE;
-	gpointer  result        = NULL;
-
 	g_return_val_if_fail (queue != NULL, NULL);
-
-	while (!success) {
-		old_head = queue->head;
-		old_tail = queue->tail;
-		old_head_next = old_head->next;
-
-		if (old_head == queue->head) {
-			if (old_head == old_tail) {
-				if (!old_head_next)
-					return NULL;
-
-				g_atomic_pointer_compare_and_exchange (
-						(gpointer*)&queue->tail,
-						old_tail,
-						old_head_next);
-			}
-			else {
-				result = old_head_next->data;
-				success = g_atomic_pointer_compare_and_exchange (
-						(gpointer*)&queue->head,
-						old_head,
-						old_head_next);
-			}
-		}
-	}
-
-	iris_free_list_put (queue->free_list, old_head);
-	if (g_atomic_int_dec_and_test ((gint*)&queue->length)) {}
-
-	return result;
+	return queue->vtable->dequeue (queue);
 }
 
 /**
@@ -171,11 +204,17 @@ iris_queue_dequeue (IrisQueue *queue)
  *
  * Retreives the length of the queue.
  *
+ * The default implementation does not use
+ * a fence since the length of a concurrent queue may not be the same between
+ * a read and a write anyway. This means that updates from other threads may
+ * not have propogated the cache lines to the host cpu (but in most cases,
+ * this is probably fine).
+ *
  * Return value: the length of the queue.
  */
 guint
 iris_queue_get_length (IrisQueue *queue)
 {
 	g_return_val_if_fail (queue != NULL, 0);
-	return g_atomic_int_get (&queue->length);
+	return queue->vtable->get_length (queue);
 }
