@@ -213,7 +213,7 @@ iris_thread_new (gboolean exclusive)
 {
 	IrisThread *thread;
 
-#ifdef IRIS_ENABLE_DEBUG
+#if 0
 	g_debug ("%s(exclusive=%s)", __func__, exclusive ? "TRUE" : "FALSE");
 #endif
 
@@ -255,7 +255,7 @@ iris_thread_manage (IrisThread    *thread,
 	g_return_if_fail (thread != NULL);
 	g_return_if_fail (queue != NULL);
 
-#ifdef IRIS_ENABLE_DEBUG
+#if 0
 	g_debug ("%s(leader=%s)", __func__, leader ? "TRUE" : "FALSE");
 #endif
 
