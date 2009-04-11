@@ -49,12 +49,28 @@
 
 struct _IrisSchedulerPrivate
 {
-	GMutex      *mutex;
-	IrisRRobin  *rrobin;
-	gboolean     initialized;
+	GMutex      *mutex;        /* Synchronization for setting up the
+	                            * scheduler instance.  Provides for lazy
+	                            * instantiation.
+	                            */
+
+	IrisRRobin  *rrobin;       /* Round robin of per-thread queues used
+	                            * by threads for work-stealing.
+	                            */
+
+	GAsyncQueue *queue;        /* Global Queue, used by work items
+	                            * not originating from a thread within
+	                            * the scheduler.
+	                            */
+
+	/* FIXME: Should we push these items into another cache-line so
+	 *        they do not get nuked from the synchronizations above.
+	 */
+
 	guint        min_threads;
 	guint        max_threads;
 	gboolean     has_leader;
+	gboolean     initialized;
 };
 
 G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT);
@@ -83,13 +99,28 @@ iris_scheduler_queue_real (IrisScheduler  *scheduler,
 {
 	IrisSchedulerPrivate *priv;
 	IrisThreadWork       *thread_work;
+	IrisThread           *thread;
 
 	g_return_if_fail (scheduler != NULL);
 	g_return_if_fail (func != NULL);
 
 	priv = scheduler->priv;
 
+	thread = iris_thread_get ();
 	thread_work = iris_thread_work_new (func, data);
+
+	/* If the current thread is an iris-thread and it is a member of our
+	 * scheduler, then we will queue it to its own lock-free queue.  This
+	 * helps keep cpu cache hits up as well since the local thread will already
+	 * have the associated data hot.  However, we need to make sure the thread
+	 * will take this item sooner so its own work doesn't invalidate cache.
+	 */
+
+	if (thread && thread->scheduler == scheduler && thread->queue) {
+		g_async_queue_push (thread->queue, thread_work);
+		return;
+	}
+
 	iris_rrobin_apply (priv->rrobin, iris_scheduler_queue_rrobin_cb, thread_work);
 }
 
@@ -192,10 +223,15 @@ iris_scheduler_init (IrisScheduler *scheduler)
 	scheduler->priv = G_TYPE_INSTANCE_GET_PRIVATE (scheduler,
 	                                          IRIS_TYPE_SCHEDULER,
 	                                          IrisSchedulerPrivate);
-	scheduler->priv->mutex = g_mutex_new ();
 	scheduler->priv->min_threads = 0;
 	scheduler->priv->max_threads = 0;
-	scheduler->priv->rrobin = iris_rrobin_new (iris_scheduler_get_max_threads (scheduler));
+	scheduler->priv->mutex = g_mutex_new ();
+
+	scheduler->priv->queue = g_async_queue_new ();
+	g_assert (scheduler->priv->queue);
+
+	scheduler->priv->rrobin = iris_rrobin_new (
+			iris_scheduler_get_max_threads (scheduler));
 	g_assert (scheduler->priv->rrobin);
 }
 
