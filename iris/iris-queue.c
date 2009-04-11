@@ -19,6 +19,7 @@
  */
 
 #include "iris-queue.h"
+#include "gstamppointer.h"
 
 /**
  * SECTION:iris-queue
@@ -44,23 +45,34 @@ iris_queue_enqueue_real (IrisQueue *queue,
 	g_return_if_fail (queue != NULL);
 
 	link = iris_free_list_get (queue->free_list);
-	link->data = data;
+
+	link = G_STAMP_POINTER_INCREMENT (link);
+	G_STAMP_POINTER_GET_LINK (link)->data = data;
 
 	while (!success) {
 		old_tail = queue->tail;
-		old_next = old_tail->next;
+		old_next = G_STAMP_POINTER_GET_LINK (old_tail)->next;
 
 		if (queue->tail == old_tail) {
 			if (!old_next) {
-				success = g_atomic_pointer_compare_and_exchange ((gpointer*)&queue->tail->next, NULL, link);
+				success = g_atomic_pointer_compare_and_exchange (
+						(gpointer*)&G_STAMP_POINTER_GET_LINK (queue->tail)->next,
+						NULL,
+						link);
 			}
 		}
 		else {
-			g_atomic_pointer_compare_and_exchange ((gpointer*)&queue->tail, old_tail, old_next);
+			g_atomic_pointer_compare_and_exchange (
+					(gpointer*)&queue->tail,
+					old_tail,
+					old_next);
 		}
 	}
 
-	g_atomic_pointer_compare_and_exchange ((gpointer*)&queue->tail, old_tail, link);
+	g_atomic_pointer_compare_and_exchange ((gpointer*)&queue->tail,
+	                                       old_tail,
+	                                       link);
+
 	g_atomic_int_inc ((gint*)&queue->length);
 }
 
@@ -78,18 +90,24 @@ iris_queue_dequeue_real (IrisQueue *queue)
 	while (!success) {
 		old_head = queue->head;
 		old_tail = queue->tail;
-		old_head_next = old_head->next;
+		old_head_next = G_STAMP_POINTER_GET_LINK (old_head)->next;
 
 		if (old_head == queue->head) {
 			if (old_head == old_tail) {
 				if (!old_head_next)
 					return NULL;
 
-				g_atomic_pointer_compare_and_exchange ((gpointer*)&queue->tail, old_tail, old_head_next);
+				g_atomic_pointer_compare_and_exchange (
+						(gpointer*)&queue->tail,
+						old_tail,
+						old_head_next);
 			}
 			else {
-				result = old_head_next->data;
-				success = g_atomic_pointer_compare_and_exchange ((gpointer*)&queue->head, old_head, old_head_next);
+				result = G_STAMP_POINTER_GET_LINK (old_head_next)->data;
+				success = g_atomic_pointer_compare_and_exchange (
+						(gpointer*)&queue->head,
+						old_head,
+						old_head_next);
 			}
 		}
 	}
