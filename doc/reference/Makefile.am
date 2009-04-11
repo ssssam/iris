@@ -47,7 +47,7 @@ CFILE_GLOB=$(top_srcdir)/iris/iris-*.c
 
 # Header files to ignore when scanning.
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h
-IGNORE_HFILES=iris.h iris-utils.h gstamppointer.h
+IGNORE_HFILES=iris.h iris-utils.h gstamppointer.h *-private.h
 
 EXTRA_HFILES=
 
