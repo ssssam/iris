@@ -31,6 +31,8 @@
 #define QUANTUM_USECS    (G_USEC_PER_SEC * 1)
 #define POP_WAIT_TIMEOUT (G_USEC_PER_SEC * 2)
 
+__thread IrisThread* my_thread = NULL;
+
 static gboolean
 timeout_elapsed (GTimeVal *tv1,
                  GTimeVal *tv2)
@@ -173,6 +175,8 @@ iris_thread_worker (IrisThread *thread)
 	g_return_val_if_fail (thread != NULL, NULL);
 	g_return_val_if_fail (thread->queue != NULL, NULL);
 
+	my_thread = thread;
+
 next_message:
 	message = g_async_queue_pop (thread->queue);
 
@@ -231,6 +235,19 @@ iris_thread_new (gboolean exclusive)
 	thread->scheduler = NULL;
 
 	return thread;
+}
+
+/**
+ * iris_thread_get:
+ *
+ * Retrieves the pointer to the current threads structure.
+ *
+ * Return value: the threads structure or NULL if not an #IrisThread.
+ */
+IrisThread*
+iris_thread_get (void)
+{
+	return my_thread;
 }
 
 /**

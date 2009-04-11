@@ -53,6 +53,7 @@ struct _IrisThreadWork
 
 /* Thread abstraction for schedulers */
 IrisThread*     iris_thread_new        (gboolean exclusive);
+IrisThread*     iris_thread_get        (void);
 void            iris_thread_manage     (IrisThread *thread, GAsyncQueue *queue, gboolean leader);
 void            iris_thread_shutdown   (IrisThread *thread);
 void            iris_thread_print_stat (IrisThread *thread);
