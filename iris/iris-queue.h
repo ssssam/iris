@@ -34,11 +34,13 @@ struct _IrisQueueVTable
 	void     (*enqueue)    (IrisQueue *queue, gpointer data);
 	gpointer (*dequeue)    (IrisQueue *queue);
 	guint    (*get_length) (IrisQueue *queue);
+	void     (*destroy)    (IrisQueue *queue);
 };
 
 struct _IrisQueue
 {
 	IrisQueueVTable *vtable;
+	volatile gint    ref_count;
 	IrisLink        *head;
 	IrisLink        *tail;
 	IrisFreeList    *free_list;
@@ -46,7 +48,8 @@ struct _IrisQueue
 };
 
 IrisQueue* iris_queue_new        (void);
-void       iris_queue_free       (IrisQueue *queue);
+IrisQueue* iris_queue_ref        (IrisQueue *queue);
+void       iris_queue_unref      (IrisQueue *queue);
 void       iris_queue_enqueue    (IrisQueue *queue, gpointer data);
 gpointer   iris_queue_dequeue    (IrisQueue *queue);
 guint      iris_queue_get_length (IrisQueue *queue);

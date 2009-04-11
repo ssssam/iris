@@ -34,7 +34,7 @@ test4 (void)
 	g_assert (queue != NULL);
 	g_assert (queue->head != NULL);
 	g_assert (queue->head->next == NULL);
-	iris_queue_free (queue);
+	iris_queue_unref (queue);
 }
 
 static void
@@ -64,6 +64,34 @@ test6 (void)
 	g_assert (iris_queue_get_length (queue) == 0);
 }
 
+static gboolean test7_data = FALSE;
+
+static void
+test7_cb (IrisQueue *queue)
+{
+	test7_data = TRUE;
+}
+
+static void
+test7 (void)
+{
+	IrisQueue *queue = iris_queue_new ();
+	queue->vtable->destroy = test7_cb;
+	iris_queue_unref (queue);
+	g_assert (test7_data == TRUE);
+}
+
+static void
+test8 (void)
+{
+	IrisQueue *queue = iris_queue_new ();
+	queue->vtable->destroy = test7_cb;
+	iris_queue_ref (queue);
+	iris_queue_unref (queue);
+	iris_queue_unref (queue);
+	g_assert (test7_data == TRUE);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -78,6 +106,8 @@ main (int   argc,
 	g_test_add_func ("/queue/free", test4);
 	g_test_add_func ("/queue/enqueue_dequeue_empty", test5);
 	g_test_add_func ("/queue/get_length", test6);
+	g_test_add_func ("/queue/unref1", test7);
+	g_test_add_func ("/queue/unref2", test8);
 
 	return g_test_run ();
 }

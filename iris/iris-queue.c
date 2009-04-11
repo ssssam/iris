@@ -128,7 +128,36 @@ static IrisQueueVTable queue_vtable = {
 	iris_queue_enqueue_real,
 	iris_queue_dequeue_real,
 	iris_queue_get_length_real,
+	NULL
 };
+
+static void
+iris_queue_destroy (IrisQueue *queue)
+{
+	if (G_LIKELY (queue->vtable->destroy))
+		queue->vtable->destroy (queue);
+}
+
+static void
+iris_queue_free (IrisQueue *queue)
+{
+	IrisLink *link, *tmp;
+
+	g_return_if_fail (queue != NULL);
+
+	link = queue->head;
+	queue->tail = NULL;
+
+	while (link) {
+		tmp = link->next;
+		if (tmp)
+			g_slice_free (IrisLink, tmp);
+		link = tmp;
+	}
+
+	iris_free_list_free (queue->free_list);
+	g_slice_free (IrisQueue, queue);
+}
 
 /**
  * iris_queue_new:
@@ -150,38 +179,48 @@ iris_queue_new (void)
 	queue->head = g_slice_new0 (IrisLink);
 	queue->tail = queue->head;
 	queue->free_list = iris_free_list_new ();
-	queue->length = 0;
+	queue->ref_count = 1;
 
 	return queue;
 }
 
 /**
- * iris_queue_free:
+ * iris_queue_ref:
  * @queue: An #IrisQueue
  *
- * Frees the memory associated with an #IrisQueue.
+ * Increases the reference count of @queue atomically by one.
  *
- * You should not be accessing this queue concurrently when freeing it.
+ * Return value: the @queue pointer.
+ */
+IrisQueue*
+iris_queue_ref (IrisQueue *queue)
+{
+	g_return_val_if_fail (queue != NULL, NULL);
+	g_return_val_if_fail (queue->ref_count > 0, NULL);
+
+	g_atomic_int_inc (&queue->ref_count);
+
+	return queue;
+}
+
+/**
+ * iris_queue_unref:
+ * @queue: An #IrisQueue
+ *
+ * Atomically decreases the reference count of @queue by one.  If the
+ * reference count reaches zero, the queue is destroyed and all its
+ * allocated resources are freed.
  */
 void
-iris_queue_free (IrisQueue *queue)
+iris_queue_unref (IrisQueue *queue)
 {
-	IrisLink *link, *tmp;
-
 	g_return_if_fail (queue != NULL);
+	g_return_if_fail (queue->ref_count > 0);
 
-	link = queue->head;
-	queue->tail = NULL;
-
-	while (link) {
-		tmp = link->next;
-		if (tmp)
-			g_slice_free (IrisLink, tmp);
-		link = tmp;
+	if (g_atomic_int_dec_and_test (&queue->ref_count)) {
+		iris_queue_destroy (queue);
+		iris_queue_free (queue);
 	}
-
-	iris_free_list_free (queue->free_list);
-	g_slice_free (IrisQueue, queue);
 }
 
 /**
