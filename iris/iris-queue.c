@@ -23,7 +23,7 @@
 
 /**
  * SECTION:iris-queue
- * @short_description: A concurrent queue data-structure
+ * @short_description: A lock-free queue data structure
  *
  * #IrisQueue is a lock-free data structure that fits well into highly
  * concurrent scenarios.  You can create your own queue implementation

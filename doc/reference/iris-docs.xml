@@ -16,22 +16,18 @@
 
   <chapter>
     <title>Iris API Reference</title>
-        <xi:include href="xml/iris-receiver.xml"/>
-    <xi:include href="xml/iris-scheduler.xml"/>
-    <xi:include href="xml/iris-arbiter.xml"/>
+    <xi:include href="xml/iris-message.xml"/>
     <xi:include href="xml/iris-port.xml"/>
-    <xi:include href="xml/iris-stack.xml"/>
+    <xi:include href="xml/iris-receiver.xml"/>
+    <xi:include href="xml/iris-scheduler.xml"/>
     <xi:include href="xml/iris-scheduler-manager.xml"/>
-    <xi:include href="xml/iris-types.xml"/>
-    <xi:include href="xml/iris-version.xml"/>
+    <xi:include href="xml/iris-arbiter.xml"/>
     <xi:include href="xml/iris-thread.xml"/>
     <xi:include href="xml/iris-rrobin.xml"/>
+    <xi:include href="xml/iris-stack.xml"/>
     <xi:include href="xml/iris-free-list.xml"/>
-    <xi:include href="xml/iris-message.xml"/>
-    <xi:include href="xml/iris-util.xml"/>
     <xi:include href="xml/iris-queue.xml"/>
-    <xi:include href="xml/iris-link.xml"/>
-
+    <xi:include href="xml/iris-version.xml"/>
   </chapter>
   <chapter id="object-tree">
     <title>Object Hierarchy</title>

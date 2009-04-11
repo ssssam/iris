@@ -23,11 +23,9 @@
 
 #include <glib.h>
 
+#include "iris-types.h"
+
 G_BEGIN_DECLS
-
-typedef void (*IrisRRobinFunc) (gpointer data, gpointer user_data);
-
-typedef struct _IrisRRobin IrisRRobin;
 
 struct _IrisRRobin
 {

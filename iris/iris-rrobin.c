@@ -20,6 +20,20 @@
 
 #include "iris-rrobin.h"
 
+/**
+ * SECTION:iris-rrobin
+ * @short_description: A lock-free round-robin data structure
+ *
+ */
+
+/**
+ * iris_rrobin_new:
+ * @size: The maximum number of entries
+ *
+ * Creates a new instance of the lock-free, round-robin data structure.
+ *
+ * Return value: the new #IrisRRobin instance
+ */
 IrisRRobin*
 iris_rrobin_new (gint size)
 {
@@ -39,9 +53,19 @@ iris_rrobin_new (gint size)
 	return rrobin;
 }
 
+/**
+ * iris_rrobin_append:
+ * @rrobin: An #IrisRRobin
+ * @data: a gpointer to callback data
+ *
+ * Appends a new data item to the round-robin structure. The data supplied
+ * will be added to the arguments of the callback used in iris_rrobin_apply().
+ *
+ * Return value: %TRUE if there was enough free-space to append the item.
+ */
 gboolean
 iris_rrobin_append (IrisRRobin *rrobin,
-                    gpointer  data)
+                    gpointer    data)
 {
 	gint count;
 	gint i;
@@ -67,9 +91,16 @@ _try_append:
 	return TRUE;
 }
 
+/**
+ * iris_rrobin_remove:
+ * @rrobin: An #IrisRRobin
+ * @data: a gpointer to callback data
+ *
+ * Removes the first instance of @data within the @rrobin structure.
+ */
 void
 iris_rrobin_remove (IrisRRobin *rrobin,
-                    gpointer  data)
+                    gpointer    data)
 {
 	gint i;
 
@@ -80,6 +111,17 @@ iris_rrobin_remove (IrisRRobin *rrobin,
 			break;
 }
 
+/**
+ * iris_rrobin_apply:
+ * @rrobin: An #IrisRRobin
+ * @callback: An #IrisRRobinFunc to execute
+ * @user_data: user data supplied to callback
+ *
+ * Executes @callback using the data from the next item in the round-robin
+ * data structure.
+ *
+ * Return value: %FALSE if no items where in the #IrisRRobin, else %TRUE.
+ */
 gboolean
 iris_rrobin_apply (IrisRRobin     *rrobin,
                    IrisRRobinFunc  callback,
@@ -124,6 +166,12 @@ _try_next_index:
 	return TRUE;
 }
 
+/**
+ * iris_rrobin_free:
+ * @rrobin: An #IrisRRobin
+ *
+ * Frees the memory associated with @rrobin.
+ */
 void
 iris_rrobin_free (IrisRRobin *rrobin)
 {

@@ -70,7 +70,10 @@ typedef struct _IrisLink             IrisLink;
 typedef struct _IrisQueue            IrisQueue;
 typedef struct _IrisQueueVTable      IrisQueueVTable;
 
+typedef struct _IrisRRobin           IrisRRobin;
+
 typedef void (*IrisCallback)       (gpointer data);
 typedef void (*IrisMessageHandler) (IrisMessage *message, gpointer data);
+typedef void (*IrisRRobinFunc)     (gpointer data, gpointer user_data);
 
 #endif /* __IRIS_TYPES_H__ */

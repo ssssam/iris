@@ -22,6 +22,25 @@
 #include "gstamppointer.h"
 
 /**
+ * SECTION:iris-stack
+ * @short_description: A lock-free stack data structure
+ *
+ * #IrisStack is a lock-free stack implementation.  It is not currently
+ * guaranteed to be fully correct.  This is due to the classical ABA
+ * problem with many lock-free data structures.  For more information
+ * on ABA, see the wikipedia page at
+ * <ulink url="http://en.wikipedia.org/wiki/ABA_problem">ABA_problem</ulink>.
+ *
+ * We do try to greatly reduce the potential of this happening.  This is done
+ * by aligning the destination of our internal pointers to sizeof(void*)
+ * which leaves us the two lower bits to repurpose as a counter stamp.  This
+ * makes the pointer different on every compare-and-swap operation allowing
+ * us to fail and retry the operation.  As you might have guessed, if the
+ * ABA problem happens 4 times within the pre-emption time of the first
+ * thread, the problem can still exist.
+ */
+
+/**
  * iris_stack_new:
  *
  * Creates a new instance of an #IrisStack, which is a concurrent,
