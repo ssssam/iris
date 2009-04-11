@@ -29,6 +29,24 @@
 #include "iris-scheduler-private.h"
 #include "iris-scheduler-manager.h"
 
+/**
+ * SECTION:iris-scheduler
+ * @short_description: A generic, extendable scheduler for work items
+ *
+ * #IrisScheduler is a base class used for managing the scheduling of
+ * work items onto active threads.  The default scheduler is sufficient
+ * for most purposes.  However, if you need custom scheduling with
+ * different queuing decisions you can create your own.
+ *
+ * By default, a scheduler will be given "min-threads" threads during
+ * startup.  If a "leader" thread, (typically the first thread added)
+ * feels it is getting behind, it will ask the scheduler manager for
+ * more help.  The scheduler manager will try to first repurpose
+ * existing threads, or create new threads if no existing threads are
+ * available.  Based on the speed of work performed by the scheduler,
+ * the manager will try to appropriate a sufficient number of threads.
+ */
+
 struct _IrisSchedulerPrivate
 {
 	GMutex      *mutex;
