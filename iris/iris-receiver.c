@@ -252,6 +252,8 @@ iris_receiver_new (void)
  *
  * Delivers a message to the receiver so that the receiver may take an
  * action on the message.
+ *
+ * Return value: the status code for the delivery.
  */
 IrisDeliveryStatus
 iris_receiver_deliver (IrisReceiver *receiver,
@@ -265,6 +267,8 @@ iris_receiver_deliver (IrisReceiver *receiver,
  * iris_receiver_new_full:
  * @scheduler: An #IrisScheduler
  * @arbiter: An #IrisArbiter
+ * @callback: a callback to execute
+ * @data: user data for the callback
  *
  * Creates a new instance of #IrisReceiver.  The receiver is initialized
  * to dispatch work items to @scheduler.  Messages can only be dispatched

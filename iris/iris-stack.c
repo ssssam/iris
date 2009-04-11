@@ -26,6 +26,8 @@
  *
  * Creates a new instance of an #IrisStack, which is a concurrent,
  * lock-free stack implementation.
+ *
+ * Return value: the newly created #IrisStack instance.
  */
 IrisStack*
 iris_stack_new (void)
@@ -74,6 +76,7 @@ _try_swap:
 /**
  * iris_stack_push:
  * @stack: An #IrisStack
+ * @data: a pointer
  *
  * Pushes a new item onto the stack atomically.
  */

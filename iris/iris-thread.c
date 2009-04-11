@@ -198,7 +198,7 @@ next_message:
 
 /**
  * iris_thread_new:
- * exclusive: the thread is exclusive
+ * @exclusive: the thread is exclusive
  *
  * Createa a new #IrisThread instance that can be used to queue work items
  * to be processed on the thread.

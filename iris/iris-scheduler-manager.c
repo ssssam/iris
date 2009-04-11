@@ -41,7 +41,7 @@ G_LOCK_DEFINE (singleton);
  * iris_scheduler_manager_yield:
  * @thread: The thread to yield
  *
- * Yields a thread back to a scheduler.
+ * Will yields a thread back to a scheduler.
  */
 void
 iris_scheduler_manager_yield (IrisThread *thread)

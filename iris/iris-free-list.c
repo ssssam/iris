@@ -101,7 +101,7 @@ iris_free_list_get (IrisFreeList *free_list)
  * @free_list: An #IrisFreeList
  * @link: An #IrisLink
  *
- * Returns an #IrisLink instance back to the #IrisFreeList instance.
+ * Puts back an #IrisLink instance back to the #IrisFreeList instance.
  */
 void
 iris_free_list_put (IrisFreeList *free_list,

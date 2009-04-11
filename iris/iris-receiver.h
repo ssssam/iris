@@ -74,7 +74,7 @@ GType              iris_receiver_get_type (void) G_GNUC_CONST;
 IrisReceiver*      iris_receiver_new      (void);
 IrisReceiver*      iris_receiver_new_full (IrisScheduler      *scheduler,
                                            IrisArbiter        *arbiter,
-                                           IrisMessageHandler  handler,
+                                           IrisMessageHandler  callback,
                                            gpointer            data);
 IrisDeliveryStatus iris_receiver_deliver  (IrisReceiver       *receiver,
                                            IrisMessage        *message);

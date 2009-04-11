@@ -22,8 +22,8 @@
 
 /**
  * g_time_val_compare:
- * @tv1: A pointer to a GTimeVal
- * @tv2: A pointer to a GTimeVal
+ * @tv1: A pointer to a #GTimeVal
+ * @tv2: A pointer to a #GTimeVal
  *
  * Compare two #GTimeVal and return -1, 0, or 1,
  * depending on whether the first is less than, equal to, or greater

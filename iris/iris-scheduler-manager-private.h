@@ -25,7 +25,7 @@
 
 G_BEGIN_DECLS
 
-gboolean iris_scheduler_manager_yield (IrisThread *thread);
+void iris_scheduler_manager_yield (IrisThread *thread);
 
 G_END_DECLS
 
