@@ -24,6 +24,7 @@ sources_private_h =						\
 	$(top_srcdir)/iris/iris-scheduler-private.h		\
 	$(top_srcdir)/iris/iris-scheduler-manager-private.h	\
 	$(top_srcdir)/iris/iris-util.h				\
+	$(top_srcdir)/iris/gstamppointer.h			\
 	$(NULL)
 
 sources_c = 						\

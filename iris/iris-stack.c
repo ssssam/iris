@@ -19,6 +19,7 @@
  */
 
 #include "iris-stack.h"
+#include "gstamppointer.h"
 
 /**
  * iris_stack_new:
@@ -57,8 +58,10 @@ _try_swap:
 	if (!g_atomic_pointer_compare_and_exchange ((gpointer*)&stack->head, link, NULL))
 		goto _try_swap;
 
+	link = G_STAMP_POINTER_GET_POINTER (link);
+
 	while (link) {
-		tmp = link->next;
+		tmp = G_STAMP_POINTER_GET_POINTER (link->next);
 		if (link)
 			g_slice_free (IrisLink, link);
 		link = tmp;
@@ -83,11 +86,15 @@ iris_stack_push (IrisStack *stack,
 	g_return_if_fail (stack != NULL);
 
 	link = iris_free_list_get (stack->free_list);
-	link->data = data;
+
+	link = G_STAMP_POINTER_INCREMENT (link);
+	G_STAMP_POINTER_GET_LINK (link)->data = data;
 
 	do {
-		link->next = stack->head->next;
-	} while (!g_atomic_pointer_compare_and_exchange ((gpointer*)&stack->head->next, link->next, link));
+		G_STAMP_POINTER_GET_LINK (link)->next = stack->head->next;
+	} while (!g_atomic_pointer_compare_and_exchange ((gpointer*)&stack->head->next,
+	                                                 G_STAMP_POINTER_GET_LINK (link)->next,
+	                                                 link));
 }
 
 /**
@@ -111,9 +118,11 @@ iris_stack_pop (IrisStack *stack)
 		link = stack->head->next;
 		if (link == NULL)
 			return NULL;
-	} while (!g_atomic_pointer_compare_and_exchange ((gpointer*)&stack->head->next, link, link->next));
+	} while (!g_atomic_pointer_compare_and_exchange ((gpointer*)&stack->head->next,
+	                                                 link,
+	                                                 G_STAMP_POINTER_GET_LINK (link)->next));
 
-	result = link->data;
+	result = G_STAMP_POINTER_GET_LINK (link)->data;
 	iris_free_list_put (stack->free_list, link);
 
 	return result;
