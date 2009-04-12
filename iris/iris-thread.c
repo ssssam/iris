@@ -21,6 +21,7 @@
 #include <glib/gprintf.h>
 
 #include "iris-message.h"
+#include "iris-queue.h"
 #include "iris-scheduler-manager.h"
 #include "iris-scheduler-manager-private.h"
 #include "iris-thread.h"
@@ -44,7 +45,7 @@ timeout_elapsed (GTimeVal *tv1,
 
 static void
 iris_thread_worker_exclusive (IrisThread  *thread,
-                              GAsyncQueue *queue,
+                              IrisQueue   *queue,
                               gboolean     leader)
 {
 	GTimeVal        tv_now      = {0,0};
@@ -61,7 +62,7 @@ iris_thread_worker_exclusive (IrisThread  *thread,
 
 	g_get_current_time (&tv_now);
 	g_get_current_time (&tv_req);
-	count = g_async_queue_length (queue);
+	count = iris_queue_length (queue);
 
 	/* Since our thread is in exclusive mode, we are responsible for
 	 * asking the scheduler manager to add or remove threads based
@@ -74,7 +75,7 @@ iris_thread_worker_exclusive (IrisThread  *thread,
 
 get_next_item:
 
-	if (G_LIKELY ((thread_work = g_async_queue_pop (queue)) != NULL)) {
+	if (G_LIKELY ((thread_work = iris_queue_pop (queue)) != NULL)) {
 		iris_thread_work_run (thread_work);
 		iris_thread_work_free (thread_work);
 		per_quantum++;
@@ -85,7 +86,7 @@ get_next_item:
 		g_get_current_time (&tv_now);
 
 		if (G_UNLIKELY (timeout_elapsed (&tv_req, &tv_now))) {
-			tmp = g_async_queue_length (queue);
+			tmp = iris_queue_length (queue);
 			growing = tmp > 0 && tmp > count;
 			count = tmp;
 
@@ -110,7 +111,7 @@ get_next_item:
 
 static void
 iris_thread_worker_transient (IrisThread  *thread,
-                              GAsyncQueue *queue)
+                              IrisQueue   *queue)
 {
 	IrisThreadWork *thread_work = NULL;
 	GTimeVal        tv_timeout = {0,0};
@@ -126,7 +127,7 @@ iris_thread_worker_transient (IrisThread  *thread,
 		g_get_current_time (&tv_timeout);
 		g_time_val_add (&tv_timeout, POP_WAIT_TIMEOUT);
 
-		if ((thread_work = g_async_queue_timed_pop (queue, &tv_timeout)) != NULL) {
+		if ((thread_work = iris_queue_timed_pop (queue, &tv_timeout)) != NULL) {
 			iris_thread_work_run (thread_work);
 			iris_thread_work_free (thread_work);
 		}
@@ -134,32 +135,28 @@ iris_thread_worker_transient (IrisThread  *thread,
 
 	/* Yield our thread back to the scheduler manager */
 	iris_scheduler_manager_yield (thread);
-
-	/* Release our pointer to the active processing queue */
-	g_mutex_lock (thread->mutex);
-	thread->queue = NULL;
-	g_mutex_unlock (thread->mutex);
-
-	/* Done with the queue */
-	g_async_queue_unref (queue);
 }
 
 static void
 iris_thread_handle_manage (IrisThread  *thread,
-                           GAsyncQueue *queue,
+                           IrisQueue   *queue,
                            gboolean     exclusive,
                            gboolean     leader)
 {
 	g_return_if_fail (queue != NULL);
 
 	g_mutex_lock (thread->mutex);
-	thread->active = g_async_queue_ref (queue);
+	thread->active = iris_queue_ref (queue);
 	g_mutex_unlock (thread->mutex);
 
 	if (G_UNLIKELY (exclusive))
 		iris_thread_worker_exclusive (thread, queue, leader);
 	else
 		iris_thread_worker_transient (thread, queue);
+
+	g_mutex_lock (thread->mutex);
+	thread->active = NULL;
+	g_mutex_unlock (thread->mutex);
 }
 
 static void
@@ -264,7 +261,7 @@ iris_thread_get (void)
  */
 void
 iris_thread_manage (IrisThread    *thread,
-                    GAsyncQueue   *queue,
+                    IrisQueue     *queue,
                     gboolean       leader)
 {
 	IrisMessage *message;
@@ -316,7 +313,7 @@ iris_thread_print_stat (IrisThread *thread)
 	           "    Thread 0x%08lx     Active: %s     Queue Size: %d\n",
 	           (long)thread->thread,
 	           thread->active != NULL ? "yes" : "no",
-	           thread->active != NULL ? g_async_queue_length (thread->active) : 0);
+	           thread->active != NULL ? iris_queue_length (thread->active) : 0);
 	g_mutex_unlock (thread->mutex);
 }
 

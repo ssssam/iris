@@ -22,8 +22,9 @@
 #include <sys/sysinfo.h>
 #endif
 
-#include "stdlib.h"
+#include <stdlib.h>
 
+#include "iris-queue.h"
 #include "iris-rrobin.h"
 #include "iris-scheduler.h"
 #include "iris-scheduler-private.h"
@@ -79,7 +80,7 @@ static void
 iris_scheduler_queue_rrobin_cb (gpointer data,
                                 gpointer user_data)
 {
-	GAsyncQueue    *queue;
+	IrisQueue      *queue;
 	IrisThreadWork *thread_work;
 
 	g_return_if_fail (data != NULL);
@@ -88,7 +89,7 @@ iris_scheduler_queue_rrobin_cb (gpointer data,
 	queue = data;
 	thread_work = user_data;
 
-	g_async_queue_push (queue, thread_work);
+	iris_queue_push (queue, thread_work);
 }
 
 static void
@@ -116,10 +117,10 @@ iris_scheduler_queue_real (IrisScheduler  *scheduler,
 	 * will take this item sooner so its own work doesn't invalidate cache.
 	 */
 
-	if (thread && thread->scheduler == scheduler && thread->queue) {
-		g_async_queue_push (thread->queue, thread_work);
-		return;
-	}
+	//if (thread && thread->scheduler == scheduler && thread->queue) {
+		//g_async_queue_push (thread->queue, thread_work);
+		//return;
+	//}
 
 	iris_rrobin_apply (priv->rrobin, iris_scheduler_queue_rrobin_cb, thread_work);
 }
@@ -164,14 +165,14 @@ iris_scheduler_add_thread_real (IrisScheduler  *scheduler,
 {
 	IrisSchedulerPrivate *priv;
 	gboolean              leader;
-	GAsyncQueue          *queue;
+	IrisQueue            *queue;
 
 	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
 
 	priv = scheduler->priv;
 
 	/* create the threads queue for the round robin */
-	queue = g_async_queue_new ();
+	queue = iris_queue_new ();
 	thread->user_data = queue;
 
 	/* add the item to the round robin */
@@ -186,7 +187,7 @@ iris_scheduler_add_thread_real (IrisScheduler  *scheduler,
 	return;
 
 error:
-	g_async_queue_unref (queue);
+	iris_queue_unref (queue);
 	thread->user_data = NULL;
 }
 

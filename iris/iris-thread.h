@@ -42,7 +42,7 @@ struct _IrisThread
 	                            * from an active scheduler   */
 	GMutex        *mutex;      /* Mutex for changing thread  *
 	                            * state. e.g. active queue.  */
-	GAsyncQueue   *active;     /* Active processing queue    */
+	IrisQueue     *active;     /* Active processing queue    */
 };
 
 struct _IrisThreadWork
@@ -54,7 +54,7 @@ struct _IrisThreadWork
 /* Thread abstraction for schedulers */
 IrisThread*     iris_thread_new        (gboolean exclusive);
 IrisThread*     iris_thread_get        (void);
-void            iris_thread_manage     (IrisThread *thread, GAsyncQueue *queue, gboolean leader);
+void            iris_thread_manage     (IrisThread *thread, IrisQueue *queue, gboolean leader);
 void            iris_thread_shutdown   (IrisThread *thread);
 void            iris_thread_print_stat (IrisThread *thread);
 
