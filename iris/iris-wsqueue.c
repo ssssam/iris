@@ -29,6 +29,7 @@
 #include <pthread.h>
 
 #include "iris-wsqueue.h"
+#include "iris-rrobin.h"
 #include "gstamppointer.h"
 
 #define WSQUEUE_DEFAULT_SIZE 32
@@ -52,13 +53,56 @@ iris_wsqueue_push_real (IrisQueue *queue,
 	g_assert_not_reached ();
 }
 
+static gboolean
+iris_wsqueue_pop_real_cb (IrisRRobin *rrobin,
+                          gpointer    data,
+                          gpointer    user_data)
+{
+	gpointer    *result   = user_data;
+	gpointer     stolen   = NULL;
+	IrisWSQueue *neighbor = data;
+
+	/* try to steal an item for the neighbor */
+	if ((stolen = iris_wsqueue_try_steal (neighbor, 0)) != NULL) {
+		*result = stolen;
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 static gpointer
 iris_wsqueue_pop_real (IrisQueue *queue)
 {
+	/*
+	 * This code path is to only be hit by the thread that owns the Queue!
+	 */
+
 	IrisWSQueue *real_queue;
+	gpointer     result = NULL;
+
 	g_return_val_if_fail (queue != NULL, NULL);
+
 	real_queue = (IrisWSQueue*)queue;
-	return NULL;
+
+	/* We check 3 different queues to retrieve an item through the
+	 * public pop interface. First we try to pop locally from our
+	 * local queue. Then we check the global queue. If neither of
+	 * those have yielded an item, we will try to steal from one
+	 * of our neighbors.
+	 */
+
+	if ((result = iris_wsqueue_local_pop (real_queue)) != NULL)
+		return result;
+
+	if ((result = iris_queue_pop (real_queue->global)) != NULL)
+		return result;
+
+	iris_rrobin_foreach (real_queue->rrobin,
+	                     iris_wsqueue_pop_real_cb,
+	                     &result);
+
+	return result;
 }
 
 static gpointer
