@@ -30,6 +30,7 @@
 #include "iris-queue.h"
 #include "iris-port.h"
 #include "iris-receiver.h"
+#include "iris-rrobin.h"
 #include "iris-scheduler.h"
 #include "iris-scheduler-manager.h"
 #include "iris-stack.h"
