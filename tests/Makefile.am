@@ -1,4 +1,6 @@
 include $(top_srcdir)/Makefile.decl
+
+NULL = 
 	
 noinst_PROGRAMS =		\
 	message-1		\
@@ -8,7 +10,9 @@ noinst_PROGRAMS =		\
 	free-list-1		\
 	stack-1			\
 	queue-1			\
-	lf-queue-1
+	lf-queue-1		\
+	ws-queue-1		\
+	$(NULL)
 
 TEST_PROGS +=			\
 	message-1		\
@@ -18,7 +22,9 @@ TEST_PROGS +=			\
 	free-list-1		\
 	stack-1			\
 	queue-1			\
-	lf-queue-1
+	lf-queue-1		\
+	ws-queue-1		\
+	$(NULL)
 
 INCLUDES = -I$(top_srcdir)
 LDADD = $(top_builddir)/iris/libiris-1.0.la
@@ -33,4 +39,5 @@ scheduler_manager_1_sources = scheduler-manager-1.c
 free_list_1_sources = free-list-1.c
 stack_1_sources = stack-1.c
 queue_1_sources = queue-1.c
-lf_queue_q_sources = lf-queue-1.c
+lf_queue_1_sources = lf-queue-1.c
+ws_queue_1_sources = ws-queue-1.c

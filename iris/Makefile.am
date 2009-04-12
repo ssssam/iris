@@ -17,6 +17,7 @@ sources_public_h =					\
 	$(top_srcdir)/iris/iris-stack.h			\
 	$(top_srcdir)/iris/iris-task.h			\
 	$(top_srcdir)/iris/iris-thread.h		\
+	$(top_srcdir)/iris/iris-wsqueue.h		\
 	$(NULL)
 
 sources_private_h =						\
@@ -43,6 +44,7 @@ sources_c = 						\
 	iris-task.c					\
 	iris-thread.c					\
 	iris-util.c					\
+	iris-wsqueue.c					\
 	$(NULL)
 
 irisincludedir = $(includedir)/iris-$(IRIS_API_VERSION)/iris

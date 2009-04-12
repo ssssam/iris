@@ -1,4 +1,4 @@
-/* iris.h
+/* iris-wsqueue.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -18,22 +18,41 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_H__
-#define __IRIS_H__
+#ifndef __IRIS_WSQUEUE_H__
+#define __IRIS_WSQUEUE_H__
 
-#include "iris-types.h"
-#include "iris-arbiter.h"
+#include <glib.h>
+
 #include "iris-free-list.h"
 #include "iris-link.h"
-#include "iris-lfqueue.h"
-#include "iris-message.h"
 #include "iris-queue.h"
-#include "iris-port.h"
-#include "iris-receiver.h"
-#include "iris-scheduler.h"
-#include "iris-scheduler-manager.h"
-#include "iris-stack.h"
-#include "iris-task.h"
-#include "iris-wsqueue.h"
+#include "iris-types.h"
 
-#endif /* __IRIS_H__ */
+G_BEGIN_DECLS
+
+#define IRIS_WSQUEUE(q) ((IrisWSQueue*)q)
+
+struct _IrisWSQueue
+{
+	IrisQueue      parent;
+
+	/*< private >*/
+	IrisQueue     *global;
+	IrisRRobin    *rrobin;
+
+	gint           mask;
+
+	GMutex        *mutex;
+	GArray        *items;
+	volatile gint  head_idx;
+	volatile gint  tail_idx;
+};
+
+IrisQueue* iris_wsqueue_new        (IrisQueue *global, IrisRRobin *peers);
+gpointer   iris_wsqueue_try_steal  (IrisWSQueue *queue, guint timeout);
+void       iris_wsqueue_local_push (IrisWSQueue *queue, gpointer data);
+gpointer   iris_wsqueue_local_pop  (IrisWSQueue *queue);
+
+G_END_DECLS
+
+#endif /* __IRIS_WSQUEUE_H__ */

@@ -44,6 +44,8 @@ tests/scheduler-manager-1
 tests/scheduler-manager-1.o
 tests/lf-queue-1
 tests/lf-queue-1.o
+tests/ws-queue-1
+tests/ws-queue-1.o
 doc/reference/html-build.stamp
 doc/reference/html.stamp
 doc/reference/html/
