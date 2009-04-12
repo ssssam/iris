@@ -31,28 +31,33 @@ G_BEGIN_DECLS
 
 struct _IrisQueueVTable
 {
-	void     (*enqueue)    (IrisQueue *queue, gpointer data);
-	gpointer (*dequeue)    (IrisQueue *queue);
-	guint    (*get_length) (IrisQueue *queue);
-	void     (*destroy)    (IrisQueue *queue);
+	void     (*push)      (IrisQueue *queue, gpointer data);
+	gpointer (*pop)       (IrisQueue *queue);
+	gpointer (*try_pop)   (IrisQueue *queue);
+	gpointer (*timed_pop) (IrisQueue *queue, GTimeVal *timeout);
+	guint    (*length)    (IrisQueue *queue);
+	void     (*dispose)   (IrisQueue *queue);
 };
 
 struct _IrisQueue
 {
 	IrisQueueVTable *vtable;
+
+	/*< private >*/
 	volatile gint    ref_count;
-	IrisLink        *head;
-	IrisLink        *tail;
-	IrisFreeList    *free_list;
-	guint            length;
+	GAsyncQueue     *impl_queue;
 };
 
-IrisQueue* iris_queue_new        (void);
-IrisQueue* iris_queue_ref        (IrisQueue *queue);
-void       iris_queue_unref      (IrisQueue *queue);
-void       iris_queue_enqueue    (IrisQueue *queue, gpointer data);
-gpointer   iris_queue_dequeue    (IrisQueue *queue);
-guint      iris_queue_get_length (IrisQueue *queue);
+IrisQueue* iris_queue_new       (void);
+
+IrisQueue* iris_queue_ref       (IrisQueue *queue);
+void       iris_queue_unref     (IrisQueue *queue);
+
+void       iris_queue_push      (IrisQueue *queue, gpointer data);
+gpointer   iris_queue_pop       (IrisQueue *queue);
+gpointer   iris_queue_try_pop   (IrisQueue *queue);
+gpointer   iris_queue_timed_pop (IrisQueue *queue, GTimeVal *timeout);
+guint      iris_queue_length    (IrisQueue *queue);
 
 G_END_DECLS
 

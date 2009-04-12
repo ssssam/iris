@@ -23,140 +23,61 @@
 
 /**
  * SECTION:iris-queue
- * @short_description: A lock-free queue data structure
+ * @short_description: A concurrent queue.
  *
- * #IrisQueue is a lock-free data structure that fits well into highly
- * concurrent scenarios.  You can create your own queue implementation
- * by overriding the vtable value in the struct. By adhering to the
- * #IrisQueue interface for the vtable, you can have alternate queuing
- * logic for schedulers and the thread workers will still know how to
- * access your work items.
+ * #IrisQueue is a queue abstraction for concurrent queues.  The default
+ * implementation wraps #GAsyncQueue which is a lock-based queue.
+ *
+ * See also #IrisLFQueue and #IrisWSQueue.
  */
 
 static void
-iris_queue_enqueue_real (IrisQueue *queue,
-                         gpointer   data)
+iris_queue_push_real (IrisQueue *queue,
+                      gpointer   data)
 {
-	IrisLink *old_tail = NULL;
-	IrisLink *old_next = NULL;
-	IrisLink *link     = NULL;
-	gboolean  success  = FALSE;
-
-	g_return_if_fail (queue != NULL);
-
-	link = iris_free_list_get (queue->free_list);
-
-	link = G_STAMP_POINTER_INCREMENT (link);
-	G_STAMP_POINTER_GET_LINK (link)->data = data;
-
-	while (!success) {
-		old_tail = queue->tail;
-		old_next = G_STAMP_POINTER_GET_LINK (old_tail)->next;
-
-		if (queue->tail == old_tail) {
-			if (!old_next) {
-				success = g_atomic_pointer_compare_and_exchange (
-						(gpointer*)&G_STAMP_POINTER_GET_LINK (queue->tail)->next,
-						NULL,
-						link);
-			}
-		}
-		else {
-			g_atomic_pointer_compare_and_exchange (
-					(gpointer*)&queue->tail,
-					old_tail,
-					old_next);
-		}
-	}
-
-	g_atomic_pointer_compare_and_exchange ((gpointer*)&queue->tail,
-	                                       old_tail,
-	                                       link);
-
-	g_atomic_int_inc ((gint*)&queue->length);
+	return g_async_queue_push (queue->impl_queue, data);
 }
 
 static gpointer
-iris_queue_dequeue_real (IrisQueue *queue)
+iris_queue_pop_real (IrisQueue *queue)
 {
-	IrisLink *old_head      = NULL;
-	IrisLink *old_tail      = NULL;
-	IrisLink *old_head_next = NULL;
-	gboolean  success       = FALSE;
-	gpointer  result        = NULL;
+	return g_async_queue_pop (queue->impl_queue);
+}
 
-	g_return_val_if_fail (queue != NULL, NULL);
-
-	while (!success) {
-		old_head = queue->head;
-		old_tail = queue->tail;
-		old_head_next = G_STAMP_POINTER_GET_LINK (old_head)->next;
-
-		if (old_head == queue->head) {
-			if (old_head == old_tail) {
-				if (!old_head_next)
-					return NULL;
-
-				g_atomic_pointer_compare_and_exchange (
-						(gpointer*)&queue->tail,
-						old_tail,
-						old_head_next);
-			}
-			else {
-				result = G_STAMP_POINTER_GET_LINK (old_head_next)->data;
-				success = g_atomic_pointer_compare_and_exchange (
-						(gpointer*)&queue->head,
-						old_head,
-						old_head_next);
-			}
-		}
-	}
-
-	iris_free_list_put (queue->free_list, old_head);
-	if (g_atomic_int_dec_and_test ((gint*)&queue->length)) {}
-
-	return result;
+static gpointer
+iris_queue_try_pop_real (IrisQueue *queue)
+{
+	return g_async_queue_try_pop (queue->impl_queue);
 }
 
 static guint
-iris_queue_get_length_real (IrisQueue *queue)
+iris_queue_length_real (IrisQueue *queue)
 {
-	return queue->length;
+	return g_async_queue_length (queue->impl_queue);
+}
+
+static void
+iris_queue_dispose_real (IrisQueue *queue)
+{
+	g_async_queue_unref (queue->impl_queue);
+	queue->impl_queue = NULL;
+	g_slice_free (IrisQueue, queue);
 }
 
 static IrisQueueVTable queue_vtable = {
-	iris_queue_enqueue_real,
-	iris_queue_dequeue_real,
-	iris_queue_get_length_real,
-	NULL
+	iris_queue_push_real,
+	iris_queue_pop_real,
+	iris_queue_try_pop_real,
+	NULL,
+	iris_queue_length_real,
+	iris_queue_dispose_real,
 };
 
 static void
-iris_queue_destroy (IrisQueue *queue)
+iris_queue_dispose (IrisQueue *queue)
 {
-	if (G_LIKELY (queue->vtable->destroy))
-		queue->vtable->destroy (queue);
-}
-
-static void
-iris_queue_free (IrisQueue *queue)
-{
-	IrisLink *link, *tmp;
-
-	g_return_if_fail (queue != NULL);
-
-	link = queue->head;
-	queue->tail = NULL;
-
-	while (link) {
-		tmp = link->next;
-		if (tmp)
-			g_slice_free (IrisLink, tmp);
-		link = tmp;
-	}
-
-	iris_free_list_free (queue->free_list);
-	g_slice_free (IrisQueue, queue);
+	if (G_LIKELY (queue->vtable->dispose))
+		queue->vtable->dispose (queue);
 }
 
 /**
@@ -176,10 +97,8 @@ iris_queue_new (void)
 
 	queue = g_slice_new0 (IrisQueue);
 	queue->vtable = &queue_vtable;
-	queue->head = g_slice_new0 (IrisLink);
-	queue->tail = queue->head;
-	queue->free_list = iris_free_list_new ();
 	queue->ref_count = 1;
+	queue->impl_queue = g_async_queue_new ();
 
 	return queue;
 }
@@ -217,14 +136,12 @@ iris_queue_unref (IrisQueue *queue)
 	g_return_if_fail (queue != NULL);
 	g_return_if_fail (queue->ref_count > 0);
 
-	if (g_atomic_int_dec_and_test (&queue->ref_count)) {
-		iris_queue_destroy (queue);
-		iris_queue_free (queue);
-	}
+	if (g_atomic_int_dec_and_test (&queue->ref_count))
+		iris_queue_dispose (queue);
 }
 
 /**
- * iris_queue_enqueue:
+ * iris_queue_push:
  * @queue: An #IrisQueue
  * @data: a gpointer
  *
@@ -232,15 +149,15 @@ iris_queue_unref (IrisQueue *queue)
  * this atomically and lock-free.
  */
 void
-iris_queue_enqueue (IrisQueue *queue,
-                    gpointer   data)
+iris_queue_push (IrisQueue *queue,
+                 gpointer   data)
 {
 	g_return_if_fail (queue != NULL);
-	queue->vtable->enqueue (queue, data);
+	queue->vtable->push (queue, data);
 }
 
 /**
- * iris_queue_dequeue:
+ * iris_queue_pop:
  * @queue: An #IrisQueue
  *
  * Dequeues the next item from the queue. The default implementation does
@@ -249,14 +166,30 @@ iris_queue_enqueue (IrisQueue *queue,
  * Return value: the next item from the queue or %NULL
  */
 gpointer
-iris_queue_dequeue (IrisQueue *queue)
+iris_queue_pop (IrisQueue *queue)
 {
 	g_return_val_if_fail (queue != NULL, NULL);
-	return queue->vtable->dequeue (queue);
+	return queue->vtable->pop (queue);
 }
 
 /**
- * iris_queue_get_length:
+ * iris_queue_try_pop:
+ * @queue: An #IrisQueue
+ *
+ * Tries to pop an item off of the queue.  If no item is available, %NULL is
+ * returned.
+ *
+ * Return value: An item from the queue or %NULL
+ */
+gpointer
+iris_queue_try_pop (IrisQueue *queue)
+{
+	g_return_val_if_fail (queue != NULL, NULL);
+	return queue->vtable->try_pop (queue);
+}
+
+/**
+ * iris_queue_length:
  * @queue: An #IrisQueue
  *
  * Retreives the length of the queue.
@@ -270,8 +203,8 @@ iris_queue_dequeue (IrisQueue *queue)
  * Return value: the length of the queue.
  */
 guint
-iris_queue_get_length (IrisQueue *queue)
+iris_queue_length (IrisQueue *queue)
 {
 	g_return_val_if_fail (queue != NULL, 0);
-	return queue->vtable->get_length (queue);
+	return queue->vtable->length (queue);
 }
