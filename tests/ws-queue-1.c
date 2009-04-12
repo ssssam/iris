@@ -71,6 +71,31 @@ test5 (void)
 	g_assert (iris_wsqueue_try_steal (IRIS_WSQUEUE (queue), 0) == &i);
 }
 
+static void
+test6 (void)
+{
+	IrisQueue  *queue;
+	IrisQueue  *global;
+	IrisQueue  *neighbor;
+	IrisRRobin *rrobin;
+
+	global = iris_queue_new ();
+	rrobin = iris_rrobin_new (2);
+	neighbor = iris_wsqueue_new (global, rrobin);
+	queue = iris_wsqueue_new (global, rrobin);
+
+	iris_rrobin_append (rrobin, queue);
+	iris_rrobin_append (rrobin, neighbor);
+
+	iris_wsqueue_local_push (((IrisWSQueue*)queue), GINT_TO_POINTER (1));
+	iris_queue_push (global, GINT_TO_POINTER (2));
+	iris_wsqueue_local_push (((IrisWSQueue*)neighbor), GINT_TO_POINTER (3));
+
+	g_assert_cmpint (GPOINTER_TO_INT (iris_queue_pop (queue)), ==, 1);
+	g_assert_cmpint (GPOINTER_TO_INT (iris_queue_pop (queue)), ==, 2);
+	g_assert_cmpint (GPOINTER_TO_INT (iris_queue_pop (queue)), ==, 3);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -84,6 +109,7 @@ main (int   argc,
 	g_test_add_func ("/wsqueue/free2", test3);
 	g_test_add_func ("/wsqueue/local1", test4);
 	g_test_add_func ("/wsqueue/try_steal1", test5);
+	g_test_add_func ("/wsqueue/pop_order1", test6);
 
 	return g_test_run ();
 }

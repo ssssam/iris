@@ -44,6 +44,12 @@
  * the #IrisRRobin of peer queues, which should also be #IrisQueue based.
  */
 
+struct StealInfo
+{
+	IrisQueue *queue;
+	gpointer   result;
+};
+
 static void
 iris_wsqueue_push_real (IrisQueue *queue,
                         gpointer   data)
@@ -58,14 +64,12 @@ iris_wsqueue_pop_real_cb (IrisRRobin *rrobin,
                           gpointer    data,
                           gpointer    user_data)
 {
-	gpointer    *result   = user_data;
-	gpointer     stolen   = NULL;
-	IrisWSQueue *neighbor = data;
+	struct StealInfo *steal    = user_data;
+	IrisWSQueue      *neighbor = data;
 
-	/* try to steal an item for the neighbor */
-	if ((stolen = iris_wsqueue_try_steal (neighbor, 0)) != NULL) {
-		*result = stolen;
-		return FALSE;
+	if (G_LIKELY (steal->queue != data)) {
+		if ((steal->result = iris_wsqueue_try_steal (neighbor, 0)) != NULL)
+			return FALSE;
 	}
 
 	return TRUE;
@@ -78,12 +82,14 @@ iris_wsqueue_pop_real (IrisQueue *queue)
 	 * This code path is to only be hit by the thread that owns the Queue!
 	 */
 
-	IrisWSQueue *real_queue;
-	gpointer     result = NULL;
+	struct StealInfo  steal;
+	IrisWSQueue      *real_queue;
 
 	g_return_val_if_fail (queue != NULL, NULL);
 
 	real_queue = (IrisWSQueue*)queue;
+	steal.queue = queue;
+	steal.result = NULL;
 
 	/* We check 3 different queues to retrieve an item through the
 	 * public pop interface. First we try to pop locally from our
@@ -92,17 +98,19 @@ iris_wsqueue_pop_real (IrisQueue *queue)
 	 * of our neighbors.
 	 */
 
-	if ((result = iris_wsqueue_local_pop (real_queue)) != NULL)
-		return result;
+	if ((steal.result = iris_wsqueue_local_pop (real_queue)) != NULL) {
+		return steal.result;
+	}
 
-	if ((result = iris_queue_pop (real_queue->global)) != NULL)
-		return result;
+	if ((steal.result = iris_queue_try_pop (real_queue->global)) != NULL) {
+		return steal.result;
+	}
 
 	iris_rrobin_foreach (real_queue->rrobin,
 	                     iris_wsqueue_pop_real_cb,
-	                     &result);
+	                     &steal);
 
-	return result;
+	return steal.result;
 }
 
 static gpointer
