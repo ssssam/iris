@@ -50,6 +50,13 @@ iris_queue_try_pop_real (IrisQueue *queue)
 	return g_async_queue_try_pop (queue->impl_queue);
 }
 
+static gpointer
+iris_queue_timed_pop_real (IrisQueue *queue,
+                           GTimeVal  *timeout)
+{
+	return g_async_queue_timed_pop (queue->impl_queue, timeout);
+}
+
 static guint
 iris_queue_length_real (IrisQueue *queue)
 {
@@ -68,7 +75,7 @@ static IrisQueueVTable queue_vtable = {
 	iris_queue_push_real,
 	iris_queue_pop_real,
 	iris_queue_try_pop_real,
-	NULL,
+	iris_queue_timed_pop_real,
 	iris_queue_length_real,
 	iris_queue_dispose_real,
 };
@@ -186,6 +193,23 @@ iris_queue_try_pop (IrisQueue *queue)
 {
 	g_return_val_if_fail (queue != NULL, NULL);
 	return queue->vtable->try_pop (queue);
+}
+
+/**
+ * iris_queue_timed_pop:
+ * @queue: An #IrisQueue
+ *
+ * Tries to pop an item off of the queue within before the specified time
+ * has passed.
+ *
+ * Return value: An item from the queue or %NULL.
+ */
+gpointer
+iris_queue_timed_pop (IrisQueue *queue,
+                      GTimeVal  *timeout)
+{
+	g_return_val_if_fail (queue != NULL, NULL);
+	return queue->vtable->timed_pop (queue, timeout);
 }
 
 /**
