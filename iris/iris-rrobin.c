@@ -201,7 +201,9 @@ iris_rrobin_foreach (IrisRRobin            *rrobin,
 
 	end = rrobin->count;
 
-	for (i = 0; i < end && rrobin->data [i]; i++) {
+	for (i = 0; i < end; i++) {
+		if (!rrobin->data [i])
+			continue;
 		if (!callback (rrobin, rrobin->data [i], user_data))
 			break;
 	}
