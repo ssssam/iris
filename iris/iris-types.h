@@ -69,6 +69,7 @@ typedef struct _IrisLink             IrisLink;
 
 typedef struct _IrisQueue            IrisQueue;
 typedef struct _IrisQueueVTable      IrisQueueVTable;
+typedef struct _IrisLFQueue          IrisLFQueue;
 
 typedef struct _IrisRRobin           IrisRRobin;
 

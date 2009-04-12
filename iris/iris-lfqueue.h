@@ -1,4 +1,4 @@
-/* iris.h
+/* iris-lfqueue.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -18,21 +18,31 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_H__
-#define __IRIS_H__
+#ifndef __IRIS_LFQUEUE_H__
+#define __IRIS_LFQUEUE_H__
 
-#include "iris-types.h"
-#include "iris-arbiter.h"
+#include <glib.h>
+
 #include "iris-free-list.h"
 #include "iris-link.h"
-#include "iris-lfqueue.h"
-#include "iris-message.h"
 #include "iris-queue.h"
-#include "iris-port.h"
-#include "iris-receiver.h"
-#include "iris-scheduler.h"
-#include "iris-scheduler-manager.h"
-#include "iris-stack.h"
-#include "iris-task.h"
+#include "iris-types.h"
 
-#endif /* __IRIS_H__ */
+G_BEGIN_DECLS
+
+struct _IrisLFQueue
+{
+	IrisQueue     parent;
+
+	/*< private >*/
+	IrisLink     *head;
+	IrisLink     *tail;
+	IrisFreeList *free_list;
+	guint         length;
+};
+
+IrisQueue* iris_lfqueue_new (void);
+
+G_END_DECLS
+
+#endif /* __IRIS_LFQUEUE_H__ */

@@ -34,14 +34,16 @@ tests/port-1
 tests/port-1.o
 tests/receiver-1
 tests/receiver-1.o
-tests/scheduler-manager-1
 tests/free-list-1
 tests/free-list-1.o
 tests/stack-1
 tests/stack-1.o
 tests/queue-1
 tests/queue-1.o
+tests/scheduler-manager-1
 tests/scheduler-manager-1.o
+tests/lf-queue-1
+tests/lf-queue-1.o
 doc/reference/html-build.stamp
 doc/reference/html.stamp
 doc/reference/html/
