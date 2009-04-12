@@ -36,11 +36,12 @@ struct _IrisRRobin
 	gpointer data[1];
 };
 
-IrisRRobin* iris_rrobin_new    (gint size);
-gboolean    iris_rrobin_append (IrisRRobin *rrobin, gpointer data);
-void        iris_rrobin_remove (IrisRRobin *rrobin, gpointer data);
-gboolean    iris_rrobin_apply  (IrisRRobin *rrobin, IrisRRobinFunc callback, gpointer user_data);
-void        iris_rrobin_free   (IrisRRobin *rrobin);
+IrisRRobin* iris_rrobin_new     (gint size);
+gboolean    iris_rrobin_append  (IrisRRobin *rrobin, gpointer data);
+void        iris_rrobin_remove  (IrisRRobin *rrobin, gpointer data);
+gboolean    iris_rrobin_apply   (IrisRRobin *rrobin, IrisRRobinFunc callback, gpointer user_data);
+void        iris_rrobin_foreach (IrisRRobin *rrobin, IrisRRobinForeachFunc callback, gpointer user_data);
+void        iris_rrobin_free    (IrisRRobin *rrobin);
 
 G_END_DECLS
 

@@ -177,3 +177,32 @@ iris_rrobin_free (IrisRRobin *rrobin)
 {
 	g_free (rrobin);
 }
+
+/**
+ * iris_rrobin_foreach:
+ * @rrobin: An #IrisRRobin
+ * @callback: An #IrisRRobinForeachFunc
+ * @user_data: user data supplied to @callback
+ *
+ * Executes @callback for each item in the #IrisRRobin structure. If
+ * @callback returns %FALSE, then iteration is stopped and the method
+ * returns.
+ */
+void
+iris_rrobin_foreach (IrisRRobin            *rrobin,
+                     IrisRRobinForeachFunc  callback,
+                     gpointer               user_data)
+{
+	gint end;
+	gint i;
+
+	g_return_if_fail (rrobin != NULL);
+	g_return_if_fail (callback != NULL);
+
+	end = rrobin->count;
+
+	for (i = 0; i < end && rrobin->data [i]; i++) {
+		if (!callback (rrobin, rrobin->data [i], user_data))
+			break;
+	}
+}
