@@ -19,6 +19,7 @@
  */
 
 #include "iris-lfqueue.h"
+#include "iris-util.h"
 #include "gstamppointer.h"
 
 /**
@@ -41,6 +42,7 @@ iris_lfqueue_push_real (IrisQueue *queue,
 	gboolean     success    = FALSE;
 
 	g_return_if_fail (real_queue != NULL);
+	g_return_if_fail (data != NULL);
 
 	link = iris_free_list_get (real_queue->free_list);
 
@@ -75,7 +77,7 @@ iris_lfqueue_push_real (IrisQueue *queue,
 }
 
 static gpointer
-iris_lfqueue_pop_real (IrisQueue *queue)
+iris_lfqueue_try_pop_real (IrisQueue *queue)
 {
 	IrisLFQueue *real_queue    = (IrisLFQueue*)queue;
 	IrisLink    *old_head      = NULL;
@@ -118,15 +120,49 @@ iris_lfqueue_pop_real (IrisQueue *queue)
 }
 
 static gpointer
-iris_lfqueue_try_pop_real (IrisQueue *queue)
+iris_lfqueue_timed_pop_real (IrisQueue *queue,
+                             GTimeVal  *timeout)
 {
-	return iris_lfqueue_pop_real (queue);
+	gpointer result;
+	gint     spin_count = 0;
+
+retry:
+	if (!(result = iris_lfqueue_try_pop_real (queue))) {
+		/* spin a few times retrying */
+		if (spin_count < 5) {
+			spin_count++;
+			goto retry;
+		}
+
+		/* This totally isn't ideal, but its what we deal with by
+		 * doing a non-blocking lock-free queue.  We will just
+		 * sleep until the timeout passes and check again.
+		 */
+		g_usleep (g_time_val_usec_until (timeout));
+		goto retry;
+	}
+
+	return result;
 }
 
 static gpointer
-iris_lfqueue_timed_pop_real (IrisQueue *queue, GTimeVal *timeout)
+iris_lfqueue_pop_real (IrisQueue *queue)
 {
-	return iris_lfqueue_pop_real (queue);
+	/* since this method must block, we will retry things periodically
+	 * since we cannot add a lock/condition wait.  This should *not*
+	 * be used on power saving devices such as embedded platforms.
+	 */
+
+	gpointer result  = NULL;
+	GTimeVal timeout = {0,0};
+
+	do {
+		g_get_current_time (&timeout);
+		g_time_val_add (&timeout, G_USEC_PER_SEC / 5); /* 200ms */
+		result = iris_lfqueue_timed_pop_real (queue, &timeout);
+	} while (!result);
+
+	return result;
 }
 
 static guint
