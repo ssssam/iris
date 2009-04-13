@@ -133,7 +133,7 @@ test9 (void)
 	queue = iris_wsqueue_new (NULL, NULL);
 	g_assert (queue);
 
-	for (i = 0; i < 50; i++) {
+	for (i = 0; i < 1025; i++) {
 		iris_wsqueue_local_push (IRIS_WSQUEUE (queue), &i);
 	}
 }
