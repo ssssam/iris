@@ -27,6 +27,7 @@
     <xi:include href="xml/iris-stack.xml"/>
     <xi:include href="xml/iris-free-list.xml"/>
     <xi:include href="xml/iris-queue.xml"/>
+    <xi:include href="xml/iris-types.xml"/>
     <xi:include href="xml/iris-version.xml"/>
   </chapter>
   <chapter id="object-tree">

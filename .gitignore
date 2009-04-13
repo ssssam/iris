@@ -72,3 +72,5 @@ build/autotools/shave
 build/autotools/shave-libtool
 examples/basic
 examples/basic.o
+examples/recursive
+examples/recursive.o
