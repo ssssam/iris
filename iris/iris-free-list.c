@@ -19,10 +19,19 @@
  */
 
 #include "iris-free-list.h"
+#include "gstamppointer.h"
 
 /**
  * SECTION:iris-free-list
  * @short_description: A lock-free free-list data structure
+ *
+ * IMPORTANT NOTE
+ *
+ * The #IrisFreeList is only for use by pointers that have the bottom
+ * two bits free. This means that for 32bit architectures the pointer
+ * must be aligned to sizeof(void*).  GSlice allocations provide this.
+ *
+ * END IMPORTANT NOTE
  *
  * #IrisFreeList is a basic free-list used by algorithms wishing to
  * control their own basic memory management. This can be very useful
@@ -76,9 +85,9 @@ _try_swap:
 		goto _try_swap;
 	
 	while (link) {
-		tmp = link->next;
+		tmp = G_STAMP_POINTER_GET_LINK (link)->next;
 		if (link)
-			g_slice_free (IrisLink, link);
+			g_slice_free (IrisLink, G_STAMP_POINTER_GET_LINK (link));
 		link = tmp;
 	}
 	
@@ -102,12 +111,15 @@ iris_free_list_get (IrisFreeList *free_list)
 	g_return_val_if_fail (free_list != NULL, NULL);
 	
 	do {
-		link = free_list->head->next;
+		link = G_STAMP_POINTER_GET_LINK (free_list->head)->next;
 		if (link == NULL)
 			return g_slice_new0 (IrisLink);
-	} while (!g_atomic_pointer_compare_and_exchange ((gpointer*)&free_list->head->next, link, link->next));
+	} while (!g_atomic_pointer_compare_and_exchange (
+				(gpointer*)&free_list->head->next,
+				link,
+				G_STAMP_POINTER_GET_LINK (link)->next));
 	
-	link->next = NULL;
+	G_STAMP_POINTER_GET_LINK (link)->next = NULL;
 	
 	return link;
 }
@@ -126,9 +138,13 @@ iris_free_list_put (IrisFreeList *free_list,
 	g_return_if_fail (free_list != NULL);
 	g_return_if_fail (link != NULL);
 	
-	link->data = NULL;
+	G_STAMP_POINTER_GET_LINK (link)->data = NULL;
 	
 	do {
-		link->next = free_list->head->next;
-	} while (!g_atomic_pointer_compare_and_exchange ((gpointer*)&free_list->head->next, link->next, link));
+		G_STAMP_POINTER_GET_LINK (link)->next =
+			G_STAMP_POINTER_GET_LINK (free_list->head)->next;
+	} while (!g_atomic_pointer_compare_and_exchange (
+				(gpointer*)&free_list->head->next,
+				G_STAMP_POINTER_GET_LINK (link)->next,
+				link));
 }
