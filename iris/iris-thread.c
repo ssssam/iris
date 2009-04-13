@@ -80,7 +80,12 @@ get_next_item:
 		iris_thread_work_free (thread_work);
 		per_quantum++;
 	}
-	else return;
+	else {
+#if 0
+		g_warning ("Exclusive thread is done managing, received NULL");
+		return;
+#endif
+	}
 
 	if (G_LIKELY (leader)) {
 		g_get_current_time (&tv_now);
