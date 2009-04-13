@@ -23,6 +23,6 @@
 
 #include <glib.h>
 
-gint g_time_val_compare (GTimeVal *a, GTimeVal *b);
+gint g_time_val_compare (GTimeVal *tv1, GTimeVal *tv2);
 
 #endif /* __IRIS_UTIL_H__ */

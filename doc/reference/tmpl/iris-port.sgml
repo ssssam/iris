@@ -1,0 +1,105 @@
+<!-- ##### SECTION Title ##### -->
+IrisPort
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION Stability_Level ##### -->
+
+
+<!-- ##### MACRO IRIS_PORT_CONST ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT IrisPort ##### -->
+<para>
+
+</para>
+
+@parent: 
+@priv: 
+
+<!-- ##### FUNCTION iris_port_new ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_port_post ##### -->
+<para>
+
+</para>
+
+@port: 
+@message: 
+
+
+<!-- ##### FUNCTION iris_port_repost ##### -->
+<para>
+
+</para>
+
+@port: 
+@message: 
+
+
+<!-- ##### FUNCTION iris_port_flush ##### -->
+<para>
+
+</para>
+
+@port: 
+
+
+<!-- ##### FUNCTION iris_port_has_receiver ##### -->
+<para>
+
+</para>
+
+@port: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_port_get_receiver ##### -->
+<para>
+
+</para>
+
+@port: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_port_set_receiver ##### -->
+<para>
+
+</para>
+
+@port: 
+@receiver: 
+
+
+<!-- ##### FUNCTION iris_port_get_queue_count ##### -->
+<para>
+
+</para>
+
+@port: 
+@Returns: 
+
+

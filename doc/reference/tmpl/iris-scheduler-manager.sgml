@@ -1,0 +1,52 @@
+<!-- ##### SECTION Title ##### -->
+IrisSchedulerManager
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION Stability_Level ##### -->
+
+
+<!-- ##### FUNCTION iris_scheduler_manager_prepare ##### -->
+<para>
+
+</para>
+
+@scheduler: 
+
+
+<!-- ##### FUNCTION iris_scheduler_manager_unprepare ##### -->
+<para>
+
+</para>
+
+@scheduler: 
+
+
+<!-- ##### FUNCTION iris_scheduler_manager_request ##### -->
+<para>
+
+</para>
+
+@scheduler: 
+@per_quantum: 
+@total: 
+
+
+<!-- ##### FUNCTION iris_scheduler_manager_print_stat ##### -->
+<para>
+
+</para>
+
+
+

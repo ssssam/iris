@@ -1,0 +1,34 @@
+<!-- ##### SECTION Title ##### -->
+IrisLFQueue
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION Stability_Level ##### -->
+
+
+<!-- ##### STRUCT IrisLFQueue ##### -->
+<para>
+
+</para>
+
+@parent: 
+
+<!-- ##### FUNCTION iris_lfqueue_new ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+

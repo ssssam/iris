@@ -1,0 +1,109 @@
+<!-- ##### SECTION Title ##### -->
+IrisQueue
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION Stability_Level ##### -->
+
+
+<!-- ##### STRUCT IrisQueueVTable ##### -->
+<para>
+
+</para>
+
+@push: 
+@pop: 
+@try_pop: 
+@timed_pop: 
+@length: 
+@dispose: 
+
+<!-- ##### STRUCT IrisQueue ##### -->
+<para>
+
+</para>
+
+@vtable: 
+
+<!-- ##### FUNCTION iris_queue_new ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_queue_ref ##### -->
+<para>
+
+</para>
+
+@queue: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_queue_unref ##### -->
+<para>
+
+</para>
+
+@queue: 
+
+
+<!-- ##### FUNCTION iris_queue_push ##### -->
+<para>
+
+</para>
+
+@queue: 
+@data: 
+
+
+<!-- ##### FUNCTION iris_queue_pop ##### -->
+<para>
+
+</para>
+
+@queue: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_queue_try_pop ##### -->
+<para>
+
+</para>
+
+@queue: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_queue_timed_pop ##### -->
+<para>
+
+</para>
+
+@queue: 
+@timeout: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_queue_length ##### -->
+<para>
+
+</para>
+
+@queue: 
+@Returns: 
+
+

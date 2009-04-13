@@ -1,0 +1,65 @@
+<!-- ##### SECTION Title ##### -->
+IrisReceiver
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION Stability_Level ##### -->
+
+
+<!-- ##### MACRO IRIS_RECEIVER_CONST ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT IrisReceiver ##### -->
+<para>
+
+</para>
+
+@parent: 
+@priv: 
+
+<!-- ##### FUNCTION iris_receiver_new ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_receiver_new_full ##### -->
+<para>
+
+</para>
+
+@scheduler: 
+@arbiter: 
+@callback: 
+@data: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_receiver_deliver ##### -->
+<para>
+
+</para>
+
+@receiver: 
+@message: 
+@Returns: 
+
+

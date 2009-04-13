@@ -28,6 +28,8 @@
  * Compare two #GTimeVal and return -1, 0, or 1,
  * depending on whether the first is less than, equal to, or greater
  * than, the last.
+ *
+ * Return value: -1, 0, or 1
  */
 gint
 g_time_val_compare (GTimeVal *tv1,

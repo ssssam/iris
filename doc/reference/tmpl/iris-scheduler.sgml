@@ -1,0 +1,99 @@
+<!-- ##### SECTION Title ##### -->
+IrisScheduler
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION Stability_Level ##### -->
+
+
+<!-- ##### MACRO IRIS_SCHEDULER_CONST ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT IrisScheduler ##### -->
+<para>
+
+</para>
+
+@parent: 
+
+<!-- ##### FUNCTION iris_scheduler_new ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_scheduler_new_full ##### -->
+<para>
+
+</para>
+
+@min_threads: 
+@max_threads: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_scheduler_get_min_threads ##### -->
+<para>
+
+</para>
+
+@scheduler: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_scheduler_get_max_threads ##### -->
+<para>
+
+</para>
+
+@scheduler: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_scheduler_queue ##### -->
+<para>
+
+</para>
+
+@scheduler: 
+@func: 
+@data: 
+@notify: 
+
+
+<!-- ##### FUNCTION iris_scheduler_add_thread ##### -->
+<para>
+
+</para>
+
+@scheduler: 
+@thread: 
+
+
+<!-- ##### FUNCTION iris_scheduler_remove_thread ##### -->
+<para>
+
+</para>
+
+@scheduler: 
+@thread: 
+
+

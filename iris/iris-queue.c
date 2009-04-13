@@ -198,6 +198,7 @@ iris_queue_try_pop (IrisQueue *queue)
 /**
  * iris_queue_timed_pop:
  * @queue: An #IrisQueue
+ * @timeout: absolute time for timeout
  *
  * Tries to pop an item off of the queue within before the specified time
  * has passed.

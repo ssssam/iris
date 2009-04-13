@@ -78,6 +78,16 @@ IRIS_PORT_GET_CLASS
 </SECTION>
 
 <SECTION>
+<FILE>iris-wsqueue</FILE>
+IRIS_WSQUEUE
+IrisWSQueue
+iris_wsqueue_new
+iris_wsqueue_try_steal
+iris_wsqueue_local_push
+iris_wsqueue_local_pop
+</SECTION>
+
+<SECTION>
 <FILE>iris-scheduler-manager-private</FILE>
 iris_scheduler_manager_yield
 </SECTION>
@@ -123,8 +133,13 @@ IrisFreeList
 IrisLink
 IrisQueue
 IrisQueueVTable
+IrisLFQueue
+IrisWSQueue
+IrisRRobin
 IrisCallback
 IrisMessageHandler
+IrisRRobinFunc
+IrisRRobinForeachFunc
 </SECTION>
 
 <SECTION>
@@ -148,6 +163,7 @@ iris_arbiter_new
 IrisThread
 IrisThreadWork
 iris_thread_new
+iris_thread_get
 iris_thread_manage
 iris_thread_shutdown
 iris_thread_print_stat
@@ -158,12 +174,12 @@ iris_thread_work_run
 
 <SECTION>
 <FILE>iris-rrobin</FILE>
-IrisRRobinFunc
 IrisRRobin
 iris_rrobin_new
 iris_rrobin_append
 iris_rrobin_remove
 iris_rrobin_apply
+iris_rrobin_foreach
 iris_rrobin_free
 </SECTION>
 
@@ -234,14 +250,23 @@ g_time_val_compare
 </SECTION>
 
 <SECTION>
+<FILE>iris-lfqueue</FILE>
+IrisLFQueue
+iris_lfqueue_new
+</SECTION>
+
+<SECTION>
 <FILE>iris-queue</FILE>
 IrisQueueVTable
 IrisQueue
 iris_queue_new
-iris_queue_free
-iris_queue_enqueue
-iris_queue_dequeue
-iris_queue_get_length
+iris_queue_ref
+iris_queue_unref
+iris_queue_push
+iris_queue_pop
+iris_queue_try_pop
+iris_queue_timed_pop
+iris_queue_length
 </SECTION>
 
 <SECTION>

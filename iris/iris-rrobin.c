@@ -186,7 +186,7 @@ iris_rrobin_free (IrisRRobin *rrobin)
  *
  * Executes @callback for each item in the #IrisRRobin structure. If
  * @callback returns %FALSE, then iteration is stopped and the method
- * returns.
+ * will return.
  */
 void
 iris_rrobin_foreach (IrisRRobin            *rrobin,

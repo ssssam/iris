@@ -1,0 +1,61 @@
+<!-- ##### SECTION Title ##### -->
+IrisStack
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION Stability_Level ##### -->
+
+
+<!-- ##### STRUCT IrisStack ##### -->
+<para>
+
+</para>
+
+@head: 
+@free_list: 
+
+<!-- ##### FUNCTION iris_stack_new ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_stack_push ##### -->
+<para>
+
+</para>
+
+@stack: 
+@data: 
+
+
+<!-- ##### FUNCTION iris_stack_pop ##### -->
+<para>
+
+</para>
+
+@stack: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_stack_free ##### -->
+<para>
+
+</para>
+
+@stack: 
+
+

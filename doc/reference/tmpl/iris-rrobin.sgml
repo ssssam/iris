@@ -1,0 +1,82 @@
+<!-- ##### SECTION Title ##### -->
+IrisRRobin
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION Stability_Level ##### -->
+
+
+<!-- ##### STRUCT IrisRRobin ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### FUNCTION iris_rrobin_new ##### -->
+<para>
+
+</para>
+
+@size: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_rrobin_append ##### -->
+<para>
+
+</para>
+
+@rrobin: 
+@data: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_rrobin_remove ##### -->
+<para>
+
+</para>
+
+@rrobin: 
+@data: 
+
+
+<!-- ##### FUNCTION iris_rrobin_apply ##### -->
+<para>
+
+</para>
+
+@rrobin: 
+@callback: 
+@user_data: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_rrobin_foreach ##### -->
+<para>
+
+</para>
+
+@rrobin: 
+@callback: 
+@user_data: 
+
+
+<!-- ##### FUNCTION iris_rrobin_free ##### -->
+<para>
+
+</para>
+
+@rrobin: 
+
+
