@@ -124,6 +124,19 @@ test8 (void)
 	g_assert_cmpint (GPOINTER_TO_INT (iris_queue_timed_pop (queue, &tv)), ==, 1);
 }
 
+static void
+test9 (void)
+{
+	IrisQueue *queue;
+
+	queue = iris_wsqueue_new (NULL, NULL);
+	g_assert (queue);
+
+	gint i;
+	for (i = 0; i < 50; i++) {
+		iris_wsqueue_local_push (IRIS_WSQUEUE (queue), GINT_TO_POINTER (1));
+	}
+}
 
 int
 main (int   argc,
@@ -141,6 +154,7 @@ main (int   argc,
 	g_test_add_func ("/wsqueue/pop_order1", test6);
 	g_test_add_func ("/wsqueue/try_pop1", test7);
 	g_test_add_func ("/wsqueue/timed_pop1", test8);
+	g_test_add_func ("/wsqueue/many_push1", test9);
 
 	return g_test_run ();
 }
