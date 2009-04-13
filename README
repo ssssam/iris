@@ -12,7 +12,8 @@ is task management for building asynchronous workflows.
  II.  API Overview
 III.  Message Delivery Cycle
  IV.  Concurrent vs Exclusive
-  V.  Notes
+  V.  Schedulers
+ VI.  Notes
 
 ---------------------------------------------------------------------------
 I. Introduction
@@ -53,12 +54,17 @@ iris_port_set_receiver (port, receiver);
 
 
 ---------------------------------------------------------------------------
-IV. 
+IV. Concurrent vs Exclusive
 ---------------------------------------------------------------------------
 
 
 ---------------------------------------------------------------------------
-V. Notes
+V. Schedulers
+---------------------------------------------------------------------------
+
+
+---------------------------------------------------------------------------
+VI. Notes
 ---------------------------------------------------------------------------
 
 The GSlice allocator is used for the most part throughout iris.  This could

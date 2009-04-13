@@ -2,11 +2,6 @@
 Code cleanliness TOOD's
 ---------------------------------------------------------------------------
 
-Remove the methods that use _iris. We should just suffix the internal
-methods for implementations with _real.
-
-PATCHED and commited.
-
 ---------------------------------------------------------------------------
 Missing or Incompleteness
 ---------------------------------------------------------------------------
@@ -18,21 +13,6 @@ periodically walk the free-list to shutdown old threads.
 ---------------------------------------------------------------------------
 Optimization TODO's
 ---------------------------------------------------------------------------
-
-iris_scheduler_get_max_threads()
-
-	This method shows up on the profiles as it is called quite often.
-	We should both reduce the number of calls to the method and make
-	sure it reads a cached value when it does.
-
-	While calls to this method are equal to about the total work items
-	/ n_threads, its total time is very low. But we should try to avoid
-	the method call all-together.
-
-	PATCHED but not verified. We now store the value from the n cpus
-	within the private structure and branch predict the outcomes.
-	This should mitigate at least the number of calls to the get n
-	cpus method.
 
 g_time_val_compare()
 
@@ -49,16 +29,8 @@ iris_message_unref()
 	The changes here should also be applied to the IrisThreadWork
 	data structure.
 
-iris_scheduler_get_type()
-
-	This is called for every work item. We should check when setting
-	up the threads so that they do not check on every work item
-	iteration.
-
-	PATCHED but not verified.
-
 iris_port_post()
-_iris_receiver_deliver_real()
+iris_receiver_deliver_real()
 
 	These related methods have significant wait time. This could be
 	both from the atomic operations as well as the locks incurred.
@@ -69,18 +41,3 @@ iris_thread_worker()
 	This method showed up with lots of wait time. This is probably
 	just from the waiting for control messages from the scheduler
 	manager.
-
-g_async_queue_push()
-g_async_queue_pop()
-
-	These methods contain almost all of the wait time for the basic
-	example. They use mutex's to synchronize (last i checked). We should
-	look at what pulse audio is using for a lock-free queue. It might
-	yield a significant speed up and reduction of time spent in kernel
-	for locks.
-
-	It would probably be good to create a basic queue api that can be
-	used within Iris that allows for other implementations of the
-	queue. Such as a work stealing queue where all the work is done in
-	the queue itself.
-
