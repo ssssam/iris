@@ -67,3 +67,10 @@ IrisScheduler
 	We need a better way to manage the min-threads, max-threads
 	properties.
 
+IrisWSQueue
+
+	The first time we look through for items we should use a timeout
+	of zero so that we do not block on the global queue.  However,
+	if no items were found or stolen, we should look through again
+	this time blocking the timed amount on the global queue.
+
