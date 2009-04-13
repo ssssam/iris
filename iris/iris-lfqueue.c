@@ -184,9 +184,9 @@ iris_lfqueue_dispose_real (IrisQueue *queue)
 	real_queue->tail = NULL;
 
 	while (link) {
-		tmp = link->next;
-		if (tmp)
-			g_slice_free (IrisLink, tmp);
+		tmp = G_STAMP_POINTER_GET_LINK (link)->next;
+		if (link)
+			g_slice_free (IrisLink, G_STAMP_POINTER_GET_POINTER (link));
 		link = tmp;
 	}
 
