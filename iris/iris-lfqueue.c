@@ -125,6 +125,7 @@ iris_lfqueue_timed_pop_real (IrisQueue *queue,
 {
 	gpointer result;
 	gint     spin_count = 0;
+	glong    usec;
 
 retry:
 	if (!(result = iris_lfqueue_try_pop_real (queue))) {
@@ -138,7 +139,10 @@ retry:
 		 * doing a non-blocking lock-free queue.  We will just
 		 * sleep until the timeout passes and check again.
 		 */
-		g_usleep (g_time_val_usec_until (timeout));
+		usec = g_time_val_usec_until (timeout);
+		if (usec <= 0)
+			return NULL;
+		g_usleep (usec);
 		goto retry;
 	}
 
