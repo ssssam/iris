@@ -48,9 +48,9 @@ recursive (void)
 	IrisMessage  *msg;
 	IrisReceiver *recv;
 
-	/* For every message received, we generate 100 more messages
+	/* For every message received, we generate ITER_MAX more messages
 	 * causing recursive contention on the work queues.  This is
-	 * solely to help us test the problem.
+	 * solely to help us test this common problem.
 	 */
 
 	scheduler = iris_wsscheduler_new ();
