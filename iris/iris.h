@@ -32,6 +32,7 @@
 #include "iris-receiver.h"
 #include "iris-rrobin.h"
 #include "iris-scheduler.h"
+#include "iris-wsscheduler.h"
 #include "iris-scheduler-manager.h"
 #include "iris-stack.h"
 #include "iris-task.h"

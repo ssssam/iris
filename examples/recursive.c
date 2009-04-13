@@ -53,7 +53,7 @@ recursive (void)
 	 * solely to help us test the problem.
 	 */
 
-	scheduler = iris_scheduler_new ();
+	scheduler = iris_wsscheduler_new ();
 	port = iris_port_new ();
 	recv = iris_receiver_new_full (scheduler, NULL, msg_handler_cb, NULL);
 	mutex = g_mutex_new ();
