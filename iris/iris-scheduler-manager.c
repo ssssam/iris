@@ -50,12 +50,6 @@ iris_scheduler_manager_yield (IrisThread *thread)
 
 	/* Remove the thread from the scheduler. */
 	iris_scheduler_remove_thread (thread->scheduler, thread);
-
-	/* We know that the threads scheduler definitely is no longer
-	 * maxed out since this thread is ending.
-	 */
-	g_atomic_int_set (&thread->scheduler->maxed, FALSE);
-	g_atomic_pointer_set (&thread->scheduler, NULL);
 }
 
 /**

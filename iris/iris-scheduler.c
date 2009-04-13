@@ -361,6 +361,7 @@ iris_scheduler_add_thread (IrisScheduler *scheduler,
                            IrisThread    *thread)
 {
 	IRIS_SCHEDULER_GET_CLASS (scheduler)->add_thread (scheduler, thread);
+	thread->scheduler = g_object_ref (scheduler);
 }
 
 /**
@@ -377,4 +378,12 @@ iris_scheduler_remove_thread (IrisScheduler *scheduler,
                               IrisThread    *thread)
 {
 	IRIS_SCHEDULER_GET_CLASS (scheduler)->remove_thread (scheduler, thread);
+
+	/* We know that the threads scheduler definitely is no longer
+	 * maxed out since this thread is ending.
+	 */
+	g_atomic_int_set (&thread->scheduler->maxed, FALSE);
+
+	thread->scheduler = NULL;
+	g_object_unref (scheduler);
 }
