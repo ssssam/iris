@@ -96,6 +96,35 @@ test6 (void)
 	g_assert_cmpint (GPOINTER_TO_INT (iris_queue_pop (queue)), ==, 3);
 }
 
+static void
+test7 (void)
+{
+	IrisQueue *queue;
+
+	queue = iris_wsqueue_new (NULL, NULL);
+	g_assert (queue);
+
+	iris_wsqueue_local_push (IRIS_WSQUEUE (queue), GINT_TO_POINTER (1));
+
+	g_assert_cmpint (GPOINTER_TO_INT (iris_queue_try_pop (queue)), ==, 1);
+}
+
+static void
+test8 (void)
+{
+	IrisQueue *queue;
+	GTimeVal   tv = {0,0};
+
+	queue = iris_wsqueue_new (NULL, NULL);
+	g_assert (queue);
+
+	iris_wsqueue_local_push (IRIS_WSQUEUE (queue), GINT_TO_POINTER (1));
+
+	g_get_current_time (&tv);
+	g_assert_cmpint (GPOINTER_TO_INT (iris_queue_timed_pop (queue, &tv)), ==, 1);
+}
+
+
 int
 main (int   argc,
       char *argv[])
@@ -110,6 +139,8 @@ main (int   argc,
 	g_test_add_func ("/wsqueue/local1", test4);
 	g_test_add_func ("/wsqueue/try_steal1", test5);
 	g_test_add_func ("/wsqueue/pop_order1", test6);
+	g_test_add_func ("/wsqueue/try_pop1", test7);
+	g_test_add_func ("/wsqueue/timed_pop1", test8);
 
 	return g_test_run ();
 }

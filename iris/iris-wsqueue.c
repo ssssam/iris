@@ -78,6 +78,30 @@ iris_wsqueue_pop_real_cb (IrisRRobin *rrobin,
 static gpointer
 iris_wsqueue_pop_real (IrisQueue *queue)
 {
+	GTimeVal tv = {0,0};
+
+	/*
+	 * This code path is to only be hit by the thread that owns the Queue!
+	 */
+
+	g_get_current_time (&tv);
+	return iris_queue_timed_pop (queue, &tv);
+}
+
+static gpointer
+iris_wsqueue_try_pop_real (IrisQueue *queue)
+{
+	/*
+	 * This code path is to only be hit by the thread that owns the Queue!
+	 */
+
+	return iris_wsqueue_pop_real (queue);
+}
+
+static gpointer
+iris_wsqueue_timed_pop_real (IrisQueue *queue,
+                             GTimeVal  *timeout)
+{
 	/*
 	 * This code path is to only be hit by the thread that owns the Queue!
 	 */
@@ -102,7 +126,7 @@ iris_wsqueue_pop_real (IrisQueue *queue)
 		return steal.result;
 	}
 
-	if ((steal.result = iris_queue_try_pop (real_queue->global)) != NULL) {
+	if ((steal.result = iris_queue_timed_pop (real_queue->global, timeout)) != NULL) {
 		return steal.result;
 	}
 
@@ -111,24 +135,6 @@ iris_wsqueue_pop_real (IrisQueue *queue)
 	                     &steal);
 
 	return steal.result;
-}
-
-static gpointer
-iris_wsqueue_try_pop_real (IrisQueue *queue)
-{
-	IrisWSQueue *real_queue;
-	g_return_val_if_fail (queue != NULL, NULL);
-	real_queue = (IrisWSQueue*)queue;
-	return NULL;
-}
-
-static gpointer
-iris_wsqueue_timed_pop_real (IrisQueue *queue, GTimeVal *timeout)
-{
-	IrisWSQueue *real_queue;
-	g_return_val_if_fail (queue != NULL, NULL);
-	real_queue = (IrisWSQueue*)queue;
-	return NULL;
 }
 
 static guint
