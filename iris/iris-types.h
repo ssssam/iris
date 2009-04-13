@@ -58,6 +58,9 @@ typedef struct _IrisSchedulerPrivate IrisSchedulerPrivate;
 typedef struct _IrisWSScheduler        IrisWSScheduler;
 typedef struct _IrisWSSchedulerClass   IrisWSSchedulerClass;
 typedef struct _IrisWSSchedulerPrivate IrisWSSchedulerPrivate;
+typedef struct _IrisLFScheduler        IrisLFScheduler;
+typedef struct _IrisLFSchedulerClass   IrisLFSchedulerClass;
+typedef struct _IrisLFSchedulerPrivate IrisLFSchedulerPrivate;
 
 typedef struct _IrisThread           IrisThread;
 typedef struct _IrisThreadWork       IrisThreadWork;

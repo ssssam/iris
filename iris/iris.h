@@ -26,6 +26,7 @@
 #include "iris-free-list.h"
 #include "iris-link.h"
 #include "iris-lfqueue.h"
+#include "iris-lfscheduler.h"
 #include "iris-message.h"
 #include "iris-queue.h"
 #include "iris-port.h"
