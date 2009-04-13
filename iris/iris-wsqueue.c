@@ -78,14 +78,23 @@ iris_wsqueue_pop_real_cb (IrisRRobin *rrobin,
 static gpointer
 iris_wsqueue_pop_real (IrisQueue *queue)
 {
-	GTimeVal tv = {0,0};
+	GTimeVal tv     = {0,0};
+	gpointer result = NULL;
 
 	/*
 	 * This code path is to only be hit by the thread that owns the Queue!
 	 */
 
 	g_get_current_time (&tv);
-	return iris_queue_timed_pop (queue, &tv);
+	if (!(result = iris_queue_timed_pop (queue, &tv))) {
+		/* Since only our local thread can push items to our
+		 * queue, we can safely block on the global queue now
+		 * for a result.
+		 */
+		result = iris_queue_pop (IRIS_WSQUEUE (queue)->global);
+	}
+
+	return result;
 }
 
 static gpointer
