@@ -1,4 +1,4 @@
-/* iris-wswsscheduler.h
+/* iris-wsscheduler.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
