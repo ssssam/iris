@@ -127,6 +127,35 @@ error:
 }
 
 static void
+iris_lfscheduler_remove_thread_real (IrisScheduler *scheduler,
+                                     IrisThread    *thread)
+{
+	IrisLFSchedulerPrivate *priv;
+	IrisQueue              *queue;
+	gpointer                thread_work;
+
+	g_return_if_fail (IRIS_IS_LFSCHEDULER (scheduler));
+	g_return_if_fail (thread != NULL);
+
+	queue = thread->user_data;
+	thread->user_data = NULL;
+	g_return_if_fail (queue != NULL);
+
+	priv = IRIS_LFSCHEDULER (scheduler)->priv;
+
+	iris_rrobin_remove (priv->rrobin, queue);
+
+	/* apply left over items to other queues */
+	while ((thread_work = iris_queue_try_pop (queue)) != NULL) {
+		iris_rrobin_apply (priv->rrobin,
+		                   iris_lfscheduler_queue_real_cb,
+		                   thread_work);
+	}
+
+	iris_queue_unref (queue);
+}
+
+static void
 iris_lfscheduler_finalize (GObject *object)
 {
 	IrisLFSchedulerPrivate *priv;
@@ -144,6 +173,7 @@ iris_lfscheduler_class_init (IrisLFSchedulerClass *klass)
 
 	sched_class->queue = iris_lfscheduler_queue_real;
 	sched_class->add_thread = iris_lfscheduler_add_thread_real;
+	sched_class->remove_thread = iris_lfscheduler_remove_thread_real;
 	object_class->finalize = iris_lfscheduler_finalize;
 
 	g_type_class_add_private (object_class, sizeof (IrisLFSchedulerPrivate));
