@@ -74,3 +74,5 @@ IrisWSQueue
 	if no items were found or stolen, we should look through again
 	this time blocking the timed amount on the global queue.
 
+	PATCHED.
+
