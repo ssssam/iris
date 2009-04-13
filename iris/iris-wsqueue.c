@@ -129,11 +129,31 @@ iris_wsqueue_timed_pop_real (IrisQueue *queue,
 	 * local queue. Then we check the global queue. If neither of
 	 * those have yielded an item, we will try to steal from one
 	 * of our neighbors.
+	 *
+	 * However, so we do not get blocked on the global queue if there
+	 * are no items available and we can steal, we look through all
+	 * three first (assuming no item was found) and then only do a
+	 * timed blocking call on the global queue the second time around.
 	 */
+
+	/* Round One */
 
 	if ((steal.result = iris_wsqueue_local_pop (real_queue)) != NULL) {
 		return steal.result;
 	}
+
+	if ((steal.result = iris_queue_try_pop (real_queue->global)) != NULL) {
+		return steal.result;
+	}
+
+	iris_rrobin_foreach (real_queue->rrobin,
+	                     iris_wsqueue_pop_real_cb,
+	                     &steal);
+
+	if (steal.result)
+		return steal.result;
+
+	/* Round Two */
 
 	if ((steal.result = iris_queue_timed_pop (real_queue->global, timeout)) != NULL) {
 		return steal.result;
