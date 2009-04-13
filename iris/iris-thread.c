@@ -351,6 +351,7 @@ void
 iris_thread_work_run (IrisThreadWork *thread_work)
 {
 	g_return_if_fail (thread_work != NULL);
+	g_return_if_fail (thread_work->callback != NULL);
 	thread_work->callback (thread_work->data);
 }
 
@@ -363,5 +364,6 @@ iris_thread_work_run (IrisThreadWork *thread_work)
 void
 iris_thread_work_free (IrisThreadWork *thread_work)
 {
+	thread_work->callback = NULL;
 	g_slice_free (IrisThreadWork, thread_work);
 }
