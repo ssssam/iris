@@ -192,9 +192,8 @@ iris_wsqueue_new (IrisQueue  *global,
 	queue->rrobin = peers;
 	queue->mask = WSQUEUE_DEFAULT_SIZE - 1;
 	queue->mutex = g_mutex_new ();
-	queue->items = g_array_sized_new (FALSE, TRUE,
-	                                  sizeof (gpointer),
-	                                  WSQUEUE_DEFAULT_SIZE);
+	queue->length = WSQUEUE_DEFAULT_SIZE;
+	queue->items = g_malloc0 (sizeof (gpointer) * queue->length);
 	queue->head_idx = 0;
 	queue->tail_idx = 0;
 
@@ -215,11 +214,11 @@ void
 iris_wsqueue_local_push (IrisWSQueue *queue,
                          gpointer     data)
 {
-	GArray *new_items;
-	GArray *old_items;
-	gint    tail;
-	gint    head;
-	gint    count;
+	gpointer *old_items;
+	gpointer *new_items;
+	gint      tail;
+	gint      head;
+	gint      count;
 
 	g_return_if_fail (queue != NULL);
 
@@ -227,7 +226,7 @@ iris_wsqueue_local_push (IrisWSQueue *queue,
 
 	if (tail < (queue->head_idx + queue->mask)) {
 		/* local push fast path */
-		g_array_insert_val (queue->items, tail & queue->mask, data);
+		queue->items [tail & queue->mask] = data;
 		g_atomic_int_set (&queue->tail_idx, tail + 1);
 	}
 	else {
@@ -240,23 +239,30 @@ iris_wsqueue_local_push (IrisWSQueue *queue,
 
 		if (count >= queue->mask) {
 			/* double the array size */
-			new_items = g_array_sized_new (FALSE, TRUE,
-			                               sizeof (gpointer),
-			                               old_items->len << 1);
+			new_items = g_malloc0 (sizeof (gpointer) * (queue->length << 1));
 
 			/* copy the existing items over */
-			memcpy (new_items->data,
-			        old_items->data,
-			        old_items->len * sizeof (gpointer));
+			memcpy (new_items,
+			        old_items,
+			        queue->length * sizeof (gpointer));
 
 			/* assign the new array */
 			queue->items = new_items;
 			queue->head_idx = 0;
 			queue->tail_idx = tail = count;
 			queue->mask = (queue->mask << 1) | 1;
+			queue->length = queue->length << 1;
+
+			/* FIXME: Free old_items safely (can't really be done)
+			 *   or save the buffer to a list for periodic GC.
+			 *   However, as Shapor mentioned, leaking this will
+			 *   only account for a total of 2x the largest growth
+			 *   which may not be a problem anyway.
+			 */
+			/* g_free (old_items); */
 		}
 
-		g_array_insert_val (queue->items, tail & queue->mask, data);
+		queue->items [tail & queue->mask] = data;
 		queue->tail_idx = tail + 1;
 
 		g_mutex_unlock (queue->mutex);
@@ -288,14 +294,14 @@ iris_wsqueue_local_pop (IrisWSQueue *queue)
 	g_atomic_int_set (&queue->tail_idx, tail);
 
 	if (queue->head_idx <= tail) {
-		result = g_array_index (queue->items, gpointer, tail & queue->mask);
+		result = queue->items [tail & queue->mask];
 	}
 	else {
 		g_mutex_lock (queue->mutex);
 
 		if (queue->head_idx <= tail) {
 			/* item is still available */
-			result = g_array_index (queue->items, gpointer, tail & queue->mask);
+			result = queue->items [tail & queue->mask];
 		}
 		else {
 			/* we lost the race, restore the tail */
@@ -344,9 +350,7 @@ iris_wsqueue_try_steal (IrisWSQueue *queue,
 	g_atomic_int_set (&queue->head_idx, head + 1);
 
 	if (head < queue->tail_idx) {
-		result = g_array_index (queue->items,
-		                        gpointer,
-		                        head & queue->mask);
+		result = queue->items [head & queue->mask];
 	}
 	else {
 		queue->head_idx = head;

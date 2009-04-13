@@ -39,13 +39,12 @@ struct _IrisWSQueue
 	/*< private >*/
 	IrisQueue     *global;
 	IrisRRobin    *rrobin;
-
 	gint           mask;
-
 	GMutex        *mutex;
-	GArray        *items;
 	volatile gint  head_idx;
 	volatile gint  tail_idx;
+	gpointer      *items;
+	gulong         length;
 };
 
 IrisQueue* iris_wsqueue_new        (IrisQueue *global, IrisRRobin *peers);
