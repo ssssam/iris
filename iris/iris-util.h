@@ -23,6 +23,7 @@
 
 #include <glib.h>
 
-gint g_time_val_compare (GTimeVal *tv1, GTimeVal *tv2);
+gint  g_time_val_compare    (GTimeVal *tv1, GTimeVal *tv2);
+glong g_time_val_usec_until (GTimeVal *tv);
 
 #endif /* __IRIS_UTIL_H__ */

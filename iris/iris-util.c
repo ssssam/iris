@@ -45,3 +45,37 @@ g_time_val_compare (GTimeVal *tv1,
 		return 1;
 	return (tv1->tv_usec == tv2->tv_usec) ? 0 : -1;
 }
+
+/**
+ * g_time_val_usec_until:
+ * @tv: A #GTimeVal
+ *
+ * Calculates the number of microseconds until the specified time.
+ * If the time is before the current time, 0 is returned.
+ *
+ * Return value: the number of usecs until @tv has elapsed or 0.
+ */
+glong
+g_time_val_usec_until (GTimeVal *tv)
+{
+	GTimeVal current = {0,0};
+	glong    seconds = 0;
+	glong    usec    = 0;
+
+	g_get_current_time (&current);
+
+	if (g_time_val_compare (&current, tv) >= 0)
+		return 0;
+
+	seconds = tv->tv_sec - current.tv_sec;
+
+	if (tv->tv_usec > current.tv_usec) {
+		usec = tv->tv_usec - current.tv_usec;
+	}
+	else {
+		seconds -= 1;
+		usec = G_USEC_PER_SEC - (current.tv_usec - tv->tv_usec);
+	}
+
+	return (seconds * G_USEC_PER_SEC) + usec;
+}
