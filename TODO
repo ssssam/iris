@@ -41,3 +41,29 @@ iris_thread_worker()
 	This method showed up with lots of wait time. This is probably
 	just from the waiting for control messages from the scheduler
 	manager.
+
+IrisMessage
+
+	Add a GValue into the message for a single value embedded within
+	the message. This will allow for a key-less data value.  Which
+	means you can store data and still keep the low-overhead of
+	avoiding the hashtable.
+
+IrisTask
+
+	Start implementing the task object.  We probably need to forge
+	forward a bit with the arbiter to only allow a single receive
+	at a time.
+
+IrisService
+
+	A concurrent service implementation which should aim to ease
+	developing service providers that need to do some work items
+	concurrently, and others exclusively.  Think of a web-server
+	that would need to do a configuration change.
+
+IrisScheduler
+
+	We need a better way to manage the min-threads, max-threads
+	properties.
+
