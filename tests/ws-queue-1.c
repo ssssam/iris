@@ -128,13 +128,13 @@ static void
 test9 (void)
 {
 	IrisQueue *queue;
+	gint i;
 
 	queue = iris_wsqueue_new (NULL, NULL);
 	g_assert (queue);
 
-	gint i;
 	for (i = 0; i < 50; i++) {
-		iris_wsqueue_local_push (IRIS_WSQUEUE (queue), GINT_TO_POINTER (1));
+		iris_wsqueue_local_push (IRIS_WSQUEUE (queue), &i);
 	}
 }
 
