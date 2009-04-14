@@ -192,6 +192,13 @@ error:
 }
 
 static void
+iris_scheduler_remove_thread_real (IrisScheduler *scheduler,
+                                   IrisThread    *thread)
+{
+	/* FIXME: Implement */
+}
+
+static void
 iris_scheduler_finalize (GObject *object)
 {
 	IrisSchedulerPrivate *priv;
@@ -212,6 +219,7 @@ iris_scheduler_class_init (IrisSchedulerClass *klass)
 	klass->get_min_threads = iris_scheduler_get_min_threads_real;
 	klass->get_max_threads = iris_scheduler_get_max_threads_real;
 	klass->add_thread = iris_scheduler_add_thread_real;
+	klass->remove_thread = iris_scheduler_remove_thread_real;
 
 	object_class->finalize = iris_scheduler_finalize;
 

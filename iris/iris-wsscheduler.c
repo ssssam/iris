@@ -94,6 +94,13 @@ iris_wsscheduler_queue_real (IrisScheduler  *scheduler,
 }
 
 static void
+iris_wsscheduler_remove_thread_real (IrisScheduler *scheduler,
+                                     IrisThread    *thread)
+{
+	/* FIXME: Implement */
+}
+
+static void
 iris_wsscheduler_add_thread_real (IrisScheduler  *scheduler,
                                   IrisThread     *thread)
 {
@@ -145,6 +152,7 @@ iris_wsscheduler_class_init (IrisWSSchedulerClass *klass)
 
 	sched_class->queue = iris_wsscheduler_queue_real;
 	sched_class->add_thread = iris_wsscheduler_add_thread_real;
+	sched_class->remove_thread = iris_wsscheduler_remove_thread_real;
 	object_class->finalize = iris_wsscheduler_finalize;
 
 	g_type_class_add_private (object_class, sizeof (IrisWSSchedulerPrivate));
