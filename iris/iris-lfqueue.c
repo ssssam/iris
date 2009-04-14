@@ -160,6 +160,9 @@ iris_lfqueue_pop_real (IrisQueue *queue)
 	gpointer result  = NULL;
 	GTimeVal timeout = {0,0};
 
+	if ((result = iris_lfqueue_try_pop_real (queue)) != NULL)
+		return result;
+
 	do {
 		g_get_current_time (&timeout);
 		g_time_val_add (&timeout, G_USEC_PER_SEC / 5); /* 200ms */
