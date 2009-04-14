@@ -1,53 +1,10 @@
 ---------------------------------------------------------------------------
-Code cleanliness TOOD's
----------------------------------------------------------------------------
-
----------------------------------------------------------------------------
 Missing or Incompleteness
 ---------------------------------------------------------------------------
 
 We are not currently destroying threads ever. After they are created they
 stay created until the end of the process. We need to find a way to
 periodically walk the free-list to shutdown old threads.
-
----------------------------------------------------------------------------
-Optimization TODO's
----------------------------------------------------------------------------
-
-g_time_val_compare()
-
-	Shows up on the profile. We are calling this between every work-
-	item in the worker thread. Lets start with inline-ing it, but how
-	can we avoid the need to check the timings at all?
-
-iris_message_unref()
-
-	This method shows up on the profile. It has considerable wait time
-	which is probably attributed to using g_slice_*(). We should look
-	at options from pulse audio which use lock-free algorithms.
-
-	The changes here should also be applied to the IrisThreadWork
-	data structure.
-
-iris_port_post()
-iris_receiver_deliver_real()
-
-	These related methods have significant wait time. This could be
-	both from the atomic operations as well as the locks incurred.
-	How can we reduce the potential for lock in these situations?
-
-iris_thread_worker()
-
-	This method showed up with lots of wait time. This is probably
-	just from the waiting for control messages from the scheduler
-	manager.
-
-IrisMessage
-
-	Add a GValue into the message for a single value embedded within
-	the message. This will allow for a key-less data value.  Which
-	means you can store data and still keep the low-overhead of
-	avoiding the hashtable.
 
 IrisTask
 
@@ -70,12 +27,38 @@ IrisScheduler
 	Either add use of execution notify, or remove it from the
 	signatures.
 
-IrisWSQueue
+---------------------------------------------------------------------------
+Optimization TODO's
+---------------------------------------------------------------------------
 
-	The first time we look through for items we should use a timeout
-	of zero so that we do not block on the global queue.  However,
-	if no items were found or stolen, we should look through again
-	this time blocking the timed amount on the global queue.
+g_time_val_compare()
 
-	PATCHED.
+	Shows up on the profile. We are calling this between every work-
+	item in the worker thread. Lets start with inline-ing it, but how
+	can we avoid the need to check the timings at all?
+
+	This should be mitigated a bit now once we hit max threads as we
+	will no longer check. Lets verify in profile to be sure.
+
+	PATCHED (not verified).
+
+iris_message_unref()
+
+	This method shows up on the profile. It has considerable wait time
+	which is probably attributed to using g_slice_*(). We should look
+	at options from pulse audio which use lock-free algorithms.
+
+	The changes here should also be applied to the IrisThreadWork
+	data structure.
+
+	Lets verify this is really an issue, I highly doubt it now.  The
+	frequent allocations for thread work might be a good idea to move
+	to a free list though, so we reduce pressure on gslice.
+
+iris_port_post()
+iris_receiver_deliver_real()
+
+	These related methods have significant wait time. This could be
+	both from the atomic operations as well as the locks incurred.
+	How can we reduce the potential for lock in these situations?
 
