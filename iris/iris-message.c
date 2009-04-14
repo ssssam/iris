@@ -286,6 +286,46 @@ iris_message_copy (IrisMessage *message)
 }
 
 /**
+ * iris_message_get_data:
+ * @message: An #IrisMessage
+ *
+ * Retrieves the data value for the #IrisMessage.  A message may have one
+ * data value within it that is not associated with a key.  This is that
+ * value.
+ *
+ * Return value: A pointer to a GValue that should not be modified.
+ */
+G_CONST_RETURN GValue*
+iris_message_get_data (IrisMessage *message)
+{
+	g_return_val_if_fail (message != NULL, NULL);
+	return &message->data;
+}
+
+/**
+ * iris_message_set_data:
+ * @message: An #IrisMessage
+ * @value: A #GValue
+ *
+ * Updates the data field for the message. A message may have only one
+ * data value within it that is not associated with a key. This is that
+ * value.
+ */
+void
+iris_message_set_data (IrisMessage  *message,
+                       const GValue *value)
+{
+	g_return_if_fail (message != NULL);
+	g_return_if_fail (value != NULL);
+
+	if (G_VALUE_TYPE (&message->data) != G_TYPE_INVALID)
+		g_value_unset (&message->data);
+
+	g_value_init (&message->data, G_VALUE_TYPE (value));
+	g_value_copy (value, &message->data);
+}
+
+/**
  * iris_message_count_names:
  * @message: An #IrisMessage
  *

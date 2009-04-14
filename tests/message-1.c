@@ -253,6 +253,21 @@ million_create (void)
 	//g_debug ("Ellapsed %lf", g_timer_elapsed (timer, NULL));
 }
 
+static void
+set_data1 (void)
+{
+	GValue value = {0,};
+	IrisMessage *msg = iris_message_new (1);
+	const gchar *str;
+
+	g_value_init (&value, G_TYPE_STRING);
+	g_value_set_string (&value, "This is my string");
+	iris_message_set_data (msg, &value);
+
+	str = g_value_get_string (iris_message_get_data (msg));
+	g_assert_cmpstr (str, ==, "This is my string");
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -280,6 +295,7 @@ main (int   argc,
 	g_test_add_func ("/message/set_uchar1", set_uchar1);
 	g_test_add_func ("/message/set_boolean1", set_boolean1);
 	g_test_add_func ("/message/million_create", million_create);
+	g_test_add_func ("/message/set_data1", set_data1);
 
 	return g_test_run ();
 }
