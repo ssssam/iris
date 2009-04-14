@@ -25,7 +25,33 @@
 
 G_BEGIN_DECLS
 
+#define IRIS_TYPE_TASK             (iris_task_get_type ())
+#define IRIS_TASK(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_TASK, IrisTask))
+#define IRIS_TASK_CONST(obj)       (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_TASK, IrisTask const))
+#define IRIS_TASK_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass),  IRIS_TYPE_TASK, IrisTaskClass))
+#define IRIS_IS_TASK(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), IRIS_TYPE_TASK))
+#define IRIS_IS_TASK_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass),  IRIS_TYPE_TASK))
+#define IRIS_TASK_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj),  IRIS_TYPE_TASK, IrisTaskClass))
 
+typedef struct _IrisTask        IrisTask;
+typedef struct _IrisTaskClass   IrisTaskClass;
+typedef struct _IrisTaskPrivate IrisTaskPrivate;
+
+struct _IrisTask
+{
+	GObject parent;
+
+	/*< private >*/
+	IrisTaskPrivate *priv;
+};
+
+struct _IrisTaskClass
+{
+	GObjectClass parent_class;
+};
+
+GType     iris_task_get_type (void) G_GNUC_CONST;
+IrisTask* iris_task_new      (void);
 
 G_END_DECLS
 
