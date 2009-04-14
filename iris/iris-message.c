@@ -158,6 +158,42 @@ iris_message_new (gint what)
 }
 
 /**
+ * iris_message_new_data:
+ * @what: The message type
+ * @type: the #GType of the data element
+ *
+ * Creates a new #IrisMessage instance with the data value initialized.
+ * The ellipsis parameter is used so you may pass any type of value or
+ * pointer into the constructor, however only one is allowed.
+ *
+ * Return value: The newly created #IrisMessage instance
+ */
+IrisMessage*
+iris_message_new_data (gint  what,
+                       GType type, ...)
+{
+	IrisMessage *message;
+	va_list      args;
+	gchar       *error = NULL;
+	
+	message = iris_message_new (what);
+
+	if (type != G_TYPE_INVALID) {
+		g_value_init (&message->data, type);
+		va_start (args, type);
+		G_VALUE_COLLECT (&message->data, args, 0, &error);
+		if (error) {
+			g_warning ("%s: %s", G_STRFUNC, error);
+			g_free (error);
+			g_value_unset (&message->data);
+		}
+		va_end (args);
+	}
+
+	return message;
+}
+
+/**
  * iris_message_new_full:
  * @what: the message type
  * @first_name: the name of the first field in the message

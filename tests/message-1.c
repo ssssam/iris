@@ -268,6 +268,18 @@ set_data1 (void)
 	g_assert_cmpstr (str, ==, "This is my string");
 }
 
+static void
+new_data1 (void)
+{
+	IrisMessage *msg;
+
+	msg = iris_message_new_data (1, G_TYPE_INT, 10);
+	g_assert (msg->what == 1);
+	g_assert (g_value_get_int (&msg->data) == 10);
+
+	iris_message_unref (msg);
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -296,6 +308,7 @@ main (int   argc,
 	g_test_add_func ("/message/set_boolean1", set_boolean1);
 	g_test_add_func ("/message/million_create", million_create);
 	g_test_add_func ("/message/set_data1", set_data1);
+	g_test_add_func ("/message/new_data1", new_data1);
 
 	return g_test_run ();
 }
