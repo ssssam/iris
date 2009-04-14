@@ -110,9 +110,14 @@ static void
 iris_message_destroy (IrisMessage *message)
 {
 	g_return_if_fail (message != NULL);
+
 	if (message->items) {
 		g_hash_table_unref (message->items);
 		message->items = NULL;
+	}
+
+	if (G_VALUE_TYPE (&message->data) != G_TYPE_INVALID) {
+		g_value_unset (&message->data);
 	}
 }
 
