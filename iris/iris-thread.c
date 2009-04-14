@@ -27,10 +27,10 @@
 #include "iris-thread.h"
 #include "iris-util.h"
 
-#define MSG_MANAGE       (1)
-#define MSG_SHUTDOWN     (2)
-#define QUANTUM_USECS    (G_USEC_PER_SEC / 1)
-#define POP_WAIT_TIMEOUT (G_USEC_PER_SEC * 2)
+#define MSG_MANAGE            (1)
+#define MSG_SHUTDOWN          (2)
+#define QUANTUM_USECS         (G_USEC_PER_SEC / 1)
+#define POP_WAIT_TIMEOUT      (G_USEC_PER_SEC * 2)
 #define VERIFY_THREAD_WORK(t) (g_atomic_int_compare_and_exchange(&t->taken, FALSE, TRUE))
 
 __thread IrisThread* my_thread = NULL;
