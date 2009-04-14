@@ -48,32 +48,6 @@
  * the manager will try to appropriate a sufficient number of threads.
  */
 
-struct _IrisSchedulerPrivate
-{
-	GMutex      *mutex;        /* Synchronization for setting up the
-	                            * scheduler instance.  Provides for lazy
-	                            * instantiation.
-	                            */
-
-	IrisRRobin  *rrobin;       /* Round robin of per-thread queues used
-	                            * by threads for work-stealing.
-	                            */
-
-	GAsyncQueue *queue;        /* Global Queue, used by work items
-	                            * not originating from a thread within
-	                            * the scheduler.
-	                            */
-
-	/* FIXME: Should we push these items into another cache-line so
-	 *        they do not get nuked from the synchronizations above.
-	 */
-
-	guint        min_threads;
-	guint        max_threads;
-	gboolean     has_leader;
-	gboolean     initialized;
-};
-
 G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT);
 
 static void
@@ -109,18 +83,6 @@ iris_scheduler_queue_real (IrisScheduler  *scheduler,
 
 	thread = iris_thread_get ();
 	thread_work = iris_thread_work_new (func, data);
-
-	/* If the current thread is an iris-thread and it is a member of our
-	 * scheduler, then we will queue it to its own lock-free queue.  This
-	 * helps keep cpu cache hits up as well since the local thread will already
-	 * have the associated data hot.  However, we need to make sure the thread
-	 * will take this item sooner so its own work doesn't invalidate cache.
-	 */
-
-	//if (thread && thread->scheduler == scheduler && thread->queue) {
-		//g_async_queue_push (thread->queue, thread_work);
-		//return;
-	//}
 
 	iris_rrobin_apply (priv->rrobin, iris_scheduler_queue_rrobin_cb, thread_work);
 }
@@ -166,10 +128,20 @@ iris_scheduler_add_thread_real (IrisScheduler  *scheduler,
 	IrisSchedulerPrivate *priv;
 	gboolean              leader;
 	IrisQueue            *queue;
+	gint                  max_threads;
 
 	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
 
 	priv = scheduler->priv;
+
+	/* initialize round robin for queues */
+	if (G_UNLIKELY (!priv->rrobin)) {
+		/* we must be getting called from sched-manager-prepare,
+		 * so no need to lock our mutex as its already locked.
+		 */
+		max_threads = iris_scheduler_get_max_threads (scheduler);
+		priv->rrobin = iris_rrobin_new (max_threads);
+	}
 
 	/* create the threads queue for the round robin */
 	queue = iris_queue_new ();
@@ -238,10 +210,6 @@ iris_scheduler_init (IrisScheduler *scheduler)
 
 	scheduler->priv->queue = g_async_queue_new ();
 	g_assert (scheduler->priv->queue);
-
-	scheduler->priv->rrobin = iris_rrobin_new (
-			iris_scheduler_get_max_threads (scheduler));
-	g_assert (scheduler->priv->rrobin);
 }
 
 /**

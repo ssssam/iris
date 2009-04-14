@@ -23,6 +23,32 @@
 
 G_BEGIN_DECLS
 
+struct _IrisSchedulerPrivate
+{
+	GMutex      *mutex;        /* Synchronization for setting up the
+	                            * scheduler instance.  Provides for lazy
+	                            * instantiation.
+	                            */
+
+	IrisRRobin  *rrobin;       /* Round robin of per-thread queues used
+	                            * by threads for work-stealing.
+	                            */
+
+	GAsyncQueue *queue;        /* Global Queue, used by work items
+	                            * not originating from a thread within
+	                            * the scheduler.
+	                            */
+
+	/* FIXME: Should we push these items into another cache-line so
+	 *        they do not get nuked from the synchronizations above.
+	 */
+
+	guint        min_threads;
+	guint        max_threads;
+	gboolean     has_leader;
+	gboolean     initialized;
+};
+
 IrisScheduler* iris_scheduler_new (void);
 
 G_END_DECLS

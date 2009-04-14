@@ -211,12 +211,8 @@ iris_lfscheduler_new_full (guint min_threads,
 	IrisScheduler *scheduler;
 
 	scheduler = iris_lfscheduler_new ();
-
-	/* FIXME: This is technically broken since it gets modified
-	 *   after we create the rrobin.
-	 */
-	//scheduler->priv->min_threads = min_threads;
-	//scheduler->priv->max_threads = max_threads;
+	scheduler->priv->min_threads = min_threads;
+	scheduler->priv->max_threads = max_threads;
 
 	return scheduler;
 }
