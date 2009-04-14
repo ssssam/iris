@@ -67,6 +67,9 @@ IrisScheduler
 	We need a better way to manage the min-threads, max-threads
 	properties.
 
+	Either add use of execution notify, or remove it from the
+	signatures.
+
 IrisWSQueue
 
 	The first time we look through for items we should use a timeout
