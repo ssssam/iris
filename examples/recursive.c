@@ -5,6 +5,7 @@ static IrisScheduler *scheduler = NULL;
 static gint counter = 0;
 static GMutex *mutex = NULL;
 static GCond *cond = NULL;
+static gboolean done = FALSE;
 
 #define MSG_ID   (1)
 #define ITER_MAX (1000)
@@ -16,6 +17,7 @@ msg_handler2_cb (IrisMessage *message,
 	g_atomic_int_inc (&counter);
 
 	if (G_UNLIKELY (counter == (ITER_MAX * ITER_MAX))) {
+		g_atomic_int_set (&done, TRUE);
 		g_mutex_lock (mutex);
 		g_cond_signal (cond);
 		g_mutex_unlock (mutex);
@@ -54,6 +56,8 @@ recursive (void)
 	 */
 
 	scheduler = iris_wsscheduler_new ();
+	//scheduler = iris_lfscheduler_new ();
+
 	port = iris_port_new ();
 	recv = iris_receiver_new_full (scheduler, NULL, msg_handler_cb, NULL);
 	mutex = g_mutex_new ();
@@ -67,12 +71,21 @@ recursive (void)
 		iris_message_unref (msg);
 	}
 
+	g_debug ("Done pushing items");
+
 	g_object_unref (port);
 	g_object_unref (recv);
 
-	g_mutex_lock (mutex);
-	g_cond_wait (cond, mutex);
-	g_mutex_unlock (mutex);
+	if (!done) {
+		g_debug ("Waiting for items to complete");
+		g_mutex_lock (mutex);
+		g_cond_wait (cond, mutex);
+		g_mutex_unlock (mutex);
+		g_debug ("Signal received, all done");
+	}
+	else {
+		g_debug ("Items completed before we could block!");
+	}
 }
 
 gint
