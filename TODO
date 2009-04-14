@@ -36,17 +36,6 @@ IrisArbiter
 Optimization TODO's
 ---------------------------------------------------------------------------
 
-g_time_val_compare()
-
-	Shows up on the profile. We are calling this between every work-
-	item in the worker thread. Lets start with inline-ing it, but how
-	can we avoid the need to check the timings at all?
-
-	This should be mitigated a bit now once we hit max threads as we
-	will no longer check. Lets verify in profile to be sure.
-
-	PATCHED (not verified).
-
 iris_message_unref()
 
 	This method shows up on the profile. It has considerable wait time

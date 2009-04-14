@@ -31,7 +31,7 @@
  *
  * Return value: -1, 0, or 1
  */
-gint
+inline gint
 g_time_val_compare (GTimeVal *tv1,
                     GTimeVal *tv2)
 {
