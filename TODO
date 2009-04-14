@@ -27,6 +27,11 @@ IrisScheduler
 	Either add use of execution notify, or remove it from the
 	signatures.
 
+IrisArbiter
+
+	Add an arbiter similar to CCR interleave that does restrictions
+	for concurrent vs exclusive messages.
+
 ---------------------------------------------------------------------------
 Optimization TODO's
 ---------------------------------------------------------------------------
