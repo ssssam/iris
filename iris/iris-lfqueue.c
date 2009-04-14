@@ -130,7 +130,7 @@ iris_lfqueue_timed_pop_real (IrisQueue *queue,
 retry:
 	if (!(result = iris_lfqueue_try_pop_real (queue))) {
 		/* spin a few times retrying */
-		if (spin_count < 5) {
+		if (spin_count < 2) {
 			spin_count++;
 			goto retry;
 		}
