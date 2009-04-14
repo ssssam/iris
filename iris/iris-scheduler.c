@@ -277,7 +277,7 @@ iris_scheduler_queue (IrisScheduler  *scheduler,
 
 	if (G_UNLIKELY (!priv->initialized)) {
 		g_mutex_lock (priv->mutex);
-		if (G_LIKELY (!priv->initialized)) {
+		if (G_LIKELY (!g_atomic_int_get (&priv->initialized))) {
 			iris_scheduler_manager_prepare (scheduler);
 			g_atomic_int_set (&priv->initialized, TRUE);
 		}
