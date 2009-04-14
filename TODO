@@ -40,6 +40,12 @@ Bindings
 	Start wrapping the core types for integration into Python, Ruby,
 	Vala, and Seed/JS.
 
+IrisMessage
+
+	We should make the ref-counting for messages use the sink concept
+	so that you don't need to unref your messages if you hit the usual
+	use-case of create->post.
+
 ---------------------------------------------------------------------------
 Optimization TODO's
 ---------------------------------------------------------------------------
