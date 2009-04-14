@@ -31,6 +31,7 @@
 #define MSG_SHUTDOWN     (2)
 #define QUANTUM_USECS    (G_USEC_PER_SEC / 1)
 #define POP_WAIT_TIMEOUT (G_USEC_PER_SEC * 2)
+#define VERIFY_THREAD_WORK(t) (g_atomic_int_compare_and_exchange(&t->taken, FALSE, TRUE))
 
 __thread IrisThread* my_thread = NULL;
 
@@ -52,17 +53,13 @@ iris_thread_worker_exclusive (IrisThread  *thread,
 	GTimeVal        tv_req      = {0,0};
 	IrisThreadWork *thread_work = NULL;
 	gint            per_quantum = 0;     /* Completed items within the
-	                                      * last quantum.
-	                                      */
-	guint           count       = 0;     /* Items left in the queue at */
-	guint           tmp         = 0;     /* the last check.            */
-	gboolean        growing     = FALSE; /* If we are growing faster than
-	                                      * than we can process items.
-	                                      */
+	                                      * last quantum. */
+	guint           queued      = 0;     /* Items left in the queue at */
+	gboolean        has_resized = FALSE;
 
 	g_get_current_time (&tv_now);
 	g_get_current_time (&tv_req);
-	count = iris_queue_length (queue);
+	queued = iris_queue_length (queue);
 
 	/* Since our thread is in exclusive mode, we are responsible for
 	 * asking the scheduler manager to add or remove threads based
@@ -76,6 +73,9 @@ iris_thread_worker_exclusive (IrisThread  *thread,
 get_next_item:
 
 	if (G_LIKELY ((thread_work = iris_queue_pop (queue)) != NULL)) {
+		if (!VERIFY_THREAD_WORK (thread_work))
+			goto get_next_item;
+
 		iris_thread_work_run (thread_work);
 		iris_thread_work_free (thread_work);
 		per_quantum++;
@@ -83,31 +83,39 @@ get_next_item:
 	else {
 #if 0
 		g_warning ("Exclusive thread is done managing, received NULL");
-		return;
 #endif
+		return;
 	}
 
 	if (G_UNLIKELY (!thread->scheduler->maxed && leader)) {
 		g_get_current_time (&tv_now);
 
-		if (G_UNLIKELY (timeout_elapsed (&tv_req, &tv_now))) {
-			tmp = iris_queue_length (queue);
-			growing = tmp > 0 && tmp > count;
-			count = tmp;
-
-			/* if we will be done within one more quantum, then its
-			 * not essential to add the other thread.
+		if (G_UNLIKELY (timeout_elapsed (&tv_now, &tv_req))) {
+			/* We check to see if we have a bunch more work to do
+			 * or a potential edge case where we are processing about
+			 * the same speed as the pusher, but it creates enough
+			 * contention where we dont speed up. This is because
+			 * some schedulers will round-robin or steal.  And unless
+			 * we look to add another thread even though we have nothing
+			 * in the queue, we know there are more coming.
 			 */
-			if (per_quantum < count) {
+			queued = iris_queue_length (queue);
+			if (queued == 0 && !has_resized) {
+				queued = per_quantum * 2;
+				has_resized = TRUE;
+			}
+
+			if (per_quantum < queued) {
 				/* make sure we are not maxed before asking */
 				if (!g_atomic_int_get (&thread->scheduler->maxed))
 					iris_scheduler_manager_request (thread->scheduler,
 									per_quantum,
-									count);
+									queued);
 			}
 
 			per_quantum = 0;
 			tv_req = tv_now;
+			g_time_val_add (&tv_req, QUANTUM_USECS);
 		}
 	}
 
@@ -133,6 +141,8 @@ iris_thread_worker_transient (IrisThread  *thread,
 		g_time_val_add (&tv_timeout, POP_WAIT_TIMEOUT);
 
 		if ((thread_work = iris_queue_timed_pop (queue, &tv_timeout)) != NULL) {
+			if (!VERIFY_THREAD_WORK (thread_work))
+				continue;
 			iris_thread_work_run (thread_work);
 			iris_thread_work_free (thread_work);
 		}
@@ -341,6 +351,7 @@ iris_thread_work_new (IrisCallback callback,
 	thread_work = g_slice_new (IrisThreadWork);
 	thread_work->callback = callback;
 	thread_work->data = data;
+	thread_work->taken = FALSE;
 
 	return thread_work;
 }

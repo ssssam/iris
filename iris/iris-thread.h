@@ -49,6 +49,7 @@ struct _IrisThreadWork
 {
 	IrisCallback callback;
 	gpointer     data;
+	gboolean     taken;
 };
 
 /* Thread abstraction for schedulers */
