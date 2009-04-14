@@ -108,6 +108,28 @@ many_message_delivered1 (void)
 	g_assert_cmpint (counter, ==, 100);
 }
 
+static void
+set_scheduler1_cb (IrisMessage *msg,
+                   gpointer     data)
+{
+}
+
+static void
+set_scheduler1 (void)
+{
+	IrisReceiver *r;
+	IrisScheduler *s1, *s2;
+
+	s1 = iris_scheduler_new ();
+	s2 = iris_scheduler_new ();
+
+	r = iris_receiver_new_full (s1, NULL, set_scheduler1_cb, NULL);
+	g_assert (iris_receiver_get_scheduler (r) == s1);
+
+	iris_receiver_set_scheduler (r, s2);
+	g_assert (iris_receiver_get_scheduler (r) == s2);
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -120,6 +142,7 @@ main (int   argc,
 	g_test_add_func ("/receiver/new_full1", new_full1);
 	g_test_add_func ("/receiver/message_delivered1", message_delivered1);
 	g_test_add_func ("/receiver/many_message_delivered1", many_message_delivered1);
+	g_test_add_func ("/receiver/set_scheduler1", set_scheduler1);
 
 	return g_test_run ();
 }

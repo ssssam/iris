@@ -291,8 +291,8 @@ iris_receiver_new_full (IrisScheduler      *scheduler,
 	receiver = iris_receiver_new ();
 	priv = receiver->priv;
 
-	priv->scheduler = scheduler;
-	priv->arbiter = arbiter;
+	priv->scheduler = g_object_ref (scheduler);
+	priv->arbiter = arbiter ? g_object_ref (arbiter) : NULL;
 	priv->callback = callback;
 	priv->data = data;
 
@@ -341,4 +341,49 @@ iris_receiver_has_scheduler (IrisReceiver *receiver)
 	priv = receiver->priv;
 
 	return g_atomic_pointer_get (&priv->scheduler) != NULL;
+}
+
+/**
+ * iris_receiver_get_scheduler:
+ * @receiver: An #IrisReceiver
+ *
+ * Retrieves the scheduler instance for the receiver.
+ *
+ * Return value: An #IrisScheduler instance
+ */
+IrisScheduler*
+iris_receiver_get_scheduler (IrisReceiver *receiver)
+{
+	g_return_val_if_fail (IRIS_IS_RECEIVER (receiver), NULL);
+	return g_atomic_pointer_get (&receiver->priv->scheduler);
+}
+
+/**
+ * iris_receiver_set_scheduler:
+ * @receiver: An #IrisReceiver
+ * @scheduler: An #IrisScheduler
+ *
+ * Sets the scheduler instance used by this receiver to execute work items.
+ * Note that it is probably not a good idea to switch schedulers while
+ * executing work items.  However, we do make an attempt to support it.
+ */
+void
+iris_receiver_set_scheduler (IrisReceiver  *receiver,
+                             IrisScheduler *scheduler)
+{
+	IrisScheduler *old_sched;
+
+	g_return_if_fail (IRIS_IS_RECEIVER (receiver));
+	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
+
+	scheduler = g_object_ref (scheduler);
+
+	do {
+		old_sched = iris_receiver_get_scheduler (receiver);
+	} while (!g_atomic_pointer_compare_and_exchange (
+				(gpointer*)&receiver->priv->scheduler,
+				old_sched,
+				scheduler));
+
+	g_object_unref (old_sched);
 }
