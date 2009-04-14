@@ -202,7 +202,7 @@ iris_scheduler_manager_request (IrisScheduler *scheduler,
 		g_object_get_data (G_OBJECT (scheduler),
 		                   THREAD_KEY));
 
-	if (n_threads <= max_threads) {
+	if (n_threads < max_threads) {
 		for (i = n_threads; i < requested; i++) {
 			thread = get_or_create_thread_unlocked (FALSE);
 			iris_scheduler_add_thread (scheduler, thread);
