@@ -33,6 +33,7 @@ IrisThread
 
 @callback: 
 @data: 
+@taken: 
 
 <!-- ##### FUNCTION iris_thread_new ##### -->
 <para>
