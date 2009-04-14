@@ -29,6 +29,17 @@ IrisArbiter
 	Add an arbiter similar to CCR interleave that does restrictions
 	for concurrent vs exclusive messages.
 
+GLib Type Integration
+
+	Most of our basic types are not registered with the type system.
+	We should register them as boxed types with copy and free methods
+	so that they can be bound to other languages easier.
+
+Bindings
+
+	Start wrapping the core types for integration into Python, Ruby,
+	Vala, and Seed/JS.
+
 ---------------------------------------------------------------------------
 Optimization TODO's
 ---------------------------------------------------------------------------
