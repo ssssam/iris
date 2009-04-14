@@ -29,18 +29,18 @@
 
 #define MSG_MANAGE       (1)
 #define MSG_SHUTDOWN     (2)
-#define QUANTUM_USECS    (G_USEC_PER_SEC * 1)
+#define QUANTUM_USECS    (G_USEC_PER_SEC / 1)
 #define POP_WAIT_TIMEOUT (G_USEC_PER_SEC * 2)
 
 __thread IrisThread* my_thread = NULL;
 
 static gboolean
-timeout_elapsed (GTimeVal *tv1,
-                 GTimeVal *tv2)
+timeout_elapsed (GTimeVal *start,
+                 GTimeVal *end)
 {
-	GTimeVal tv_quantum = *tv1;
-	g_time_val_add (&tv_quantum, QUANTUM_USECS);
-	return (g_time_val_compare (&tv_quantum, tv2) == 1);
+	GTimeVal end_by = *start;
+	g_time_val_add (&end_by, QUANTUM_USECS);
+	return (g_time_val_compare (&end_by, end) == 1);
 }
 
 static void
