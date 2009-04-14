@@ -57,6 +57,7 @@ recursive (void)
 
 	scheduler = iris_wsscheduler_new ();
 	//scheduler = iris_lfscheduler_new ();
+	//scheduler = iris_scheduler_new ();
 
 	port = iris_port_new ();
 	recv = iris_receiver_new_full (scheduler, NULL, msg_handler_cb, NULL);
