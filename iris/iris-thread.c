@@ -87,7 +87,7 @@ get_next_item:
 #endif
 	}
 
-	if (G_LIKELY (leader)) {
+	if (G_UNLIKELY (!thread->scheduler->maxed && leader)) {
 		g_get_current_time (&tv_now);
 
 		if (G_UNLIKELY (timeout_elapsed (&tv_req, &tv_now))) {
