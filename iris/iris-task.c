@@ -23,6 +23,13 @@
 
 #include "iris-task.h"
 #include "iris-task-private.h"
+#include "iris-receiver-private.h"
+
+#define CAN_EXECUTE_NOW(t)                                     \
+	(((t->priv->flags & IRIS_TASK_FLAG_EXECUTING) == 0) && \
+	 ((t->priv->flags & IRIS_TASK_FLAG_CALLBACKS) == 0) && \
+	 (t->priv->dependencies == NULL))
+#define CAN_CALLBACK_NOW(t) (0)
 
 G_DEFINE_TYPE (IrisTask, iris_task, G_TYPE_OBJECT);
 
@@ -62,7 +69,7 @@ iris_task_new (IrisTaskFunc   func,
 	closure = g_cclosure_new (G_CALLBACK (func),
 	                          user_data,
 	                          (GClosureNotify)notify);
-	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__OBJECT);
+	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__VOID);
 	task = iris_task_new_from_closure (closure);
 	g_closure_unref (closure);
 
@@ -142,8 +149,7 @@ iris_task_new_from_closure (GClosure *closure)
  * Asynchronously schedules the task for execution.
  */
 void
-iris_task_run (IrisTask            *task,
-               GAsyncReadyCallback  callback)
+iris_task_run (IrisTask *task)
 {
 	IrisTaskPrivate *priv;
 	IrisMessage     *msg;
@@ -152,8 +158,38 @@ iris_task_run (IrisTask            *task,
 
 	priv = task->priv;
 
+	msg = iris_message_new (IRIS_TASK_MESSAGE_EXECUTE);
+	iris_port_post (priv->port, msg);
+	iris_message_unref (msg);
+}
+
+/**
+ * iris_task_run_full:
+ * @task: An #IrisTask
+ * @callback: A #GAsyncReadyCallback
+ * @user_data: data for @callback
+ *
+ * Asynchronously schedules the task for execution. Upon completion of
+ * execution and callbacks/errbacks phase, @callback will be executed.
+ */
+void
+iris_task_run_full (IrisTask            *task,
+                    GAsyncReadyCallback  callback,
+                    gpointer             user_data)
+{
+	IrisTaskPrivate    *priv;
+	IrisMessage        *msg;
+	GSimpleAsyncResult *res;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+
+	priv = task->priv;
+
+	res = g_simple_async_result_new (G_OBJECT (task),
+	                                 callback, user_data,
+	                                 (gpointer)G_STRFUNC);
 	msg = iris_message_new_data (IRIS_TASK_MESSAGE_EXECUTE,
-	                             G_TYPE_POINTER, callback);
+	                             G_TYPE_OBJECT, res);
 	iris_port_post (priv->port, msg);
 	iris_message_unref (msg);
 }
@@ -229,7 +265,7 @@ iris_task_add_callback (IrisTask       *task,
 	closure = g_cclosure_new (G_CALLBACK (callback),
 	                          user_data,
 	                          (GClosureNotify)notify);
-	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__OBJECT);
+	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__VOID);
 	iris_task_add_callback_closure (task, closure);
 	g_closure_unref (closure);
 }
@@ -258,7 +294,7 @@ iris_task_add_errback (IrisTask       *task,
 	closure = g_cclosure_new (G_CALLBACK (errback),
 	                          user_data,
 	                          (GClosureNotify)notify);
-	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__OBJECT);
+	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__VOID);
 	iris_task_add_errback_closure (task, closure);
 	g_closure_unref (closure);
 }
@@ -285,7 +321,8 @@ iris_task_add_callback_closure (IrisTask *task,
 	priv = task->priv;
 
 	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_CALLBACK,
-	                             G_TYPE_CLOSURE, closure);
+	                             G_TYPE_CLOSURE,
+	                             g_closure_ref (closure));
 	iris_port_post (priv->port, msg);
 	iris_message_unref (msg);
 }
@@ -312,7 +349,8 @@ iris_task_add_errback_closure  (IrisTask *task,
 	priv = task->priv;
 
 	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_ERRBACK,
-	                             G_TYPE_CLOSURE, closure);
+	                             G_TYPE_CLOSURE,
+	                             g_closure_ref (closure));
 	iris_port_post (priv->port, msg);
 	iris_message_unref (msg);
 }
@@ -677,6 +715,18 @@ iris_task_set_scheduler (IrisTask      *task,
 }
 
 static void
+iris_task_execute_worker (gpointer data)
+{
+	g_return_if_fail (IRIS_IS_TASK (data));
+	IRIS_TASK_GET_CLASS (data)->execute (IRIS_TASK (data));
+}
+
+static void
+iris_task_execute_notify (gpointer data)
+{
+}
+
+static void
 iris_task_handle_message_real (IrisTask    *task,
                                IrisMessage *message)
 {
@@ -713,6 +763,25 @@ iris_task_handle_message_real (IrisTask    *task,
 		                      g_value_get_pointer (iris_message_get_data (message)));
 		break;
 	}
+	case IRIS_TASK_MESSAGE_EXECUTE: {
+		/* if the execute message has an async result to complete,
+		 * we need to store it for later execution.
+		 */
+		if (G_VALUE_TYPE (iris_message_get_data (message)) == G_TYPE_OBJECT)
+			priv->async_result = g_value_get_object (iris_message_get_data (message));
+		if (CAN_EXECUTE_NOW (task)) {
+			g_atomic_int_set (&priv->flags,
+			                  priv->flags |= IRIS_TASK_FLAG_EXECUTING);
+			iris_scheduler_queue (priv->receiver->priv->scheduler,
+			                      iris_task_execute_worker,
+			                      g_object_ref (task),
+			                      iris_task_execute_notify);
+			/* Make sure we unref the task after
+			 * execution/callbacks/notify has complated.
+			 */
+		}
+		break;
+	}
 	default:
 		g_assert_not_reached ();
 		break;
@@ -738,6 +807,23 @@ iris_task_cancel_real (IrisTask *task)
 }
 
 static void
+iris_task_execute_real (IrisTask *task)
+{
+	GValue params = {0,};
+
+	g_value_init (&params, G_TYPE_OBJECT);
+	g_value_set_object (&params, task);
+
+	g_closure_invoke (task->priv->closure,
+	                  NULL, 1, &params, NULL);
+
+	g_closure_invalidate (task->priv->closure);
+	g_closure_unref (task->priv->closure);
+	task->priv->closure = NULL;
+	g_value_unset (&params);
+}
+
+static void
 iris_task_finalize (GObject *object)
 {
 	G_OBJECT_CLASS (iris_task_parent_class)->finalize (object);
@@ -750,6 +836,7 @@ iris_task_class_init (IrisTaskClass *task_class)
 
 	task_class->handle_message = iris_task_handle_message_real;
 	task_class->cancel = iris_task_cancel_real;
+	task_class->execute = iris_task_execute_real;
 
 	object_class = G_OBJECT_CLASS (task_class);
 	object_class->finalize = iris_task_finalize;

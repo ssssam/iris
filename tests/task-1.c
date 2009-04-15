@@ -168,6 +168,25 @@ test15 (void)
 	g_assert (task->priv->receiver->priv->scheduler == sched);
 }
 
+static void
+test16_cb (IrisTask *task,
+           gpointer  user_data)
+{
+	gboolean *cb = user_data;
+	g_assert (IRIS_IS_TASK (task));
+	*cb = TRUE;
+}
+
+static void
+test16 (void)
+{
+	gboolean success = FALSE;
+	IrisTask *task = iris_task_new (test16_cb, &success, NULL);
+	/* run should complete synchronously because of our scheduler */
+	iris_task_run (task);
+	g_assert (success == TRUE);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -191,6 +210,7 @@ main (int   argc,
 	g_test_add_func ("/task/new_full-is_async", test13);
 	g_test_add_func ("/task/new_full-context", test14);
 	g_test_add_func ("/task/new_full-scheduler", test15);
+	g_test_add_func ("/task/run", test16);
 
 	return g_test_run ();
 }
