@@ -108,9 +108,8 @@ iris_receiver_worker (gpointer data)
 
 	worker = data;
 
-	if (G_LIKELY (worker->priv->callback))
-		worker->priv->callback (worker->message,
-		                        worker->priv->data);
+	worker->priv->callback (worker->message,
+	                        worker->priv->data);
 }
 
 static IrisDeliveryStatus
@@ -188,7 +187,7 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 	if (execute) {
 		worker = g_slice_new0 (IrisWorkerData);
 		worker->priv = priv;
-		worker->message = message;
+		worker->message = iris_message_ref (message);
 
 		iris_scheduler_queue (priv->scheduler,
 		                      iris_receiver_worker,

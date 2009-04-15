@@ -247,6 +247,30 @@ iris_scheduler_new_full (guint min_threads,
 	return scheduler;
 }
 
+G_LOCK_DEFINE (default_scheduler);
+
+/**
+ * iris_scheduler_default:
+ *
+ * Retrieves the default scheduler which can be shared.
+ *
+ * Return value: a #IrisScheduler instance
+ */
+IrisScheduler*
+iris_scheduler_default (void)
+{
+	static IrisScheduler *default_scheduler = NULL;
+
+	if (G_UNLIKELY (default_scheduler == NULL)) {
+		G_LOCK (default_scheduler);
+		if (!g_atomic_pointer_get (&default_scheduler))
+			default_scheduler = iris_scheduler_new ();
+		G_UNLOCK (default_scheduler);
+	}
+
+	return default_scheduler;
+}
+
 /**
  * iris_scheduler_queue:
  * @scheduler: An #IrisScheduler
