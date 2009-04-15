@@ -57,11 +57,71 @@ iris_port_set_receiver (port, receiver);
 IV. Concurrent vs Exclusive
 ---------------------------------------------------------------------------
 
+One of the major problems in developing concurrent systems is managing the
+state changing operations while the actual concurrent service is being
+provided.  Typically, complex locking scenarios are implemented which are
+both painful to read and maintain.
+
+This is where the arbiter can help us greatly.  With an arbiter, we can
+use message passing into two ports (or sets of ports) and let the arbiter
+manage how they run.  This means the highly concurrent portions of our
+code can continue to be concurrent without the complex locking schemes
+for dealing with state changes.  The reason for this, is that the arbiter
+can bleed off the concurrent messages when a state change message is
+received so that it happens exclusively.
+
+This means we can optimize the locking patterns in a single place (the
+arbiter/receiver/port code-paths) and use the concept to develop our
+services around handling messages efficently (and ideally lock-free
+in our own code).
+
+I will introduce a new GObject soon that makes this easier, IrisService.
+It should feel similar in nature to Erlang's gen_server behaviour in how
+you handle messages.
 
 ---------------------------------------------------------------------------
 V. Schedulers
 ---------------------------------------------------------------------------
 
+The schedulers are responsible for the actual execution of work items
+within iris.  Message handlers that are responding to dispatched messages
+occur on the scheduler in addition to real work-items for things such as
+IrisTask's.
+
+Due to the variance in work-loads for specific problem sets, the concept
+of multiple schedulers was introduced.  This allows for fine-grained custom
+schedulers for a specific work-load (or a library perhaps).  This problem
+had the potential to wreak havoc on the number of threads that were created
+within an application.  To avoid this, we created a scheduler manager,
+which can dynamically move threads around between schedulers as they become
+free or under-utilized.
+
+Currently, there are a few schedulers that are available.  The default
+scheduler is typical to what you see in most basic thread pools.  It has
+a global work queue that all the threads share.  This is a cess-pool for
+high contention on heavy work-loads.  However, its a nice, safe scheduler
+for basic work to be performed.  Especially when the lifetime of the work
+items grows (thus lowering the locking contention overhead of the queue).
+
+The IrisWSScheduler, a work-stealing scheduler, performs much better under
+heavy work-loads.  It is designed to push items to a global queue only if
+the thread pushing the work item is not already part of the scheduler.  It
+turns out that this is not the common case in concurrent systems. Typically,
+threads performing work recursively create more work for themselves based
+on the nature of the work-item.  This is where the work-stealing really
+shines, because these recursive work items are pushed onto a local queue
+for the thread.  They are placed in the queue in a position that allows
+the recently yielded work item to be taken soon in the scheduler which
+provides a good chance for a cpu cache hit.  When a thread runs out of
+local work items, it will check back with the global queue then steal from
+a neighbor thread.
+
+The IrisLFScheduler, a lock-free scheduler, is not really an ideal scheduler
+for anything.  It was simply a test to see how well it could perform for
+tasks created outside of a scheduler thread.  It does okay for this; I
+believe the basic example runs fastest on this scheduler.  Note that it
+is very hard on the cpu's and spins a lot.  Definitely the wrong answer
+for low-power cpus and embedded devices.
 
 ---------------------------------------------------------------------------
 VI. Notes
