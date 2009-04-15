@@ -59,7 +59,7 @@ AC_PATH_PROG([GTESTER_REPORT], [gtester-report])
 
 AM_CONDITIONAL(PLATFORM_LINUX, echo x$host| grep -q linux)
 
-PKG_CHECK_MODULES(IRIS, gobject-2.0 >= glib_req_version gthread-2.0 >= glib_req_version)
+PKG_CHECK_MODULES(IRIS, gobject-2.0 >= glib_req_version gthread-2.0 >= glib_req_version gio-2.0 >= glib_req_version)
 AC_SUBST(IRIS_CFLAGS)
 AC_SUBST(IRIS_LIBS)
 
