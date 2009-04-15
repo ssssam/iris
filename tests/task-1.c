@@ -1,5 +1,7 @@
 #include <iris/iris.h>
 #include "mocks/mock-scheduler.h"
+#include <iris/iris-task-private.h>
+#include <iris/iris-receiver-private.h>
 
 static void
 test1 (void)
@@ -149,6 +151,23 @@ test13 (void)
 	g_assert (iris_task_is_async (task) == TRUE);
 }
 
+static void
+test14 (void)
+{
+	IrisTask *task = iris_task_new_full (NULL, NULL, NULL, TRUE, NULL, g_main_context_default ());
+	g_assert (task != NULL);
+	g_assert (iris_task_get_main_context (task) == g_main_context_default ());
+}
+
+static void
+test15 (void)
+{
+	IrisScheduler *sched = mock_scheduler_new ();
+	IrisTask *task = iris_task_new_full (NULL, NULL, NULL, TRUE, sched, NULL);
+	g_assert (task != NULL);
+	g_assert (task->priv->receiver->priv->scheduler == sched);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -169,7 +188,9 @@ main (int   argc,
 	g_test_add_func ("/task/set_result1", test10);
 	g_test_add_func ("/task/cancel1", test11);
 	g_test_add_func ("/task/main_context1", test12);
-	g_test_add_func ("/task/is_async", test13);
+	g_test_add_func ("/task/new_full-is_async", test13);
+	g_test_add_func ("/task/new_full-context", test14);
+	g_test_add_func ("/task/new_full-scheduler", test15);
 
 	return g_test_run ();
 }
