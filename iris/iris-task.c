@@ -656,6 +656,13 @@ iris_task_handle_message_real (IrisTask    *task,
 		g_value_copy (iris_message_get_data (message), &priv->result);
 		break;
 	}
+	case IRIS_TASK_MESSAGE_CANCEL: {
+		/* the class can handle cancel and deny it */
+		if (!IRIS_TASK_GET_CLASS (task)->cancel (task)) {
+			priv->flags |= IRIS_TASK_FLAG_CANCELED;
+		}
+		break;
+	}
 	default:
 		g_assert_not_reached ();
 		break;
@@ -674,6 +681,12 @@ iris_task_handle_message (IrisMessage *message,
 	IRIS_TASK_GET_CLASS (task)->handle_message (task, message);
 }
 
+static gboolean
+iris_task_cancel_real (IrisTask *task)
+{
+	return FALSE;
+}
+
 static void
 iris_task_finalize (GObject *object)
 {
@@ -686,6 +699,7 @@ iris_task_class_init (IrisTaskClass *task_class)
 	GObjectClass *object_class;
 
 	task_class->handle_message = iris_task_handle_message_real;
+	task_class->cancel = iris_task_cancel_real;
 
 	object_class = G_OBJECT_CLASS (task_class);
 	object_class->finalize = iris_task_finalize;

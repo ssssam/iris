@@ -122,6 +122,16 @@ test10 (void)
 	g_assert_cmpstr (g_value_get_string (iris_task_get_result (task)), ==, "This is my string");
 }
 
+static void
+test11 (void)
+{
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	iris_task_set_scheduler (task, mock_scheduler_new ());
+	g_assert (iris_task_is_canceled (task) == FALSE);
+	iris_task_cancel (task);
+	g_assert (iris_task_is_canceled (task) == TRUE);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -140,6 +150,7 @@ main (int   argc,
 	g_test_add_func ("/task/THROW1", test8);
 	g_test_add_func ("/task/RETURN_VALUE1", test9);
 	g_test_add_func ("/task/set_result1", test10);
+	g_test_add_func ("/task/cancel1", test11);
 
 	return g_test_run ();
 }
