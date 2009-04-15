@@ -104,10 +104,11 @@ iris_task_new_full (IrisTaskFunc   func,
                     GMainContext  *context)
 {
 	IrisTask *task = iris_task_new (func, user_data, notify);
-	if (async)
-		task->priv->flags |= IRIS_TASK_FLAG_ASYNC;
+	/* scheduler first so future messages pass over this scheduler */
 	if (scheduler)
 		iris_task_set_scheduler (task, scheduler);
+	if (async)
+		task->priv->flags |= IRIS_TASK_FLAG_ASYNC;
 	if (context)
 		iris_task_set_main_context (task, context);
 	return task;
