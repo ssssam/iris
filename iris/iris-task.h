@@ -56,20 +56,20 @@ G_BEGIN_DECLS
 
 #define IRIS_TASK_THROW_NEW(t,q,c,f,...)                                    \
         G_STMT_START {                                                      \
-                GError *__iris_task_error = g_error_new(q,c,f,__VA_ARGS__); \
-                iris_task_take_error (t,__iris_task_error);                 \
+                GError *_iris_task_error = g_error_new(q,c,f,##__VA_ARGS__);\
+                iris_task_take_error (t,_iris_task_error);                  \
         } G_STMT_END
 
 #define IRIS_TASK_THROW(t,e)                                                \
         G_STMT_START {                                                      \
-                GError *__iris_task_error = g_error_copy(e);                \
-                iris_task_take_error(t,__iris_task_error);                  \
+                iris_task_take_error(t,e);                                  \
         } G_STMT_END
 
 #define IRIS_TASK_CATCH(t,e)                                                \
         G_STMT_START {                                                      \
-                if (e && *e && iris_task_get_error(t)) {                    \
-                        *e = g_error_copy (iris_task_get_error (t));        \
+                if (e && *((GError**)e) == NULL && iris_task_get_error(t)) {\
+                        *((GError**)e) = g_error_copy (                     \
+                        		iris_task_get_error (t));           \
                 }                                                           \
                 iris_task_set_error (t,NULL);                               \
         } G_STMT_END

@@ -50,6 +50,45 @@ test5 (void)
 	g_error_free (error);
 }
 
+static void
+test6 (void)
+{
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	g_assert (iris_task_get_error (task) == NULL);
+	IRIS_TASK_THROW_NEW (task, 1, 1, "Some message here");
+	g_assert (iris_task_get_error (task) != NULL);
+}
+
+static void
+test7 (void)
+{
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	g_assert (iris_task_get_error (task) == NULL);
+	IRIS_TASK_THROW_NEW (task, 1, 1, "Some message here");
+	g_assert (iris_task_get_error (task) != NULL);
+	IRIS_TASK_CATCH (task, NULL);
+	g_assert (iris_task_get_error (task) == NULL);
+}
+
+static void
+test8 (void)
+{
+	GError *e = NULL;
+
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	g_assert (iris_task_get_error (task) == NULL);
+
+	IRIS_TASK_THROW_NEW (task, 1, 1, "Some message here");
+	g_assert (iris_task_get_error (task) != NULL);
+
+	IRIS_TASK_CATCH (task, &e);
+	g_assert (iris_task_get_error (task) == NULL);
+	g_assert (e != NULL);
+
+	IRIS_TASK_THROW (task, e);
+	g_assert (iris_task_get_error (task) == e);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -62,7 +101,10 @@ main (int   argc,
 	g_test_add_func ("/task/unref1", test2);
 	g_test_add_func ("/task/set_scheduler1", test3);
 	g_test_add_func ("/task/take_error1", test4);
-	g_test_add_func ("/task/set_error1", test4);
+	g_test_add_func ("/task/set_error1", test5);
+	g_test_add_func ("/task/THROW_NEW1", test6);
+	g_test_add_func ("/task/CATCH1", test7);
+	g_test_add_func ("/task/THROW1", test8);
 
 	return g_test_run ();
 }
