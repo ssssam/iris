@@ -11,6 +11,7 @@ noinst_PROGRAMS =		\
 	stack-1			\
 	queue-1			\
 	lf-queue-1		\
+	task-1			\
 	ws-queue-1		\
 	$(NULL)
 
@@ -23,6 +24,7 @@ TEST_PROGS +=			\
 	stack-1			\
 	queue-1			\
 	lf-queue-1		\
+	task-1			\
 	ws-queue-1		\
 	$(NULL)
 
@@ -41,3 +43,4 @@ stack_1_sources = stack-1.c
 queue_1_sources = queue-1.c
 lf_queue_1_sources = lf-queue-1.c
 ws_queue_1_sources = ws-queue-1.c
+task_1_sources = task-1.c

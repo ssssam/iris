@@ -158,6 +158,8 @@ gboolean      iris_task_is_finished          (IrisTask            *task);
 void          iris_task_set_main_context     (IrisTask            *task,
                                               GMainContext        *context);
 GMainContext* iris_task_get_main_context     (IrisTask            *task);
+void          iris_task_set_scheduler        (IrisTask            *task,
+                                              IrisScheduler       *scheduler);
 
 G_CONST_RETURN
 GError*       iris_task_get_error            (IrisTask            *task);

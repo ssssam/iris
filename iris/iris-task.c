@@ -614,6 +614,56 @@ iris_task_set_result_gtype (IrisTask *task,
 	iris_message_unref (msg);
 }
 
+/**
+ * iris_task_set_scheduler:
+ * @task: An #IrisTask
+ * @scheduler: An #IrisScheduler
+ *
+ * Sets the scheduler used to execute future work items.
+ */
+void
+iris_task_set_scheduler (IrisTask      *task,
+                         IrisScheduler *scheduler)
+{
+	IrisTaskPrivate *priv;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
+
+	priv = task->priv;
+
+	iris_receiver_set_scheduler (priv->receiver, scheduler);
+}
+
+static void
+iris_task_handle_message_real (IrisTask    *task,
+                               IrisMessage *message)
+{
+	IrisTaskPrivate *priv;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+
+	priv = task->priv;
+
+	switch (message->what) {
+	default:
+		g_assert_not_reached ();
+		break;
+	}
+}
+
+static void
+iris_task_handle_message (IrisMessage *message,
+                          gpointer     data)
+{
+	IrisTask *task;
+
+	g_return_if_fail (IRIS_IS_TASK (data));
+
+	task = IRIS_TASK (data);
+	IRIS_TASK_GET_CLASS (task)->handle_message (task, message);
+}
+
 static void
 iris_task_finalize (GObject *object)
 {
@@ -621,17 +671,28 @@ iris_task_finalize (GObject *object)
 }
 
 static void
-iris_task_class_init (IrisTaskClass *klass)
+iris_task_class_init (IrisTaskClass *task_class)
 {
-	GObjectClass *object_class = G_OBJECT_CLASS (klass);
-	
+	GObjectClass *object_class;
+
+	task_class->handle_message = iris_task_handle_message_real;
+
+	object_class = G_OBJECT_CLASS (task_class);
 	object_class->finalize = iris_task_finalize;
 
 	g_type_class_add_private (object_class, sizeof(IrisTaskPrivate));
 }
 
 static void
-iris_task_init (IrisTask *self)
+iris_task_init (IrisTask *task)
 {
-	self->priv = IRIS_TASK_GET_PRIVATE (self);
+	IrisTaskPrivate *priv;
+
+	priv = task->priv = IRIS_TASK_GET_PRIVATE (task);
+
+	priv->port = iris_port_new ();
+	priv->receiver = iris_receiver_new_full (iris_scheduler_default (),
+	                                         NULL, /* IrisArbiter */
+	                                         iris_task_handle_message,
+	                                         task);
 }
