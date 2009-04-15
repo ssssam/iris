@@ -108,9 +108,8 @@ iris_receiver_worker (gpointer data)
 
 	worker = data;
 
-	if (G_LIKELY (worker->priv->callback))
-		worker->priv->callback (worker->message,
-		                        worker->priv->data);
+	worker->priv->callback (worker->message,
+	                        worker->priv->data);
 }
 
 static IrisDeliveryStatus
