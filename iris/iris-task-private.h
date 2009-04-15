@@ -37,6 +37,7 @@ typedef enum
 	IRIS_TASK_FLAG_CANCELED  = 1 << 1,
 	IRIS_TASK_FLAG_FINISHED  = 1 << 2,
 	IRIS_TASK_FLAG_ASYNC     = 1 << 3,
+	IRIS_TASK_FLAG_CALLBACKS = 1 << 4,
 } IrisTaskFlags;
 
 typedef enum
@@ -55,17 +56,22 @@ typedef enum
 
 struct _IrisTaskPrivate
 {
-	IrisPort     *port;
-	IrisReceiver *receiver;
-
-	GValue        result;
-	GError       *error;
-
-	GClosure     *closure;
-	GList        *handlers;
-
+	IrisPort     *port;          /* Message delivery port */
+	IrisReceiver *receiver;      /* Receiver for port */
+	GValue        result;        /* Current task result */
+	GError       *error;         /* Current task error */
+	GClosure     *closure;       /* Our execution closure. */
+	GList        *handlers;      /* A list of callback/errback handlers.
+	                              */
+	GList        *dependencies;  /* Tasks we are depending on. */
+	GList        *observers;     /* Tasks observing our state changes */
 	glong         flags;
-	GMainContext *context;
+	GMainContext *context;       /* A main-context to execute our
+	                              * callbacks and async_result within.
+	                              */
+	GAsyncResult *async_result;  /* GAsyncResult to execute after our
+	                              * execution/callbacks have completed.
+	                              */
 };
 
 #endif /* __IRIS_TASK_PRIVATE_H__ */
