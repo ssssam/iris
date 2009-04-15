@@ -141,6 +141,14 @@ test12 (void)
 	g_assert (iris_task_get_main_context (task) == g_main_context_default ());
 }
 
+static void
+test13 (void)
+{
+	IrisTask *task = iris_task_new_full (NULL, NULL, NULL, TRUE, NULL, NULL);
+	g_assert (task != NULL);
+	g_assert (iris_task_is_async (task) == TRUE);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -161,6 +169,7 @@ main (int   argc,
 	g_test_add_func ("/task/set_result1", test10);
 	g_test_add_func ("/task/cancel1", test11);
 	g_test_add_func ("/task/main_context1", test12);
+	g_test_add_func ("/task/is_async", test13);
 
 	return g_test_run ();
 }

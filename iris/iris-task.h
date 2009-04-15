@@ -125,6 +125,12 @@ GType         iris_task_get_type             (void) G_GNUC_CONST;
 IrisTask*     iris_task_new                  (IrisTaskFunc         func,
                                               gpointer             user_data,
                                               GDestroyNotify       notify);
+IrisTask*     iris_task_new_full             (IrisTaskFunc         func,
+                                              gpointer             user_data,
+                                              GDestroyNotify       notify,
+                                              gboolean             async,
+                                              IrisScheduler       *scheduler,
+                                              GMainContext        *context);
 IrisTask*     iris_task_new_from_closure     (GClosure            *closure);
 
 void          iris_task_run                  (IrisTask            *task,

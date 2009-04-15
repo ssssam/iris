@@ -70,6 +70,50 @@ iris_task_new (IrisTaskFunc   func,
 }
 
 /**
+ * iris_task_new_full:
+ * @func: An #IrisTaskFunc
+ * @user_data: data for @func
+ * @notify: A destroy notify after execution of the task
+ * @async: Will the task complete during the execution of @func
+ * @scheduler: An #IrisScheduler or %NULL
+ * @context: A #GMainContext or %NULL
+ *
+ * Creates a new instance of #IrisTask.  This method allows for setting
+ * if the task is asynchronous with @async.  An asynchronous task has the
+ * ability to not complete during the execution of the task's execution
+ * method (in this case @func).  To mark the task's execution as completed,
+ * g_task_complete() must be called for the task.
+ *
+ * If you want errbacks and callbacks to complete within a #GMainContext,
+ * you may specify @context or %NULL for the callbacks to happen within
+ * the worker thread.
+ *
+ * @scheduler allows you to set a specific #IrisScheduler to perform
+ * execution of the task within.  Note that all message passing associated
+ * with the tasks internal #IrisPort<!-- -->'s will also happen on this
+ * scheduler.
+ *
+ * Return value: The newly created #IrisTask instance.
+ */
+IrisTask*
+iris_task_new_full (IrisTaskFunc   func,
+                    gpointer       user_data,
+                    GDestroyNotify notify,
+                    gboolean       async,
+                    IrisScheduler *scheduler,
+                    GMainContext  *context)
+{
+	IrisTask *task = iris_task_new (func, user_data, notify);
+	if (async)
+		task->priv->flags |= IRIS_TASK_FLAG_ASYNC;
+	if (scheduler)
+		iris_task_set_scheduler (task, scheduler);
+	if (context)
+		iris_task_set_main_context (task, context);
+	return task;
+}
+
+/**
  * iris_task_new_from_closure:
  * @closure: A #GClosure
  *
