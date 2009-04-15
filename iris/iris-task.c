@@ -557,18 +557,15 @@ iris_task_set_result (IrisTask     *task,
 {
 	IrisTaskPrivate *priv;
 	IrisMessage     *msg;
-	GValue          *val;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 
 	priv = task->priv;
+	msg = iris_message_new (IRIS_TASK_MESSAGE_RESULT);
 
-	val = g_slice_new0 (GValue);
-	g_value_init (val, G_VALUE_TYPE (value));
-	g_value_copy (value, val);
+	g_value_init (&msg->data, G_VALUE_TYPE (value));
+	g_value_copy (value, &msg->data);
 
-	msg = iris_message_new_data (IRIS_TASK_MESSAGE_RESULT,
-	                             G_TYPE_POINTER, val);
 	iris_port_post (priv->port, msg);
 	iris_message_unref (msg);
 }
@@ -587,30 +584,29 @@ iris_task_set_result_gtype (IrisTask *task,
 {
 	IrisTaskPrivate *priv;
 	IrisMessage     *msg;
-	GValue          *val;
 	va_list          args;
 	gchar           *error;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 
 	priv = task->priv;
-
-	val = g_slice_new0 (GValue);
-	g_value_init (val, type);
+	msg = iris_message_new (IRIS_TASK_MESSAGE_RESULT);
 
 	va_start (args, type);
-	G_VALUE_COLLECT (val, args, 0, &error);
+	g_value_init (&msg->data, type);
+	G_VALUE_COLLECT (&msg->data, args, 0, &error);
 	va_end (args);
 
 	if (error) {
 		g_warning ("%s: %s", G_STRFUNC, error);
 		g_free (error);
-		g_value_unset (val);
+		g_value_unset (&msg->data);
+		goto cleanup;
 	}
 
-	msg = iris_message_new_data (IRIS_TASK_MESSAGE_RESULT,
-	                             G_TYPE_POINTER, val);
 	iris_port_post (priv->port, msg);
+
+cleanup:
 	iris_message_unref (msg);
 }
 
@@ -651,6 +647,13 @@ iris_task_handle_message_real (IrisTask    *task,
 		priv->error = g_value_get_pointer (iris_message_get_data (message));
 		if (error)
 			g_error_free (error);
+		break;
+	}
+	case IRIS_TASK_MESSAGE_RESULT: {
+		if (G_VALUE_TYPE (&priv->result) != G_TYPE_INVALID)
+			g_value_unset (&priv->result);
+		g_value_init (&priv->result, G_VALUE_TYPE (iris_message_get_data (message)));
+		g_value_copy (iris_message_get_data (message), &priv->result);
 		break;
 	}
 	default:

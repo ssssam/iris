@@ -54,6 +54,7 @@ static void
 test6 (void)
 {
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_get_error (task) == NULL);
 	IRIS_TASK_THROW_NEW (task, 1, 1, "Some message here");
 	g_assert (iris_task_get_error (task) != NULL);
@@ -63,6 +64,7 @@ static void
 test7 (void)
 {
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_get_error (task) == NULL);
 	IRIS_TASK_THROW_NEW (task, 1, 1, "Some message here");
 	g_assert (iris_task_get_error (task) != NULL);
@@ -76,6 +78,7 @@ test8 (void)
 	GError *e = NULL;
 
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_get_error (task) == NULL);
 
 	IRIS_TASK_THROW_NEW (task, 1, 1, "Some message here");
@@ -87,6 +90,36 @@ test8 (void)
 
 	IRIS_TASK_THROW (task, e);
 	g_assert (iris_task_get_error (task) == e);
+}
+
+static void
+test9 (void)
+{
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	iris_task_set_scheduler (task, mock_scheduler_new ());
+	g_assert (iris_task_get_result (task) != NULL);
+	g_assert (G_VALUE_TYPE (iris_task_get_result (task)) == G_TYPE_INVALID);
+
+	IRIS_TASK_RETURN_VALUE (task, G_TYPE_INT, 123);
+	g_assert_cmpint (G_VALUE_TYPE (iris_task_get_result (task)), ==, G_TYPE_INT);
+	g_assert_cmpint (g_value_get_int (iris_task_get_result (task)), ==, 123);
+}
+
+static void
+test10 (void)
+{
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	iris_task_set_scheduler (task, mock_scheduler_new ());
+	g_assert (iris_task_get_result (task) != NULL);
+	g_assert (G_VALUE_TYPE (iris_task_get_result (task)) == G_TYPE_INVALID);
+
+	GValue value = {0,};
+	g_value_init (&value, G_TYPE_STRING);
+	g_value_set_string (&value, "This is my string");
+
+	iris_task_set_result (task, &value);
+	g_assert_cmpint (G_VALUE_TYPE (iris_task_get_result (task)), ==, G_TYPE_STRING);
+	g_assert_cmpstr (g_value_get_string (iris_task_get_result (task)), ==, "This is my string");
 }
 
 int
@@ -105,6 +138,8 @@ main (int   argc,
 	g_test_add_func ("/task/THROW_NEW1", test6);
 	g_test_add_func ("/task/CATCH1", test7);
 	g_test_add_func ("/task/THROW1", test8);
+	g_test_add_func ("/task/RETURN_VALUE1", test9);
+	g_test_add_func ("/task/set_result1", test10);
 
 	return g_test_run ();
 }
