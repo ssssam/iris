@@ -646,6 +646,13 @@ iris_task_handle_message_real (IrisTask    *task,
 	priv = task->priv;
 
 	switch (message->what) {
+	case IRIS_TASK_MESSAGE_ERROR: {
+		GError *error = priv->error;
+		priv->error = g_value_get_pointer (iris_message_get_data (message));
+		if (error)
+			g_error_free (error);
+		break;
+	}
 	default:
 		g_assert_not_reached ();
 		break;
@@ -695,4 +702,5 @@ iris_task_init (IrisTask *task)
 	                                         NULL, /* IrisArbiter */
 	                                         iris_task_handle_message,
 	                                         task);
+	iris_port_set_receiver (priv->port, priv->receiver);
 }
