@@ -663,6 +663,11 @@ iris_task_handle_message_real (IrisTask    *task,
 		}
 		break;
 	}
+	case IRIS_TASK_MESSAGE_CONTEXT: {
+		g_atomic_pointer_set (&priv->context,
+		                      g_value_get_pointer (iris_message_get_data (message)));
+		break;
+	}
 	default:
 		g_assert_not_reached ();
 		break;

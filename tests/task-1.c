@@ -132,6 +132,15 @@ test11 (void)
 	g_assert (iris_task_is_canceled (task) == TRUE);
 }
 
+static void
+test12 (void)
+{
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_set_main_context (task, g_main_context_default ());
+	g_assert (iris_task_get_main_context (task) == g_main_context_default ());
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -151,6 +160,7 @@ main (int   argc,
 	g_test_add_func ("/task/RETURN_VALUE1", test9);
 	g_test_add_func ("/task/set_result1", test10);
 	g_test_add_func ("/task/cancel1", test11);
+	g_test_add_func ("/task/main_context1", test12);
 
 	return g_test_run ();
 }
