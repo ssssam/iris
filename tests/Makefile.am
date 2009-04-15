@@ -7,6 +7,7 @@ noinst_PROGRAMS =		\
 	port-1			\
 	receiver-1		\
 	scheduler-manager-1	\
+	scheduler-1		\
 	free-list-1		\
 	stack-1			\
 	queue-1			\
@@ -20,6 +21,7 @@ TEST_PROGS +=			\
 	port-1			\
 	receiver-1		\
 	scheduler-manager-1	\
+	scheduler-1		\
 	free-list-1		\
 	stack-1			\
 	queue-1			\
@@ -38,6 +40,7 @@ message_1_sources = message-1.c
 port_1_sources = port-1.c mocks/mock-callback-receiver.c
 receiver_1_sources = receiver-1.c
 scheduler_manager_1_sources = scheduler-manager-1.c
+scheduler_1_sources = scheduler-1.c
 free_list_1_sources = free-list-1.c
 stack_1_sources = stack-1.c
 queue_1_sources = queue-1.c
