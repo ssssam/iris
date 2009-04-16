@@ -270,6 +270,74 @@ test19 (void)
 	g_assert (task->priv->error == NULL);
 }
 
+static void
+test20_cb1 (IrisTask *task,
+            gpointer  user_data)
+{
+	g_assert (IRIS_IS_TASK (task));
+	*((gboolean*)user_data) = TRUE;
+	IRIS_TASK_THROW_NEW (task, 1, 1, "Some error message");
+}
+
+static void
+test20_cb2 (IrisTask *task,
+            gpointer  user_data)
+{
+	GError *error = NULL;
+	g_assert (IRIS_IS_TASK (task));
+	*((gboolean*)user_data) = TRUE;
+	g_assert (task->priv->error != NULL);
+	IRIS_TASK_CATCH (task, &error);
+	IRIS_TASK_THROW (task, error);
+}
+
+static void
+test20_cb3 (IrisTask *task,
+            gpointer  user_data)
+{
+	*((gboolean*)user_data) = TRUE;
+	IRIS_TASK_CATCH (task, NULL);
+}
+
+static void
+test20_cb4 (IrisTask *task,
+            gpointer  user_data)
+{
+	*((gboolean*)user_data) = TRUE;
+}
+
+static void
+test20_skip (IrisTask *task,
+             gpointer  user_data)
+{
+	*((gboolean*)user_data) = TRUE;
+}
+
+static void
+test20 (void)
+{
+	gboolean cb1 = FALSE;
+	gboolean cb2 = FALSE;
+	gboolean cb3 = FALSE;
+	gboolean cb4 = FALSE;
+	gboolean skip = FALSE;
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_add_callback (task, test20_cb1, &cb1, NULL);
+	iris_task_add_errback (task, test20_cb2, &cb2, NULL);
+	iris_task_add_errback (task, test20_cb2, &cb2, NULL);
+	iris_task_add_callback (task, test20_skip, &skip, NULL);
+	iris_task_add_errback (task, test20_cb3, &cb3, NULL);
+	iris_task_add_callback (task, test20_cb4, &cb4, NULL);
+	iris_task_run (task);
+	g_assert (cb1 == TRUE);
+	g_assert (cb2 == TRUE);
+	g_assert (cb3 == TRUE);
+	g_assert (cb4 == TRUE);
+	g_assert (skip == FALSE);
+	g_assert (task->priv->error == NULL);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -297,6 +365,7 @@ main (int   argc,
 	g_test_add_func ("/task/run_full", test17);
 	g_test_add_func ("/task/add_callback1", test18);
 	g_test_add_func ("/task/callback-errback1", test19);
+	g_test_add_func ("/task/callback-errback2", test20);
 
 	return g_test_run ();
 }
