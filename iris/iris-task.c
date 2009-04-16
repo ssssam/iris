@@ -1179,6 +1179,7 @@ handle_remove_dependency (IrisTask    *task,
 {
 	IrisTaskPrivate *priv;
 	IrisTask        *dep;
+	GList           *link;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 	g_return_if_fail (message != NULL);
@@ -1186,8 +1187,8 @@ handle_remove_dependency (IrisTask    *task,
 	priv = task->priv;
 	dep = g_value_get_object (iris_message_get_data (message));
 
-	if (g_list_find (priv->dependencies, dep)) {
-		priv->dependencies = g_list_remove (priv->dependencies, dep);
+	if ((link = g_list_find (priv->dependencies, dep)) != NULL) {
+		priv->dependencies = g_list_delete_link (priv->dependencies, link);
 		g_object_unref (dep);
 	}
 

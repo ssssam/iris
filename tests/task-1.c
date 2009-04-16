@@ -411,6 +411,35 @@ test24 (void)
 	g_assert (success == FALSE);
 }
 
+static void
+test25 (void)
+{
+	IrisTask *t1 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *t2 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *t3 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *t4 = iris_task_all_of (t1, t2, t3, NULL);
+
+	IrisScheduler *sched = mock_scheduler_new ();
+	iris_task_set_scheduler (t1, sched);
+	iris_task_set_scheduler (t2, sched);
+	iris_task_set_scheduler (t3, sched);
+	iris_task_set_scheduler (t4, sched);
+
+	g_assert (g_list_find (t1->priv->observers, t4) != NULL);
+	g_assert (g_list_find (t2->priv->observers, t4) != NULL);
+	g_assert (g_list_find (t3->priv->observers, t4) != NULL);
+
+	g_assert (t4->priv->dependencies != NULL);
+	iris_task_run (t4);
+	g_assert (iris_task_is_finished (t4) == FALSE);
+	iris_task_run (t1);
+	g_assert (iris_task_is_finished (t4) == FALSE);
+	iris_task_run (t2);
+	g_assert (iris_task_is_finished (t4) == FALSE);
+	iris_task_run (t3);
+	g_assert (iris_task_is_finished (t4) == TRUE);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -443,6 +472,7 @@ main (int   argc,
 	g_test_add_func ("/task/cancel2", test22);
 	g_test_add_func ("/task/callback-after-finish1", test23);
 	g_test_add_func ("/task/callback-after-finish-cancel1", test24);
+	g_test_add_func ("/task/all_of1", test25);
 
 	return g_test_run ();
 }

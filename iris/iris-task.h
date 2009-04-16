@@ -183,6 +183,11 @@ void          iris_task_set_result           (IrisTask            *task,
 void          iris_task_set_result_gtype     (IrisTask            *task,
                                               GType                type, ...);
 
+IrisTask*     iris_task_all_of               (IrisTask            *first_task, ...) __attribute__ ((__sentinel__));
+IrisTask*     iris_task_any_of               (IrisTask            *first_task, ...) __attribute__ ((__sentinel__));
+IrisTask*     iris_task_n_of                 (gint                 n,
+                                              IrisTask            *first_task, ...) __attribute__ ((__sentinel__));
+
 G_END_DECLS
 
 #endif /* __IRIS_TASK_H__ */
