@@ -25,11 +25,18 @@
 #include "iris-task-private.h"
 #include "iris-receiver-private.h"
 
-#define CAN_EXECUTE_NOW(t)                                     \
-	(((t->priv->flags & IRIS_TASK_FLAG_EXECUTING) == 0) && \
-	 ((t->priv->flags & IRIS_TASK_FLAG_CALLBACKS) == 0) && \
+#define CAN_EXECUTE_NOW(t)                                      \
+	(((t->priv->flags & IRIS_TASK_FLAG_EXECUTING) == 0) &&  \
+	 ((t->priv->flags & IRIS_TASK_FLAG_CALLBACKS) == 0) &&  \
 	 (t->priv->dependencies == NULL))
-#define CAN_CALLBACK_NOW(t) (0)
+#define CAN_CALLBACK_NOW(t)                                     \
+	((((t->priv->dependencies == NULL)                   && \
+	 (((t->priv->flags & IRIS_TASK_FLAG_EXECUTING) != 0) || \
+	   (t->priv->flags & IRIS_TASK_FLAG_CALLBACKS) != 0))))
+#define CAN_FINISH_NOW(t)                                       \
+	((t->priv->dependencies == NULL) &&                     \
+	 (t->priv->handlers == NULL) &&				\
+	 ((t->priv->flags & IRIS_TASK_FLAG_CALLBACKS) != 0))
 
 G_DEFINE_TYPE (IrisTask, iris_task, G_TYPE_OBJECT);
 
@@ -727,6 +734,42 @@ iris_task_execute_notify (gpointer data)
 }
 
 static void
+iris_task_callbacks_worker (IrisTask *task)
+{
+	GMutex       *mutex;
+	GCond        *cond;
+	GMainContext *context;
+	IrisMessage  *msg;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+
+	if (G_UNLIKELY ((context = task->priv->context) != NULL)) {
+		mutex = task->priv->context_mutex;
+		cond = task->priv->context_cond;
+
+		g_mutex_lock (mutex);
+
+	retry:
+		if (!g_main_context_wait (context, cond, mutex))
+			goto retry;
+
+		// get the next callback
+
+		g_mutex_unlock (mutex);
+	}
+	else {
+		// get the next callback
+	}
+
+	// send message for next callback iteration
+	// this allows for callbacks pausing execution for future
+	// tasks to complete those tasks before more callbacks
+	msg = iris_message_new (IRIS_TASK_MESSAGE_CALLBACKS);
+	iris_port_post (task->priv->port, msg);
+	iris_message_unref (msg);
+}
+
+static void
 iris_task_handle_message_real (IrisTask    *task,
                                IrisMessage *message)
 {
@@ -759,8 +802,18 @@ iris_task_handle_message_real (IrisTask    *task,
 		break;
 	}
 	case IRIS_TASK_MESSAGE_CONTEXT: {
+		if (priv->context) {
+			g_mutex_free (priv->context_mutex);
+			g_cond_free (priv->context_cond);
+			priv->context_mutex = NULL;
+			priv->context_cond = NULL;
+		}
 		g_atomic_pointer_set (&priv->context,
 		                      g_value_get_pointer (iris_message_get_data (message)));
+		if (priv->context) {
+			priv->context_mutex = g_mutex_new ();
+			priv->context_cond = g_cond_new ();
+		}
 		break;
 	}
 	case IRIS_TASK_MESSAGE_EXECUTE: {
@@ -779,6 +832,44 @@ iris_task_handle_message_real (IrisTask    *task,
 			/* Make sure we unref the task after
 			 * execution/callbacks/notify has complated.
 			 */
+		}
+		break;
+	}
+	case IRIS_TASK_MESSAGE_COMPLETE: {
+		if (CAN_CALLBACK_NOW (task)) {
+			g_atomic_int_set (&priv->flags,
+			                  (priv->flags & ~IRIS_TASK_FLAG_EXECUTING) | IRIS_TASK_FLAG_CALLBACKS);
+			/* start the callbacks phase */
+			iris_task_callbacks_worker (task);
+		}
+		break;
+	}
+	case IRIS_TASK_MESSAGE_CALLBACKS: {
+		if (CAN_CALLBACK_NOW (task)) {
+			if (CAN_FINISH_NOW (task)) {
+				IrisMessage *fmsg = iris_message_new (IRIS_TASK_MESSAGE_FINISH);
+				iris_port_post (priv->port, fmsg);
+				iris_message_unref (fmsg);
+			}
+			else {
+				iris_task_callbacks_worker (task);
+			}
+		}
+		break;
+	}
+	case IRIS_TASK_MESSAGE_FINISH: {
+		if (CAN_FINISH_NOW (task)) {
+			/* notify our observers that we are complete */
+			/* FIXME: Notify each of our observers */
+
+			/* finish our async result if we have one */
+			if (priv->async_result) {
+				if (priv->context)
+					/* FIXME: complete within their context */
+					g_simple_async_result_complete_in_idle ((GSimpleAsyncResult*)priv->async_result);
+				else
+					g_simple_async_result_complete ((GSimpleAsyncResult*)priv->async_result);
+			}
 		}
 		break;
 	}
@@ -821,6 +912,10 @@ iris_task_execute_real (IrisTask *task)
 	g_closure_unref (task->priv->closure);
 	task->priv->closure = NULL;
 	g_value_unset (&params);
+
+	/* if not async, we can notify that we are done */
+	if ((task->priv->flags & IRIS_TASK_FLAG_ASYNC) == 0)
+		iris_task_complete (task);
 }
 
 static void
