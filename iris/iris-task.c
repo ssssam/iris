@@ -761,9 +761,10 @@ iris_task_callbacks_worker (IrisTask *task)
 		// get the next callback
 	}
 
-	// send message for next callback iteration
-	// this allows for callbacks pausing execution for future
-	// tasks to complete those tasks before more callbacks
+	/* send message for next callback iteration
+	 * this allows for callbacks pausing execution for future
+	 * tasks to complete before more callbacks
+	 */
 	msg = iris_message_new (IRIS_TASK_MESSAGE_CALLBACKS);
 	iris_port_post (task->priv->port, msg);
 	iris_message_unref (msg);
