@@ -52,6 +52,8 @@ typedef enum
 	IRIS_TASK_MESSAGE_CONTEXT,
 	IRIS_TASK_MESSAGE_ERROR,
 	IRIS_TASK_MESSAGE_RESULT,
+	IRIS_TASK_MESSAGE_CALLBACKS,
+	IRIS_TASK_MESSAGE_FINISH,
 } IrisTaskMessageType;
 
 struct _IrisTaskPrivate
@@ -69,6 +71,8 @@ struct _IrisTaskPrivate
 	GMainContext *context;       /* A main-context to execute our
 	                              * callbacks and async_result within.
 	                              */
+	GMutex       *context_mutex; /* A mutex for acquiring the context */
+	GCond        *context_cond;  /* A cond for acquiring the context */
 	GAsyncResult *async_result;  /* GAsyncResult to execute after our
 	                              * execution/callbacks have completed.
 	                              */
