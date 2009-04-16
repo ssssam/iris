@@ -54,6 +54,7 @@
 			else                                            \
 				g_closure_invoke(h->callback,           \
 				                 NULL,1,&param,NULL);   \
+			g_value_unset (&param);                         \
 			free_handler (h);                               \
 		}                                                       \
 	} G_STMT_END
@@ -847,6 +848,61 @@ iris_task_callbacks_worker (IrisTask *task)
 }
 
 static void
+iris_task_notify_observers (IrisTask *task,
+                            gboolean  canceled)
+{
+	IrisTaskPrivate *priv;
+	IrisMessage     *msg;
+	GList           *iter;
+
+	priv = task->priv;
+
+	msg = iris_message_new_data (
+			canceled ? IRIS_TASK_MESSAGE_DEP_CANCELED :
+			           IRIS_TASK_MESSAGE_DEP_FINISHED,
+			IRIS_TYPE_TASK, task);
+
+	for (iter = priv->observers; iter; iter = iter->next)
+		iris_port_post (IRIS_TASK (iter->data)->priv->port, msg);
+
+	g_list_foreach (priv->observers, (GFunc)g_object_unref, NULL);
+	g_list_free (priv->observers);
+	priv->observers = NULL;
+
+	iris_message_unref (msg);
+}
+
+static void
+iris_task_complete_async_result (IrisTask *task)
+{
+	IrisTaskPrivate *priv;
+	GMutex          *mutex;
+	GCond           *cond;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+
+	priv = task->priv;
+
+	if (priv->context) {
+		mutex = task->priv->context_mutex;
+		cond = task->priv->context_cond;
+
+		g_mutex_lock (mutex);
+
+	retry:
+		if (!g_main_context_wait (priv->context, cond, mutex))
+			goto retry;
+
+		g_simple_async_result_complete ((GSimpleAsyncResult*)priv->async_result);
+
+		g_mutex_unlock (mutex);
+	}
+	else {
+		g_simple_async_result_complete ((GSimpleAsyncResult*)priv->async_result);
+	}
+}
+
+static void
 iris_task_handle_message_real (IrisTask    *task,
                                IrisMessage *message)
 {
@@ -875,6 +931,8 @@ iris_task_handle_message_real (IrisTask    *task,
 		/* the class can handle cancel and deny it */
 		if (!IRIS_TASK_GET_CLASS (task)->cancel (task)) {
 			priv->flags |= IRIS_TASK_FLAG_CANCELED;
+			if (priv->observers)
+				iris_task_notify_observers (task, TRUE);
 		}
 		break;
 	}
@@ -906,9 +964,6 @@ iris_task_handle_message_real (IrisTask    *task,
 			                      iris_task_execute_worker,
 			                      g_object_ref (task),
 			                      iris_task_execute_notify);
-			/* Make sure we unref the task after
-			 * execution/callbacks/notify has complated.
-			 */
 		}
 		break;
 	}
@@ -928,25 +983,22 @@ iris_task_handle_message_real (IrisTask    *task,
 				iris_port_post (priv->port, fmsg);
 				iris_message_unref (fmsg);
 			}
-			else {
-				iris_task_callbacks_worker (task);
-			}
+			else iris_task_callbacks_worker (task);
 		}
 		break;
 	}
 	case IRIS_TASK_MESSAGE_FINISH: {
 		if (CAN_FINISH_NOW (task)) {
 			/* notify our observers that we are complete */
-			/* FIXME: Notify each of our observers */
+			if (priv->observers)
+				iris_task_notify_observers (task, FALSE);
 
 			/* finish our async result if we have one */
-			if (priv->async_result) {
-				if (priv->context)
-					/* FIXME: complete within their context */
-					g_simple_async_result_complete_in_idle ((GSimpleAsyncResult*)priv->async_result);
-				else
-					g_simple_async_result_complete ((GSimpleAsyncResult*)priv->async_result);
-			}
+			if (priv->async_result)
+				iris_task_complete_async_result (task);
+
+			/* done with our private task ref */
+			g_object_unref (task);
 		}
 		break;
 	}
@@ -957,10 +1009,59 @@ iris_task_handle_message_real (IrisTask    *task,
 		                      g_list_append (priv->handlers, handler));
 		break;
 	}
+	case IRIS_TASK_MESSAGE_DEP_FINISHED: {
+		IRIS_TASK_GET_CLASS (task)->dependency_finished (task,
+				IRIS_TASK (g_value_get_object (iris_message_get_data (message))));
+		/* FIXME: Check for dispatch? */
+		break;
+	}
+	case IRIS_TASK_MESSAGE_DEP_CANCELED: {
+		IRIS_TASK_GET_CLASS (task)->dependency_canceled (task,
+				IRIS_TASK (g_value_get_object (iris_message_get_data (message))));
+		/* FIXME: Check for dispatch? */
+		break;
+	}
+	case IRIS_TASK_MESSAGE_ADD_DEPENDENCY: {
+		priv->dependencies = g_list_prepend (priv->dependencies,
+					g_object_ref (g_value_get_object (iris_message_get_data (message))));
+		IrisMessage *msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_OBSERVER,
+				IRIS_TYPE_TASK, task);
+		iris_port_post (IRIS_TASK (g_value_get_object (iris_message_get_data (message)))->priv->port, msg);
+		iris_message_unref (msg);
+		break;
+	}
+	case IRIS_TASK_MESSAGE_REMOVE_DEPENDENCY: {
+		IrisTask *dep = g_value_get_object (iris_message_get_data (message));
+		priv->dependencies = g_list_remove (priv->dependencies, dep);
+		g_object_unref (dep);
+		/* FIXME: Check for dispatch? */
+		break;
+	}
+	case IRIS_TASK_MESSAGE_ADD_OBSERVER: {
+		IrisTask *obs = g_value_get_object (iris_message_get_data (message));
+		priv->observers = g_list_prepend (priv->observers, g_object_ref (obs));
+		/* FIXME: If we are finished, we should notify our new observer */
+		break;
+	}
 	default:
 		g_assert_not_reached ();
 		break;
 	}
+}
+
+static void
+iris_task_dependency_canceled_real (IrisTask *task,
+                                    IrisTask *dependency)
+{
+	/* Default is to cancel our task if a dependent task is canceled */
+	g_debug ("!!!!!!!!!!!!!!!!! C");
+}
+
+static void
+iris_task_dependency_finished_real (IrisTask *task,
+                                    IrisTask *dependency)
+{
+	iris_task_remove_dependency (task, dependency);
 }
 
 static void
@@ -1016,6 +1117,8 @@ iris_task_class_init (IrisTaskClass *task_class)
 	task_class->handle_message = iris_task_handle_message_real;
 	task_class->cancel = iris_task_cancel_real;
 	task_class->execute = iris_task_execute_real;
+	task_class->dependency_finished = iris_task_dependency_finished_real;
+	task_class->dependency_canceled = iris_task_dependency_canceled_real;
 
 	object_class = G_OBJECT_CLASS (task_class);
 	object_class->finalize = iris_task_finalize;
