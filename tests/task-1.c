@@ -211,9 +211,29 @@ test17 (void)
 {
 	gint count = 0;
 	IrisTask *task = iris_task_new (test17_cb, &count, NULL);
+	iris_task_set_scheduler (task, mock_scheduler_new ());
 	/* run should complete synchronously because of our scheduler */
 	iris_task_run_full (task, test17_notify, &count);
 	g_assert_cmpint (count, ==, 2);
+}
+
+static void
+test18_cb (IrisTask *task,
+           gpointer  user_data)
+{
+	g_assert (IRIS_IS_TASK (task));
+	*((gboolean*)user_data) = TRUE;
+}
+
+static void
+test18 (void)
+{
+	gboolean success = FALSE;
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_add_callback (task, test18_cb, &success, NULL);
+	iris_task_run (task);
+	g_assert (success == TRUE);
 }
 
 int
@@ -241,6 +261,7 @@ main (int   argc,
 	g_test_add_func ("/task/new_full-scheduler", test15);
 	g_test_add_func ("/task/run", test16);
 	g_test_add_func ("/task/run_full", test17);
+	g_test_add_func ("/task/add_callback1", test18);
 
 	return g_test_run ();
 }

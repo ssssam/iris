@@ -25,18 +25,38 @@
 #include "iris-task-private.h"
 #include "iris-receiver-private.h"
 
-#define CAN_EXECUTE_NOW(t)                                      \
-	(((t->priv->flags & IRIS_TASK_FLAG_EXECUTING) == 0) &&  \
-	 ((t->priv->flags & IRIS_TASK_FLAG_CALLBACKS) == 0) &&  \
+#define CAN_EXECUTE_NOW(t)                                              \
+	(((t->priv->flags & IRIS_TASK_FLAG_EXECUTING) == 0) &&          \
+	 ((t->priv->flags & IRIS_TASK_FLAG_CALLBACKS) == 0) &&          \
 	 (t->priv->dependencies == NULL))
-#define CAN_CALLBACK_NOW(t)                                     \
-	((((t->priv->dependencies == NULL)                   && \
-	 (((t->priv->flags & IRIS_TASK_FLAG_EXECUTING) != 0) || \
+#define CAN_CALLBACK_NOW(t)                                             \
+	((((t->priv->dependencies == NULL)                   &&         \
+	 (((t->priv->flags & IRIS_TASK_FLAG_EXECUTING) != 0) ||         \
 	   (t->priv->flags & IRIS_TASK_FLAG_CALLBACKS) != 0))))
-#define CAN_FINISH_NOW(t)                                       \
-	((t->priv->dependencies == NULL) &&                     \
-	 (t->priv->handlers == NULL) &&				\
+#define CAN_FINISH_NOW(t)                                               \
+	((t->priv->dependencies == NULL) &&                             \
+	 (t->priv->handlers == NULL) &&				        \
 	 ((t->priv->flags & IRIS_TASK_FLAG_CALLBACKS) != 0))
+#define RUN_NEXT_HANDLER(t)                                             \
+	G_STMT_START {                                                  \
+		IrisTaskHandler *h;                                     \
+		if (t->priv->error)                                     \
+			h = move_next_errback(t);                       \
+		else                                                    \
+			h = move_next_callback(t);                      \
+		if (h) {                                                \
+			GValue param = {0,};                            \
+			g_value_init (&param, G_TYPE_OBJECT);           \
+			g_value_set_object (&param, t);                 \
+			if (t->priv->error)                             \
+				g_closure_invoke(h->errback,            \
+				                 NULL,1,&param,NULL);   \
+			else                                            \
+				g_closure_invoke(h->callback,           \
+				                 NULL,1,&param,NULL);   \
+			free_handler (h);                               \
+		}                                                       \
+	} G_STMT_END
 
 G_DEFINE_TYPE (IrisTask, iris_task, G_TYPE_OBJECT);
 
@@ -50,6 +70,58 @@ static void
 iris_task_dummy (IrisTask *task,
                  gpointer  user_data)
 {
+}
+
+static void
+free_handler (IrisTaskHandler *handler)
+{
+	if (handler->callback) {
+		g_closure_invalidate (handler->callback);
+		g_closure_unref (handler->callback);
+	}
+	if (handler->errback) {
+		g_closure_invalidate (handler->errback);
+		g_closure_unref (handler->errback);
+	}
+	g_slice_free (IrisTaskHandler, handler);
+}
+
+static IrisTaskHandler*
+move_next_handler (IrisTask *task)
+{
+	IrisTaskPrivate *priv = task->priv;
+	IrisTaskHandler *handler = NULL;
+
+	if (priv->handlers) {
+		handler = g_list_first (priv->handlers)->data;
+		priv->handlers = g_list_remove (priv->handlers, handler);
+	}
+
+	return handler;
+}
+
+static IrisTaskHandler*
+move_next_callback (IrisTask *task)
+{
+	IrisTaskHandler *handler;
+	while ((handler = move_next_handler (task)) != NULL) {
+		if (handler->callback)
+			break;
+		free_handler (handler);
+	}
+	return handler;
+}
+
+static IrisTaskHandler*
+move_next_errback (IrisTask *task)
+{
+	IrisTaskHandler *handler;
+	while ((handler = move_next_handler (task)) != NULL) {
+		if (handler->errback)
+			break;
+		free_handler (handler);
+	}
+	return handler;
 }
 
 /**
@@ -321,15 +393,18 @@ iris_task_add_callback_closure (IrisTask *task,
 {
 	IrisTaskPrivate *priv;
 	IrisMessage     *msg;
+	IrisTaskHandler *handler;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 	g_return_if_fail (closure != NULL);
 
 	priv = task->priv;
 
-	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_CALLBACK,
-	                             G_TYPE_CLOSURE,
-	                             g_closure_ref (closure));
+	handler = g_slice_new0 (IrisTaskHandler);
+	handler->callback = g_closure_ref (closure);
+
+	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_HANDLER,
+	                             G_TYPE_POINTER, handler);
 	iris_port_post (priv->port, msg);
 	iris_message_unref (msg);
 }
@@ -349,15 +424,18 @@ iris_task_add_errback_closure  (IrisTask *task,
 {
 	IrisTaskPrivate *priv;
 	IrisMessage     *msg;
+	IrisTaskHandler *handler;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 	g_return_if_fail (closure != NULL);
 
 	priv = task->priv;
 
-	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_ERRBACK,
-	                             G_TYPE_CLOSURE,
-	                             g_closure_ref (closure));
+	handler = g_slice_new0 (IrisTaskHandler);
+	handler->errback = g_closure_ref (closure);
+
+	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_HANDLER,
+	                             G_TYPE_POINTER, handler);
 	iris_port_post (priv->port, msg);
 	iris_message_unref (msg);
 }
@@ -736,10 +814,10 @@ iris_task_execute_notify (gpointer data)
 static void
 iris_task_callbacks_worker (IrisTask *task)
 {
-	GMutex       *mutex;
-	GCond        *cond;
-	GMainContext *context;
-	IrisMessage  *msg;
+	GMutex          *mutex;
+	GCond           *cond;
+	GMainContext    *context;
+	IrisMessage     *msg;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 
@@ -752,13 +830,11 @@ iris_task_callbacks_worker (IrisTask *task)
 	retry:
 		if (!g_main_context_wait (context, cond, mutex))
 			goto retry;
-
-		// get the next callback
-
+		RUN_NEXT_HANDLER (task);
 		g_mutex_unlock (mutex);
 	}
 	else {
-		// get the next callback
+		RUN_NEXT_HANDLER (task);
 	}
 
 	/* send message for next callback iteration
@@ -872,6 +948,13 @@ iris_task_handle_message_real (IrisTask    *task,
 					g_simple_async_result_complete ((GSimpleAsyncResult*)priv->async_result);
 			}
 		}
+		break;
+	}
+	case IRIS_TASK_MESSAGE_ADD_HANDLER: {
+		IrisTaskHandler *handler = g_value_get_pointer (iris_message_get_data (message));
+		g_return_if_fail (handler != NULL);
+		g_atomic_pointer_set (&priv->handlers,
+		                      g_list_append (priv->handlers, handler));
 		break;
 	}
 	default:
