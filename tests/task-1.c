@@ -187,6 +187,35 @@ test16 (void)
 	g_assert (success == TRUE);
 }
 
+static void
+test17_cb (IrisTask *task,
+           gpointer  user_data)
+{
+	gint *cb = user_data;
+	g_assert (IRIS_IS_TASK (task));
+	g_atomic_int_inc (cb);
+}
+
+static void
+test17_notify (GObject      *task,
+               GAsyncResult *res,
+               gpointer      user_data)
+{
+	gint *cb = user_data;
+	g_assert (IRIS_IS_TASK (task));
+	g_atomic_int_inc (cb);
+}
+
+static void
+test17 (void)
+{
+	gint count = 0;
+	IrisTask *task = iris_task_new (test17_cb, &count, NULL);
+	/* run should complete synchronously because of our scheduler */
+	iris_task_run_full (task, test17_notify, &count);
+	g_assert_cmpint (count, ==, 2);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -211,6 +240,7 @@ main (int   argc,
 	g_test_add_func ("/task/new_full-context", test14);
 	g_test_add_func ("/task/new_full-scheduler", test15);
 	g_test_add_func ("/task/run", test16);
+	g_test_add_func ("/task/run_full", test17);
 
 	return g_test_run ();
 }
