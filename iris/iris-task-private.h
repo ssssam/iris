@@ -33,11 +33,12 @@
 
 typedef enum
 {
-	IRIS_TASK_FLAG_EXECUTING = 1 << 0,
-	IRIS_TASK_FLAG_CANCELED  = 1 << 1,
-	IRIS_TASK_FLAG_FINISHED  = 1 << 2,
-	IRIS_TASK_FLAG_ASYNC     = 1 << 3,
-	IRIS_TASK_FLAG_CALLBACKS = 1 << 4,
+	IRIS_TASK_FLAG_EXECUTING    = 1 << 0,
+	IRIS_TASK_FLAG_CANCELED     = 1 << 1,
+	IRIS_TASK_FLAG_FINISHED     = 1 << 2,
+	IRIS_TASK_FLAG_ASYNC        = 1 << 3,
+	IRIS_TASK_FLAG_CALLBACKS    = 1 << 4,
+	IRIS_TASK_FLAG_NEED_EXECUTE = 1 << 5,
 } IrisTaskFlags;
 
 typedef enum
@@ -57,6 +58,12 @@ typedef enum
 	IRIS_TASK_MESSAGE_DEP_CANCELED,
 	IRIS_TASK_MESSAGE_ADD_OBSERVER,
 } IrisTaskMessageType;
+
+typedef struct
+{
+	GClosure *callback;
+	GClosure *errback;
+} IrisTaskHandler;
 
 struct _IrisTaskPrivate
 {

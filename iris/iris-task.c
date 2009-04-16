@@ -25,6 +25,15 @@
 #include "iris-task-private.h"
 #include "iris-receiver-private.h"
 
+#define TOGGLE_CALLBACKS(t)                                             \
+	g_atomic_int_set (&t->priv->flags,                              \
+		((t->priv->flags & ~IRIS_TASK_FLAG_EXECUTING)           \
+		 | IRIS_TASK_FLAG_CALLBACKS))
+#define TOGGLE_FINISHED(t)                                              \
+	g_atomic_int_set (&t->priv->flags,                              \
+		(((t->priv->flags & ~IRIS_TASK_FLAG_EXECUTING)          \
+		  & ~IRIS_TASK_FLAG_CALLBACKS)                          \
+		 | IRIS_TASK_FLAG_FINISHED))
 #define CAN_EXECUTE_NOW(t)                                              \
 	(((t->priv->flags & IRIS_TASK_FLAG_EXECUTING) == 0) &&          \
 	 ((t->priv->flags & IRIS_TASK_FLAG_CALLBACKS) == 0) &&          \
@@ -41,9 +50,9 @@
 	G_STMT_START {                                                  \
 		IrisTaskHandler *h;                                     \
 		if (t->priv->error)                                     \
-			h = move_next_errback(t);                       \
+			h = iris_task_next_errback(t);                  \
 		else                                                    \
-			h = move_next_callback(t);                      \
+			h = iris_task_next_callback(t);                 \
 		if (h) {                                                \
 			GValue param = {0,};                            \
 			g_value_init (&param, G_TYPE_OBJECT);           \
@@ -55,75 +64,28 @@
 				g_closure_invoke(h->callback,           \
 				                 NULL,1,&param,NULL);   \
 			g_value_unset (&param);                         \
-			free_handler (h);                               \
+			iris_task_handler_free (h);                     \
 		}                                                       \
 	} G_STMT_END
+#define FLAG_IS_ON(t,f) ((t->priv->flags & f) != 0)
+#define FLAG_IS_OFF(t,f) ((t->priv->flags & f) == 0)
+#define ENABLE_FLAG(t,f) G_STMT_START{t->priv->flags|=f;}G_STMT_END
+#define DISABLE_FLAG(t,f) G_STMT_START{t->priv->flags&=~f;}G_STMT_END
+#define PROGRESS_BLOCKED(t)                                             \
+	(t->priv->dependencies != NULL &&                               \
+	 FLAG_IS_OFF (t, IRIS_TASK_FLAG_CANCELED))
 
 G_DEFINE_TYPE (IrisTask, iris_task, G_TYPE_OBJECT);
 
-typedef struct
-{
-	GClosure *callback;
-	GClosure *errback;
-} IrisTaskHandler;
+static void             iris_task_dummy         (IrisTask *task, gpointer user_data);
+static void             iris_task_handler_free  (IrisTaskHandler *handler);
+static IrisTaskHandler* iris_task_next_handler  (IrisTask *task);
+static IrisTaskHandler* iris_task_next_callback (IrisTask *task);
+static IrisTaskHandler* iris_task_next_errback  (IrisTask *task);
 
-static void
-iris_task_dummy (IrisTask *task,
-                 gpointer  user_data)
-{
-}
-
-static void
-free_handler (IrisTaskHandler *handler)
-{
-	if (handler->callback) {
-		g_closure_invalidate (handler->callback);
-		g_closure_unref (handler->callback);
-	}
-	if (handler->errback) {
-		g_closure_invalidate (handler->errback);
-		g_closure_unref (handler->errback);
-	}
-	g_slice_free (IrisTaskHandler, handler);
-}
-
-static IrisTaskHandler*
-move_next_handler (IrisTask *task)
-{
-	IrisTaskPrivate *priv = task->priv;
-	IrisTaskHandler *handler = NULL;
-
-	if (priv->handlers) {
-		handler = g_list_first (priv->handlers)->data;
-		priv->handlers = g_list_remove (priv->handlers, handler);
-	}
-
-	return handler;
-}
-
-static IrisTaskHandler*
-move_next_callback (IrisTask *task)
-{
-	IrisTaskHandler *handler;
-	while ((handler = move_next_handler (task)) != NULL) {
-		if (handler->callback)
-			break;
-		free_handler (handler);
-	}
-	return handler;
-}
-
-static IrisTaskHandler*
-move_next_errback (IrisTask *task)
-{
-	IrisTaskHandler *handler;
-	while ((handler = move_next_handler (task)) != NULL) {
-		if (handler->errback)
-			break;
-		free_handler (handler);
-	}
-	return handler;
-}
+/**************************************************************************
+ *                          IrisTask Public API                           *
+ *************************************************************************/
 
 /**
  * iris_task_new:
@@ -191,7 +153,6 @@ iris_task_new_full (IrisTaskFunc   func,
                     GMainContext  *context)
 {
 	IrisTask *task = iris_task_new (func, user_data, notify);
-	/* scheduler first so future messages pass over this scheduler */
 	if (scheduler)
 		iris_task_set_scheduler (task, scheduler);
 	if (async)
@@ -770,12 +731,12 @@ iris_task_set_result_gtype (IrisTask *task,
 		g_warning ("%s: %s", G_STRFUNC, error);
 		g_free (error);
 		g_value_unset (&msg->data);
-		goto cleanup;
+		goto _cleanup;
 	}
 
 	iris_port_post (priv->port, msg);
 
-cleanup:
+_cleanup:
 	iris_message_unref (msg);
 }
 
@@ -800,20 +761,19 @@ iris_task_set_scheduler (IrisTask      *task,
 	iris_receiver_set_scheduler (priv->receiver, scheduler);
 }
 
+/**************************************************************************
+ *                      IrisTask Private Implementation                   *
+ *************************************************************************/
+
 static void
-iris_task_execute_worker (gpointer data)
+iris_task_execute (IrisTask *task)
 {
-	g_return_if_fail (IRIS_IS_TASK (data));
-	IRIS_TASK_GET_CLASS (data)->execute (IRIS_TASK (data));
+	g_return_if_fail (IRIS_IS_TASK (task));
+	IRIS_TASK_GET_CLASS (task)->execute (task);
 }
 
 static void
-iris_task_execute_notify (gpointer data)
-{
-}
-
-static void
-iris_task_callbacks_worker (IrisTask *task)
+iris_task_progress_callbacks (IrisTask *task)
 {
 	GMutex          *mutex;
 	GCond           *cond;
@@ -838,10 +798,14 @@ iris_task_callbacks_worker (IrisTask *task)
 		RUN_NEXT_HANDLER (task);
 	}
 
-	/* send message for next callback iteration
-	 * this allows for callbacks pausing execution for future
-	 * tasks to complete before more callbacks
+	/* The callbacks work by sending a message to push the callbacks
+	 * progress continuely forward.  This way callbacks are able to
+	 * pause further execution until other tasks have completed.
+	 *
+	 * Think of this as a psuedo tail-recursion, but with messages
+	 * and not really tail-recursion at all :-)
 	 */
+
 	msg = iris_message_new (IRIS_TASK_MESSAGE_CALLBACKS);
 	iris_port_post (task->priv->port, msg);
 	iris_message_unref (msg);
@@ -886,19 +850,381 @@ iris_task_complete_async_result (IrisTask *task)
 	if (priv->context) {
 		mutex = task->priv->context_mutex;
 		cond = task->priv->context_cond;
-
 		g_mutex_lock (mutex);
-
-	retry:
+	_retry:
 		if (!g_main_context_wait (priv->context, cond, mutex))
-			goto retry;
-
+			goto _retry;
 		g_simple_async_result_complete ((GSimpleAsyncResult*)priv->async_result);
-
 		g_mutex_unlock (mutex);
 	}
 	else {
 		g_simple_async_result_complete ((GSimpleAsyncResult*)priv->async_result);
+	}
+}
+
+static void
+iris_task_schedule (IrisTask *task)
+{
+	IrisTaskPrivate *priv;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+
+	priv = task->priv;
+
+	DISABLE_FLAG (task, IRIS_TASK_FLAG_NEED_EXECUTE);
+	ENABLE_FLAG (task, IRIS_TASK_FLAG_EXECUTING);
+
+	iris_scheduler_queue (priv->receiver->priv->scheduler,
+	                      (IrisCallback)iris_task_execute,
+	                      g_object_ref (task),
+	                      NULL);
+}
+
+/**************************************************************************
+ *                    IrisTask Message Handling Methods                   *
+ *************************************************************************/
+
+static void
+handle_complete (IrisTask    *task,
+                 IrisMessage *message)
+{
+	g_return_if_fail (FLAG_IS_ON (task, IRIS_TASK_FLAG_EXECUTING));
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_CALLBACKS));
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_FINISHED));
+
+	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELED))
+		return;
+
+	DISABLE_FLAG (task, IRIS_TASK_FLAG_EXECUTING);
+	ENABLE_FLAG (task, IRIS_TASK_FLAG_CALLBACKS);
+
+	if (!PROGRESS_BLOCKED (task))
+		iris_task_progress_callbacks (task);
+}
+
+static void
+handle_error (IrisTask    *task,
+              IrisMessage *message)
+{
+	IrisTaskPrivate *priv;
+	GError          *error;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (message != NULL);
+
+	priv = task->priv;
+	error = priv->error;
+	priv->error = g_value_get_pointer (iris_message_get_data (message));
+
+	if (error)
+		g_error_free (error);
+}
+
+static void
+handle_result (IrisTask    *task,
+               IrisMessage *message)
+{
+	IrisTaskPrivate *priv;
+	GValue          *result;
+	const GValue    *ro_result;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (message != NULL);
+
+	priv = task->priv;
+	result = &priv->result;
+	ro_result = iris_message_get_data (message);
+
+	if (G_VALUE_TYPE (result) != G_TYPE_INVALID)
+		g_value_unset (result);
+
+	g_value_init (result, G_VALUE_TYPE (ro_result));
+	g_value_copy (ro_result, result);
+}
+
+static void
+handle_cancel (IrisTask    *task,
+               IrisMessage *message)
+{
+	IrisTaskPrivate *priv;
+	gboolean         ignore;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (message != NULL);
+
+	priv = task->priv;
+
+	if (!(ignore = IRIS_TASK_GET_CLASS (task)->cancel (task))) {
+		ENABLE_FLAG (task, IRIS_TASK_FLAG_CANCELED);
+		ENABLE_FLAG (task, IRIS_TASK_FLAG_FINISHED);
+		iris_task_notify_observers (task, TRUE);
+	}
+}
+
+static void
+handle_context (IrisTask    *task,
+                IrisMessage *message)
+{
+	IrisTaskPrivate *priv;
+	GMainContext    *context;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (message != NULL);
+
+	priv = task->priv;
+	context = g_value_get_pointer (iris_message_get_data (message));
+
+	if (priv->context) {
+		g_mutex_free (priv->context_mutex);
+		g_cond_free (priv->context_cond);
+		priv->context_mutex = NULL;
+		priv->context_cond = NULL;
+	}
+
+	g_atomic_pointer_set (&priv->context, context);
+
+	if (priv->context) {
+		priv->context_mutex = g_mutex_new ();
+		priv->context_cond = g_cond_new ();
+	}
+}
+
+static void
+handle_execute (IrisTask    *task,
+                IrisMessage *message)
+{
+	IrisTaskPrivate *priv;
+	const GValue    *value = NULL;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (message != NULL);
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_EXECUTING));
+
+	priv = task->priv;
+	value = iris_message_get_data (message);
+
+	if (G_VALUE_TYPE (value) == G_TYPE_OBJECT)
+		priv->async_result = g_value_get_object (value);
+
+	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELED))
+		return;
+
+	if (!PROGRESS_BLOCKED (task))
+		iris_task_schedule (task);
+	else
+		ENABLE_FLAG (task, IRIS_TASK_FLAG_NEED_EXECUTE);
+}
+
+static void
+iris_task_progress_or_finish (IrisTask *task)
+{
+	IrisTaskPrivate *priv;
+	IrisMessage     *message;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+
+	priv = task->priv;
+
+	if (CAN_FINISH_NOW (task)) {
+		message = iris_message_new (IRIS_TASK_MESSAGE_FINISH);
+		iris_port_post (priv->port, message);
+		iris_message_unref (message);
+	}
+	else {
+		iris_task_progress_callbacks (task);
+	}
+}
+
+static void
+handle_callbacks (IrisTask    *task,
+                  IrisMessage *message)
+{
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (message != NULL);
+	g_return_if_fail (FLAG_IS_ON (task, IRIS_TASK_FLAG_EXECUTING) || FLAG_IS_ON (task, IRIS_TASK_FLAG_CALLBACKS));
+
+	if (!PROGRESS_BLOCKED (task))
+		iris_task_progress_or_finish (task);
+}
+
+static void
+handle_finish (IrisTask    *task,
+               IrisMessage *message)
+{
+	IrisTaskPrivate *priv;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (message != NULL);
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_FINISHED));
+	g_return_if_fail (FLAG_IS_ON (task, IRIS_TASK_FLAG_EXECUTING) || FLAG_IS_ON (task, IRIS_TASK_FLAG_CALLBACKS));
+
+	priv = task->priv;
+
+	if (PROGRESS_BLOCKED (task))
+		return;
+
+	if (priv->handlers) {
+		iris_task_progress_or_finish (task);
+		return;
+	}
+
+	iris_task_notify_observers (task, FALSE);
+
+	if (task->priv->async_result)
+		iris_task_complete_async_result (task);
+
+	g_object_unref (task);
+}
+
+static void
+handle_add_handler (IrisTask    *task,
+                    IrisMessage *message)
+{
+	IrisTaskPrivate *priv;
+	IrisTaskHandler *handler;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (message != NULL);
+
+	priv = task->priv;
+
+	if (!(handler = g_value_get_pointer (iris_message_get_data (message))))
+		return;
+
+	priv->handlers = g_list_append (priv->handlers, handler);
+
+	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED)) {
+		ENABLE_FLAG (task, IRIS_TASK_FLAG_CALLBACKS);
+		DISABLE_FLAG (task, IRIS_TASK_FLAG_FINISHED);
+		iris_task_progress_or_finish (task);
+	}
+}
+
+static void
+handle_dep_finished (IrisTask    *task,
+                     IrisMessage *message)
+{
+	IrisTaskClass *task_class;
+	IrisTask      *dep;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (message != NULL);
+	g_return_if_fail (PROGRESS_BLOCKED (task));
+
+	task_class = IRIS_TASK_GET_CLASS (task);
+	dep = IRIS_TASK (g_value_get_object (iris_message_get_data (message)));
+
+	task_class->dependency_finished (task, dep);
+
+	if (!PROGRESS_BLOCKED (task)) {
+		if (FLAG_IS_ON (task, IRIS_TASK_FLAG_NEED_EXECUTE))
+			iris_task_schedule (task);
+		else if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CALLBACKS))
+			iris_task_progress_or_finish (task);
+	}
+}
+
+static void
+handle_dep_canceled (IrisTask    *task,
+                     IrisMessage *message)
+{
+	IrisTaskClass *task_class;
+	IrisTask      *dep;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (message != NULL);
+	g_return_if_fail (PROGRESS_BLOCKED (task));
+
+	task_class = IRIS_TASK_GET_CLASS (task);
+	dep = IRIS_TASK (g_value_get_object (iris_message_get_data (message)));
+
+	task_class->dependency_canceled (task, dep);
+
+	if (!PROGRESS_BLOCKED (task)) {
+		if (FLAG_IS_ON (task, IRIS_TASK_FLAG_NEED_EXECUTE))
+			iris_task_schedule (task);
+		else if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CALLBACKS))
+			iris_task_progress_or_finish (task);
+	}
+}
+
+static void
+handle_add_dependency (IrisTask    *task,
+                       IrisMessage *message)
+{
+	IrisTaskPrivate *priv;
+	IrisTask        *dep;
+	IrisMessage     *msg;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (message != NULL);
+
+	priv = task->priv;
+	dep = g_value_get_object (iris_message_get_data (message));
+
+	priv->dependencies = g_list_prepend (priv->dependencies,
+	                                     g_object_ref (dep));
+
+	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED)) {
+		/* we were already done, lets move back to the
+		 * callbacks phase and turn off the finished bit
+		 */
+		ENABLE_FLAG (task, IRIS_TASK_FLAG_CALLBACKS);
+		DISABLE_FLAG (task, IRIS_TASK_FLAG_FINISHED);
+	}
+
+	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_OBSERVER,
+	                             IRIS_TYPE_TASK, task);
+	iris_port_post (dep->priv->port, msg);
+	iris_message_unref (msg);
+}
+
+static void
+handle_remove_dependency (IrisTask    *task,
+                          IrisMessage *message)
+{
+	IrisTaskPrivate *priv;
+	IrisTask        *dep;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (message != NULL);
+
+	priv = task->priv;
+	dep = g_value_get_object (iris_message_get_data (message));
+
+	if (g_list_find (priv->dependencies, dep)) {
+		priv->dependencies = g_list_remove (priv->dependencies, dep);
+		g_object_unref (dep);
+	}
+
+	if (!PROGRESS_BLOCKED (task)) {
+		if (FLAG_IS_ON (task, IRIS_TASK_FLAG_NEED_EXECUTE))
+			iris_task_schedule (task);
+		else if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CALLBACKS))
+			iris_task_progress_or_finish (task);
+	}
+}
+
+static void
+handle_add_observer (IrisTask    *task,
+                     IrisMessage *message)
+{
+	IrisTaskPrivate *priv;
+	IrisTask        *observed;
+	gboolean         cancel;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (message != NULL);
+
+	priv = task->priv;
+	observed = g_value_get_object (iris_message_get_data (message));
+
+	priv->observers = g_list_prepend (priv->observers,
+	                                  g_object_ref (observed));
+
+	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED)) {
+		cancel = FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELED);
+		iris_task_notify_observers (task, cancel);
 	}
 }
 
@@ -913,136 +1239,48 @@ iris_task_handle_message_real (IrisTask    *task,
 	priv = task->priv;
 
 	switch (message->what) {
-	case IRIS_TASK_MESSAGE_ERROR: {
-		GError *error = priv->error;
-		priv->error = g_value_get_pointer (iris_message_get_data (message));
-		if (error)
-			g_error_free (error);
+	case IRIS_TASK_MESSAGE_ERROR:
+		handle_error (task, message);
 		break;
-	}
-	case IRIS_TASK_MESSAGE_RESULT: {
-		if (G_VALUE_TYPE (&priv->result) != G_TYPE_INVALID)
-			g_value_unset (&priv->result);
-		g_value_init (&priv->result, G_VALUE_TYPE (iris_message_get_data (message)));
-		g_value_copy (iris_message_get_data (message), &priv->result);
+	case IRIS_TASK_MESSAGE_RESULT:
+		handle_result (task, message);
 		break;
-	}
-	case IRIS_TASK_MESSAGE_CANCEL: {
-		/* the class can handle cancel and deny it */
-		if (!IRIS_TASK_GET_CLASS (task)->cancel (task)) {
-			priv->flags |= IRIS_TASK_FLAG_CANCELED;
-			if (priv->observers)
-				iris_task_notify_observers (task, TRUE);
-		}
+	case IRIS_TASK_MESSAGE_CANCEL:
+		handle_cancel (task, message);
 		break;
-	}
-	case IRIS_TASK_MESSAGE_CONTEXT: {
-		if (priv->context) {
-			g_mutex_free (priv->context_mutex);
-			g_cond_free (priv->context_cond);
-			priv->context_mutex = NULL;
-			priv->context_cond = NULL;
-		}
-		g_atomic_pointer_set (&priv->context,
-		                      g_value_get_pointer (iris_message_get_data (message)));
-		if (priv->context) {
-			priv->context_mutex = g_mutex_new ();
-			priv->context_cond = g_cond_new ();
-		}
+	case IRIS_TASK_MESSAGE_CONTEXT:
+		handle_context (task, message);
 		break;
-	}
-	case IRIS_TASK_MESSAGE_EXECUTE: {
-		/* if the execute message has an async result to complete,
-		 * we need to store it for later execution.
-		 */
-		if (G_VALUE_TYPE (iris_message_get_data (message)) == G_TYPE_OBJECT)
-			priv->async_result = g_value_get_object (iris_message_get_data (message));
-		if (CAN_EXECUTE_NOW (task)) {
-			g_atomic_int_set (&priv->flags,
-			                  priv->flags |= IRIS_TASK_FLAG_EXECUTING);
-			iris_scheduler_queue (priv->receiver->priv->scheduler,
-			                      iris_task_execute_worker,
-			                      g_object_ref (task),
-			                      iris_task_execute_notify);
-		}
+	case IRIS_TASK_MESSAGE_EXECUTE:
+		handle_execute (task, message);
 		break;
-	}
-	case IRIS_TASK_MESSAGE_COMPLETE: {
-		if (CAN_CALLBACK_NOW (task)) {
-			g_atomic_int_set (&priv->flags,
-			                  (priv->flags & ~IRIS_TASK_FLAG_EXECUTING) | IRIS_TASK_FLAG_CALLBACKS);
-			/* start the callbacks phase */
-			iris_task_callbacks_worker (task);
-		}
+	case IRIS_TASK_MESSAGE_COMPLETE:
+		handle_complete (task, message);
 		break;
-	}
-	case IRIS_TASK_MESSAGE_CALLBACKS: {
-		if (CAN_CALLBACK_NOW (task)) {
-			if (CAN_FINISH_NOW (task)) {
-				IrisMessage *fmsg = iris_message_new (IRIS_TASK_MESSAGE_FINISH);
-				iris_port_post (priv->port, fmsg);
-				iris_message_unref (fmsg);
-			}
-			else iris_task_callbacks_worker (task);
-		}
+	case IRIS_TASK_MESSAGE_CALLBACKS:
+		handle_callbacks (task,message);
 		break;
-	}
-	case IRIS_TASK_MESSAGE_FINISH: {
-		if (CAN_FINISH_NOW (task)) {
-			/* notify our observers that we are complete */
-			if (priv->observers)
-				iris_task_notify_observers (task, FALSE);
-
-			/* finish our async result if we have one */
-			if (priv->async_result)
-				iris_task_complete_async_result (task);
-
-			/* done with our private task ref */
-			g_object_unref (task);
-		}
+	case IRIS_TASK_MESSAGE_FINISH:
+		handle_finish (task, message);
 		break;
-	}
-	case IRIS_TASK_MESSAGE_ADD_HANDLER: {
-		IrisTaskHandler *handler = g_value_get_pointer (iris_message_get_data (message));
-		g_return_if_fail (handler != NULL);
-		g_atomic_pointer_set (&priv->handlers,
-		                      g_list_append (priv->handlers, handler));
+	case IRIS_TASK_MESSAGE_ADD_HANDLER:
+		handle_add_handler (task, message);
 		break;
-	}
-	case IRIS_TASK_MESSAGE_DEP_FINISHED: {
-		IRIS_TASK_GET_CLASS (task)->dependency_finished (task,
-				IRIS_TASK (g_value_get_object (iris_message_get_data (message))));
-		/* FIXME: Check for dispatch? */
+	case IRIS_TASK_MESSAGE_DEP_FINISHED:
+		handle_dep_finished (task, message);
 		break;
-	}
-	case IRIS_TASK_MESSAGE_DEP_CANCELED: {
-		IRIS_TASK_GET_CLASS (task)->dependency_canceled (task,
-				IRIS_TASK (g_value_get_object (iris_message_get_data (message))));
-		/* FIXME: Check for dispatch? */
+	case IRIS_TASK_MESSAGE_DEP_CANCELED:
+		handle_dep_canceled (task, message);
 		break;
-	}
-	case IRIS_TASK_MESSAGE_ADD_DEPENDENCY: {
-		priv->dependencies = g_list_prepend (priv->dependencies,
-					g_object_ref (g_value_get_object (iris_message_get_data (message))));
-		IrisMessage *msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_OBSERVER,
-				IRIS_TYPE_TASK, task);
-		iris_port_post (IRIS_TASK (g_value_get_object (iris_message_get_data (message)))->priv->port, msg);
-		iris_message_unref (msg);
+	case IRIS_TASK_MESSAGE_ADD_DEPENDENCY:
+		handle_add_dependency (task, message);
 		break;
-	}
-	case IRIS_TASK_MESSAGE_REMOVE_DEPENDENCY: {
-		IrisTask *dep = g_value_get_object (iris_message_get_data (message));
-		priv->dependencies = g_list_remove (priv->dependencies, dep);
-		g_object_unref (dep);
-		/* FIXME: Check for dispatch? */
+	case IRIS_TASK_MESSAGE_REMOVE_DEPENDENCY:
+		handle_remove_dependency (task, message);
 		break;
-	}
-	case IRIS_TASK_MESSAGE_ADD_OBSERVER: {
-		IrisTask *obs = g_value_get_object (iris_message_get_data (message));
-		priv->observers = g_list_prepend (priv->observers, g_object_ref (obs));
-		/* FIXME: If we are finished, we should notify our new observer */
+	case IRIS_TASK_MESSAGE_ADD_OBSERVER:
+		handle_add_observer (task, message);
 		break;
-	}
 	default:
 		g_assert_not_reached ();
 		break;
@@ -1139,4 +1377,73 @@ iris_task_init (IrisTask *task)
 	                                         iris_task_handle_message,
 	                                         task);
 	iris_port_set_receiver (priv->port, priv->receiver);
+}
+
+static void
+iris_task_dummy (IrisTask *task, gpointer user_data)
+{
+}
+
+/*************************************************************************
+ *                        IrisTaskHandler API                            *
+ *************************************************************************/
+
+static void
+iris_task_handler_free (IrisTaskHandler *handler)
+{
+	if (handler->callback) {
+		g_closure_invalidate (handler->callback);
+		g_closure_unref (handler->callback);
+	}
+
+	if (handler->errback) {
+		g_closure_invalidate (handler->errback);
+		g_closure_unref (handler->errback);
+	}
+
+	g_slice_free (IrisTaskHandler, handler);
+}
+
+static IrisTaskHandler*
+iris_task_next_handler (IrisTask *task)
+{
+	IrisTaskPrivate *priv;
+	IrisTaskHandler *handler = NULL;
+
+	priv = task->priv;
+
+	if (priv->handlers) {
+		handler = g_list_first (priv->handlers)->data;
+		priv->handlers = g_list_remove (priv->handlers, handler);
+	}
+
+	return handler;
+}
+
+static IrisTaskHandler*
+iris_task_next_callback (IrisTask *task)
+{
+	IrisTaskHandler *handler;
+
+	while ((handler = iris_task_next_handler (task)) != NULL) {
+		if (handler->callback)
+			break;
+		iris_task_handler_free (handler);
+	}
+
+	return handler;
+}
+
+static IrisTaskHandler*
+iris_task_next_errback (IrisTask *task)
+{
+	IrisTaskHandler *handler;
+
+	while ((handler = iris_task_next_handler (task)) != NULL) {
+		if (handler->errback)
+			break;
+		iris_task_handler_free (handler);
+	}
+
+	return handler;
 }
