@@ -72,6 +72,18 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 
 	priv = receiver->priv;
 
+	/* arbiter cannot be changed after instantiation, so it is safe to
+	 * check the arbiter pointer with out a lock or memory barrier.
+	 * Without an arbiter, we cannot pause, so we can assume that the
+	 * flood gates are open if we do not have a max allowed or an
+	 * arbiter. (Fast-Path)
+	 */
+	if (!priv->arbiter && !priv->max_active) {
+		execute = TRUE;
+		status = IRIS_DELIVERY_ACCEPTED;
+		goto _post_decision;
+	}
+
 	g_mutex_lock (priv->mutex);
 
 	if (g_atomic_int_get (&priv->completed) == TRUE) {
@@ -111,10 +123,11 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 			g_assert_not_reached ();
 		}
 	}
-	else {
-		execute = TRUE;
-		status = IRIS_DELIVERY_ACCEPTED;
-	}
+	else g_assert_not_reached ();
+
+	g_mutex_unlock (priv->mutex);
+
+_post_decision:
 
 	/* We do this before leaving the lock to prevent a potential
 	 * race condition where we could go over our max concurrent.
@@ -123,12 +136,14 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 		g_atomic_int_inc (&priv->active);
 
 	/* If our execution will be the only execution allowed, so make
-	 * sure that we mark the receiver as it is completed.
+	 * sure that we mark the receiver as it is completed.  Also, we
+	 * need to compare exchange just incase we race and lose.  This
+	 * could happen if we are not persistent and do not have an arbiter,
+	 * which means we avoid the lock above.
 	 */
 	if (!priv->persistent && execute)
-		g_atomic_int_set (&priv->completed, TRUE);
-
-	g_mutex_unlock (priv->mutex);
+		if (!g_atomic_int_compare_and_exchange (&priv->completed, FALSE, TRUE))
+			execute = FALSE;
 
 	if (execute) {
 		worker = g_slice_new0 (IrisWorkerData);
