@@ -1286,8 +1286,7 @@ static void
 iris_task_dependency_canceled_real (IrisTask *task,
                                     IrisTask *dependency)
 {
-	/* Default is to cancel our task if a dependent task is canceled */
-	g_debug ("!!!!!!!!!!!!!!!!! C");
+	iris_task_cancel (task);
 }
 
 static void

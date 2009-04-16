@@ -356,6 +356,20 @@ test21 (void)
 	g_assert (iris_task_is_finished (task2));
 }
 
+static void
+test22 (void)
+{
+	IrisScheduler *sched = mock_scheduler_new ();
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	iris_task_set_scheduler (task, sched);
+	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
+	iris_task_set_scheduler (task, sched);
+	iris_task_add_dependency (task2, task);
+	iris_task_cancel (task);
+	g_assert (iris_task_is_canceled (task));
+	g_assert (iris_task_is_canceled (task2));
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -385,6 +399,7 @@ main (int   argc,
 	g_test_add_func ("/task/callback-errback1", test19);
 	g_test_add_func ("/task/callback-errback2", test20);
 	g_test_add_func ("/task/dep-clean-finish1", test21);
+	g_test_add_func ("/task/cancel2", test22);
 
 	return g_test_run ();
 }
