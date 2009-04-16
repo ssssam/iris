@@ -1082,6 +1082,9 @@ handle_add_handler (IrisTask    *task,
 	if (!(handler = g_value_get_pointer (iris_message_get_data (message))))
 		return;
 
+	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELED))
+		return;
+
 	priv->handlers = g_list_append (priv->handlers, handler);
 
 	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED)) {
