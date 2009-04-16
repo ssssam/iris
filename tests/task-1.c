@@ -236,6 +236,40 @@ test18 (void)
 	g_assert (success == TRUE);
 }
 
+static void
+test19_cb1 (IrisTask *task,
+            gpointer  user_data)
+{
+	g_assert (IRIS_IS_TASK (task));
+	*((gboolean*)user_data) = TRUE;
+	IRIS_TASK_THROW_NEW (task, 1, 1, "Some error message");
+}
+
+static void
+test19_cb2 (IrisTask *task,
+            gpointer  user_data)
+{
+	g_assert (IRIS_IS_TASK (task));
+	*((gboolean*)user_data) = TRUE;
+	g_assert (task->priv->error != NULL);
+	IRIS_TASK_CATCH (task, NULL);
+}
+
+static void
+test19 (void)
+{
+	gboolean cb1 = FALSE;
+	gboolean cb2 = FALSE;
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_add_callback (task, test19_cb1, &cb1, NULL);
+	iris_task_add_errback (task, test19_cb2, &cb2, NULL);
+	iris_task_run (task);
+	g_assert (cb1 == TRUE);
+	g_assert (cb2 == TRUE);
+	g_assert (task->priv->error == NULL);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -262,6 +296,7 @@ main (int   argc,
 	g_test_add_func ("/task/run", test16);
 	g_test_add_func ("/task/run_full", test17);
 	g_test_add_func ("/task/add_callback1", test18);
+	g_test_add_func ("/task/callback-errback1", test19);
 
 	return g_test_run ();
 }
