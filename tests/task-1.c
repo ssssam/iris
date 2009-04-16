@@ -346,10 +346,13 @@ test21 (void)
 	iris_task_set_scheduler (task, sched);
 	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, sched);
-	iris_task_add_dependency (task, task2);
+	iris_task_add_dependency (task2, task);
 	iris_task_run (task2);
+	g_assert ((task2->priv->flags & IRIS_TASK_FLAG_NEED_EXECUTE) != 0);
+	g_assert ((task2->priv->flags & IRIS_TASK_FLAG_FINISHED) == 0);
 	g_assert (!iris_task_is_finished (task2));
 	iris_task_run (task);
+	g_assert (iris_task_is_finished (task));
 	g_assert (iris_task_is_finished (task2));
 }
 
