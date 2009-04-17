@@ -212,6 +212,15 @@ next_message:
 	goto next_message;
 }
 
+GType
+iris_thread_get_type (void)
+{
+	static GType thread_type = 0;
+	if (G_UNLIKELY (!thread_type))
+		thread_type = g_pointer_type_register_static ("IrisThread");
+	return thread_type;
+}
+
 /**
  * iris_thread_new:
  * @exclusive: the thread is exclusive

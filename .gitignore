@@ -40,6 +40,8 @@ tests/stack-1
 tests/stack-1.o
 tests/queue-1
 tests/queue-1.o
+tests/thread-1
+tests/thread-1.o
 tests/scheduler-manager-1
 tests/scheduler-manager-1.o
 tests/lf-queue-1

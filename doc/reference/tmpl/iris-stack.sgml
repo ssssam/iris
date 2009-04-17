@@ -22,8 +22,6 @@ IrisStack
 
 </para>
 
-@head: 
-@free_list: 
 
 <!-- ##### FUNCTION iris_stack_new ##### -->
 <para>
@@ -49,13 +47,5 @@ IrisStack
 
 @stack: 
 @Returns: 
-
-
-<!-- ##### FUNCTION iris_stack_free ##### -->
-<para>
-
-</para>
-
-@stack: 
 
 

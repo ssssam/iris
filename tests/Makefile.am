@@ -13,6 +13,7 @@ noinst_PROGRAMS =		\
 	queue-1			\
 	lf-queue-1		\
 	task-1			\
+	thread-1		\
 	ws-queue-1		\
 	$(NULL)
 
@@ -27,6 +28,7 @@ TEST_PROGS +=			\
 	queue-1			\
 	lf-queue-1		\
 	task-1			\
+	thread-1		\
 	ws-queue-1		\
 	$(NULL)
 
@@ -47,3 +49,4 @@ queue_1_sources = queue-1.c
 lf_queue_1_sources = lf-queue-1.c
 ws_queue_1_sources = ws-queue-1.c
 task_1_sources = task-1.c
+thread_1_sources = thread-1.c

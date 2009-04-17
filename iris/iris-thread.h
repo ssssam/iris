@@ -28,6 +28,8 @@
 
 G_BEGIN_DECLS
 
+#define IRIS_TYPE_THREAD (iris_thread_get_type())
+
 struct _IrisThread
 {
 	gpointer       user_data;
@@ -51,6 +53,8 @@ struct _IrisThreadWork
 	gpointer     data;
 	gboolean     taken;
 };
+
+GType           iris_thread_get_type   (void) G_GNUC_CONST;
 
 /* Thread abstraction for schedulers */
 IrisThread*     iris_thread_new        (gboolean exclusive);
