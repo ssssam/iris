@@ -34,7 +34,22 @@ test4 (void)
 	g_assert (stack != NULL);
 	g_assert (stack->head != NULL);
 	g_assert (stack->head->next == NULL);
-	iris_stack_free (stack);
+	iris_stack_unref (stack);
+}
+
+static void
+test5 (void)
+{
+	IrisStack *stack = iris_stack_new ();
+	g_assert (stack != NULL);
+	g_assert (stack->head != NULL);
+	g_assert (stack->head->next == NULL);
+	g_assert_cmpint (stack->ref_count, ==, 1);
+	stack = iris_stack_ref (stack);
+	g_assert_cmpint (stack->ref_count, ==, 2);
+	iris_stack_unref (stack);
+	g_assert_cmpint (stack->ref_count, ==, 1);
+	iris_stack_unref (stack);
 }
 
 int
@@ -48,7 +63,8 @@ main (int   argc,
 	g_test_add_func ("/stack/new", test1);
 	g_test_add_func ("/stack/pop_empty", test2);
 	g_test_add_func ("/stack/push_pop", test3);
-	g_test_add_func ("/stack/free", test4);
+	g_test_add_func ("/stack/unref", test4);
+	g_test_add_func ("/stack/ref-unref", test5);
 
 	return g_test_run ();
 }

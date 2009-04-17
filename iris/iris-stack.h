@@ -21,7 +21,7 @@
 #ifndef __IRIS_STACK_H__
 #define __IRIS_STACK_H__
 
-#include <glib.h>
+#include <glib-object.h>
 
 #include "iris-types.h"
 #include "iris-free-list.h"
@@ -29,16 +29,22 @@
 
 G_BEGIN_DECLS
 
+#define IRIS_TYPE_STACK (iris_stack_get_type())
+
 struct _IrisStack
 {
-	IrisLink     *head;
-	IrisFreeList *free_list;
+	/*< private >*/
+	IrisLink      *head;
+	IrisFreeList  *free_list;
+	volatile gint  ref_count;
 };
 
-IrisStack* iris_stack_new  (void);
-void       iris_stack_push (IrisStack *stack, gpointer data);
-gpointer   iris_stack_pop  (IrisStack *stack);
-void       iris_stack_free (IrisStack *stack);
+GType      iris_stack_get_type (void) G_GNUC_CONST;
+IrisStack* iris_stack_new      (void);
+void       iris_stack_push     (IrisStack *stack, gpointer data);
+gpointer   iris_stack_pop      (IrisStack *stack);
+IrisStack* iris_stack_ref      (IrisStack *stack);
+void       iris_stack_unref    (IrisStack *stack);
 
 G_END_DECLS
 

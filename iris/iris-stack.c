@@ -40,6 +40,58 @@
  * thread, the problem can still exist.
  */
 
+static void iris_stack_free (IrisStack *stack);
+
+GType
+iris_stack_get_type (void)
+{
+	static GType stack_type = 0;
+	if (G_UNLIKELY (!stack_type))
+		stack_type = g_boxed_type_register_static (
+				"IrisStack",
+				(GBoxedCopyFunc)iris_stack_ref,
+				(GBoxedFreeFunc)iris_stack_unref);
+	return stack_type;
+}
+
+/**
+ * iris_stack_ref:
+ * @stack: An #IrisStack
+ *
+ * Atomically increases the reference count of @stack by one.
+ *
+ * Return value: the passed #IrisStack, which the reference count
+ *   increased by one.
+ */
+IrisStack*
+iris_stack_ref (IrisStack *stack)
+{
+	g_return_val_if_fail (stack != NULL, NULL);
+	g_return_val_if_fail (stack->ref_count > 0, NULL);
+
+	g_atomic_int_inc (&stack->ref_count);
+
+	return stack;
+}
+
+/**
+ * iris_stack_unref:
+ * @stack: An #IrisStack
+ *
+ * Atomically decreases the reference count of @stack.  If the reference
+ * count reaches zero, the object is destroyed and all its allocated
+ * resources are freed.
+ */
+void
+iris_stack_unref (IrisStack *stack)
+{
+	g_return_if_fail (stack != NULL);
+	g_return_if_fail (stack->ref_count > 0);
+
+	if (g_atomic_int_dec_and_test (&stack->ref_count))
+		iris_stack_free (stack);
+}
+
 /**
  * iris_stack_new:
  *
@@ -56,40 +108,9 @@ iris_stack_new (void)
 	stack = g_slice_new0 (IrisStack);
 	stack->head = g_slice_new0 (IrisLink);
 	stack->free_list = iris_free_list_new ();
+	stack->ref_count = 1;
 
 	return stack;
-}
-
-/**
- * iris_stack_free:
- * @stack: An #IrisStack
- *
- * Frees the memory associated with the #IrisStack.  This should never
- * be called while other threads are still accessing the structure.
- */
-void
-iris_stack_free (IrisStack *stack)
-{
-	IrisLink *link, *tmp;
-
-	g_return_if_fail (stack != NULL);
-
-_try_swap:
-	link = stack->head;
-	if (!g_atomic_pointer_compare_and_exchange ((gpointer*)&stack->head, link, NULL))
-		goto _try_swap;
-
-	link = G_STAMP_POINTER_GET_POINTER (link);
-
-	while (link) {
-		tmp = G_STAMP_POINTER_GET_POINTER (link->next);
-		if (link)
-			g_slice_free (IrisLink, link);
-		link = tmp;
-	}
-
-	iris_free_list_free (stack->free_list);
-	g_slice_free (IrisStack, stack);
 }
 
 /**
@@ -148,4 +169,29 @@ iris_stack_pop (IrisStack *stack)
 	iris_free_list_put (stack->free_list, link);
 
 	return result;
+}
+
+static void
+iris_stack_free (IrisStack *stack)
+{
+	IrisLink *link, *tmp;
+
+	g_return_if_fail (stack != NULL);
+
+_try_swap:
+	link = stack->head;
+	if (!g_atomic_pointer_compare_and_exchange ((gpointer*)&stack->head, link, NULL))
+		goto _try_swap;
+
+	link = G_STAMP_POINTER_GET_POINTER (link);
+
+	while (link) {
+		tmp = G_STAMP_POINTER_GET_POINTER (link->next);
+		if (link)
+			g_slice_free (IrisLink, link);
+		link = tmp;
+	}
+
+	iris_free_list_free (stack->free_list);
+	g_slice_free (IrisStack, stack);
 }
