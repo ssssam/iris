@@ -107,5 +107,5 @@ iris_arbiter_coordinate (IrisReceiver *exclusive,
                          IrisReceiver *concurrent,
                          IrisReceiver *teardown)
 {
-	return iris_concurrency_arbiter_new (exclusive, concurrent, teardown);
+	return iris_coordination_arbiter_new (exclusive, concurrent, teardown);
 }

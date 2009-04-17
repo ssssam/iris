@@ -23,7 +23,7 @@
 
 #include "iris-types.h"
 #include "iris-arbiter.h"
-#include "iris-concurrency-arbiter.h"
+#include "iris-coordination-arbiter.h"
 #include "iris-free-list.h"
 #include "iris-link.h"
 #include "iris-lfqueue.h"

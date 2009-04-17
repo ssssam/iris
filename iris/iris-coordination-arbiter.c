@@ -1,4 +1,4 @@
-/* iris-concurrency-arbiter.c
+/* iris-coordination-arbiter.c
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -20,7 +20,7 @@
 
 #include "iris-arbiter.h"
 #include "iris-arbiter-private.h"
-#include "iris-concurrency-arbiter.h"
+#include "iris-coordination-arbiter.h"
 #include "iris-port.h"
 #include "iris-receiver.h"
 #include "iris-receiver-private.h"
@@ -32,10 +32,10 @@
 	} G_STMT_END
 
 /**
- * SECTION:iris-concurrency-receiver
+ * SECTION:iris-coordination-receiver
  * @short_description: #IrisArbiter to manage exclusive vs concurrent messages
  *
- * The #IrisConcurrencyArbiter provides management over how incoming messages
+ * The #IrisCoordinationArbiter provides management over how incoming messages
  * can be handled.  Its primary purpose is to allow messages to be as
  * concurrent as possible until an exclusive message is received.  When that
  * happens, it will bleed off the concurrent messages and then run the
@@ -43,69 +43,69 @@
  * gates can re-open and throttle back up to full concurrency.
  */
 
-struct _IrisConcurrencyArbiterPrivate
+struct _IrisCoordinationArbiterPrivate
 {
 	IrisReceiver *exclusive;
 	IrisReceiver *concurrent;
 	IrisReceiver *teardown;
 };
 
-G_DEFINE_TYPE (IrisConcurrencyArbiter,
-               iris_concurrency_arbiter,
+G_DEFINE_TYPE (IrisCoordinationArbiter,
+               iris_coordination_arbiter,
                IRIS_TYPE_ARBITER);
 
 static IrisReceiveDecision
-iris_concurrency_arbiter_can_receive (IrisArbiter  *arbiter,
+iris_coordination_arbiter_can_receive (IrisArbiter  *arbiter,
                                       IrisReceiver *receiver)
 {
 	return IRIS_RECEIVE_NOW;
 }
 
 static void
-iris_concurrency_arbiter_receive_completed (IrisArbiter  *arbiter,
+iris_coordination_arbiter_receive_completed (IrisArbiter  *arbiter,
                                             IrisReceiver *receiver)
 {
 }
 
 static void
-iris_concurrency_arbiter_finalize (GObject *object)
+iris_coordination_arbiter_finalize (GObject *object)
 {
-	G_OBJECT_CLASS (iris_concurrency_arbiter_parent_class)->finalize (object);
+	G_OBJECT_CLASS (iris_coordination_arbiter_parent_class)->finalize (object);
 }
 
 static void
-iris_concurrency_arbiter_class_init (IrisConcurrencyArbiterClass *klass)
+iris_coordination_arbiter_class_init (IrisCoordinationArbiterClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 	IrisArbiterClass *arbiter_class = IRIS_ARBITER_CLASS (klass);
 
-	arbiter_class->can_receive = iris_concurrency_arbiter_can_receive;
-	arbiter_class->receive_completed = iris_concurrency_arbiter_receive_completed;
-	object_class->finalize = iris_concurrency_arbiter_finalize;
+	arbiter_class->can_receive = iris_coordination_arbiter_can_receive;
+	arbiter_class->receive_completed = iris_coordination_arbiter_receive_completed;
+	object_class->finalize = iris_coordination_arbiter_finalize;
 
-	g_type_class_add_private (object_class, sizeof(IrisConcurrencyArbiterPrivate));
+	g_type_class_add_private (object_class, sizeof(IrisCoordinationArbiterPrivate));
 }
 
 static void
-iris_concurrency_arbiter_init (IrisConcurrencyArbiter *arbiter)
+iris_coordination_arbiter_init (IrisCoordinationArbiter *arbiter)
 {
 	arbiter->priv = G_TYPE_INSTANCE_GET_PRIVATE (arbiter,
-	                                             IRIS_TYPE_CONCURRENCY_ARBITER,
-	                                             IrisConcurrencyArbiterPrivate);
+	                                             IRIS_TYPE_COORDINATION_ARBITER,
+	                                             IrisCoordinationArbiterPrivate);
 }
 
 IrisArbiter*
-iris_concurrency_arbiter_new (IrisReceiver *exclusive,
+iris_coordination_arbiter_new (IrisReceiver *exclusive,
                               IrisReceiver *concurrent,
                               IrisReceiver *teardown)
 {
-	IrisConcurrencyArbiter *arbiter;
+	IrisCoordinationArbiter *arbiter;
 
 	g_return_val_if_fail (exclusive  == NULL || IRIS_IS_RECEIVER (exclusive),  NULL);
 	g_return_val_if_fail (concurrent == NULL || IRIS_IS_RECEIVER (concurrent), NULL);
 	g_return_val_if_fail (teardown   == NULL || IRIS_IS_RECEIVER (teardown),   NULL);
 	
-	arbiter = g_object_new (IRIS_TYPE_CONCURRENCY_ARBITER, NULL);
+	arbiter = g_object_new (IRIS_TYPE_COORDINATION_ARBITER, NULL);
 	arbiter->priv->exclusive = exclusive;
 	arbiter->priv->concurrent = concurrent;
 	arbiter->priv->teardown = teardown;
