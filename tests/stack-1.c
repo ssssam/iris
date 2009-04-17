@@ -52,6 +52,12 @@ test5 (void)
 	iris_stack_unref (stack);
 }
 
+static void
+test6 (void)
+{
+	g_assert_cmpint (IRIS_TYPE_STACK, !=, G_TYPE_INVALID);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -65,6 +71,7 @@ main (int   argc,
 	g_test_add_func ("/stack/push_pop", test3);
 	g_test_add_func ("/stack/unref", test4);
 	g_test_add_func ("/stack/ref-unref", test5);
+	g_test_add_func ("/stack/get_type", test6);
 
 	return g_test_run ();
 }
