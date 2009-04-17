@@ -390,3 +390,15 @@ iris_wsqueue_try_steal (IrisWSQueue *queue,
 
 	return result;
 }
+
+GType
+iris_wsqueue_get_type (void)
+{
+	static GType wsqueue_type = 0;
+	if (G_UNLIKELY (!wsqueue_type))
+		wsqueue_type = g_boxed_type_register_static (
+				"IrisWSQueue",
+				(GBoxedCopyFunc)iris_queue_ref,
+				(GBoxedFreeFunc)iris_queue_unref);
+	return wsqueue_type;
+}

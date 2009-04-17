@@ -21,7 +21,7 @@
 #ifndef __IRIS_WSQUEUE_H__
 #define __IRIS_WSQUEUE_H__
 
-#include <glib.h>
+#include <glib-object.h>
 
 #include "iris-free-list.h"
 #include "iris-link.h"
@@ -30,6 +30,7 @@
 
 G_BEGIN_DECLS
 
+#define IRIS_TYPE_WSQUEUE (iris_wsqueue_get_type())
 #define IRIS_WSQUEUE(q) ((IrisWSQueue*)q)
 
 struct _IrisWSQueue
@@ -47,6 +48,7 @@ struct _IrisWSQueue
 	gulong         length;
 };
 
+GType      iris_wsqueue_get_type   (void) G_GNUC_CONST;
 IrisQueue* iris_wsqueue_new        (IrisQueue *global, IrisRRobin *peers);
 gpointer   iris_wsqueue_try_steal  (IrisWSQueue *queue, guint timeout);
 void       iris_wsqueue_local_push (IrisWSQueue *queue, gpointer data);

@@ -138,6 +138,12 @@ test9 (void)
 	}
 }
 
+static void
+test10 (void)
+{
+	g_assert_cmpint (IRIS_TYPE_WSQUEUE, !=, G_TYPE_INVALID);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -155,6 +161,7 @@ main (int   argc,
 	g_test_add_func ("/wsqueue/try_pop1", test7);
 	g_test_add_func ("/wsqueue/timed_pop1", test8);
 	g_test_add_func ("/wsqueue/many_push1", test9);
+	g_test_add_func ("/wsqueue/get_type", test10);
 
 	return g_test_run ();
 }
