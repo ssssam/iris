@@ -67,3 +67,10 @@ iris_arbiter_can_receive (IrisArbiter  *arbiter,
 		return IRIS_ARBITER_GET_CLASS (arbiter)->can_receive (arbiter, receiver);
 	return IRIS_RECEIVE_NOW;
 }
+
+void
+iris_arbiter_receive_completed (IrisArbiter  *arbiter,
+                                IrisReceiver *receiver)
+{
+	IRIS_ARBITER_GET_CLASS (arbiter)->receive_completed (arbiter, receiver);
+}
