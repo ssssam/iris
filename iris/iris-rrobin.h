@@ -21,27 +21,33 @@
 #ifndef __IRIS_RROBIN_H__
 #define __IRIS_RROBIN_H__
 
-#include <glib.h>
+#include <glib-object.h>
 
 #include "iris-types.h"
 
 G_BEGIN_DECLS
 
+#define IRIS_TYPE_RROBIN (iris_rrobin_get_type())
+
 struct _IrisRRobin
 {
 	/*< private >*/
-	gint     size;
-	gint     count;
-	guint    active;
-	gpointer data[1];
+	gint          size;
+	volatile gint ref_count;
+	gint          count;
+	guint         active;
+	gpointer      data[1];
 };
 
-IrisRRobin* iris_rrobin_new     (gint size);
-gboolean    iris_rrobin_append  (IrisRRobin *rrobin, gpointer data);
-void        iris_rrobin_remove  (IrisRRobin *rrobin, gpointer data);
-gboolean    iris_rrobin_apply   (IrisRRobin *rrobin, IrisRRobinFunc callback, gpointer user_data);
-void        iris_rrobin_foreach (IrisRRobin *rrobin, IrisRRobinForeachFunc callback, gpointer user_data);
-void        iris_rrobin_free    (IrisRRobin *rrobin);
+GType       iris_rrobin_get_type (void) G_GNUC_CONST;
+IrisRRobin* iris_rrobin_new      (gint size);
+IrisRRobin* iris_rrobin_ref      (IrisRRobin *rrobin);
+void        iris_rrobin_unref    (IrisRRobin *rrobin);
+
+gboolean    iris_rrobin_append   (IrisRRobin *rrobin, gpointer data);
+void        iris_rrobin_remove   (IrisRRobin *rrobin, gpointer data);
+gboolean    iris_rrobin_apply    (IrisRRobin *rrobin, IrisRRobinFunc callback, gpointer user_data);
+void        iris_rrobin_foreach  (IrisRRobin *rrobin, IrisRRobinForeachFunc callback, gpointer user_data);
 
 G_END_DECLS
 

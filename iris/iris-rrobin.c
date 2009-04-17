@@ -23,8 +23,22 @@
 /**
  * SECTION:iris-rrobin
  * @short_description: A lock-free round-robin data structure
- *
  */
+
+static void iris_rrobin_free (IrisRRobin *rrobin);
+
+GType
+iris_rrobin_get_type (void)
+{
+	static GType rrobin_type = 0;
+	if (G_UNLIKELY (!rrobin_type))
+		rrobin_type = g_boxed_type_register_static (
+				"IrisRRobin",
+				(GBoxedCopyFunc)iris_rrobin_ref,
+				(GBoxedFreeFunc)iris_rrobin_unref);
+	return rrobin_type;
+
+}
 
 /**
  * iris_rrobin_new:
@@ -49,8 +63,45 @@ iris_rrobin_new (gint size)
 
 	rrobin->size = size;
 	rrobin->count = 0;
+	rrobin->ref_count = 1;
 
 	return rrobin;
+}
+
+/**
+ * iris_rrobin_ref:
+ * @rrobin: An #IrisRRobin
+ *
+ * Increments the reference count of @rrobin atomically by one.
+ *
+ * Return value: The @rrobin instance with its reference count incremented.
+ */
+IrisRRobin*
+iris_rrobin_ref (IrisRRobin *rrobin)
+{
+	g_return_val_if_fail (rrobin != NULL, NULL);
+	g_return_val_if_fail (rrobin->ref_count > 0, NULL);
+
+	g_atomic_int_inc (&rrobin->ref_count);
+	return rrobin;
+}
+
+/**
+ * iris_rrobin_unref:
+ * @rrobin: An #IrisRRobin
+ *
+ * Atomically decreates the reference count of @rrobin. If the reference
+ * count reaches zero, teh object is destroyed and all its allocated
+ * resources are freed.
+ */
+void
+iris_rrobin_unref (IrisRRobin *rrobin)
+{
+	g_return_if_fail (rrobin != NULL);
+	g_return_if_fail (rrobin->ref_count > 0);
+
+	if (g_atomic_int_dec_and_test (&rrobin->ref_count))
+		iris_rrobin_free (rrobin);
 }
 
 /**

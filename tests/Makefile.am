@@ -15,6 +15,7 @@ noinst_PROGRAMS =		\
 	task-1			\
 	thread-1		\
 	ws-queue-1		\
+	rrobin-1		\
 	$(NULL)
 
 TEST_PROGS +=			\
@@ -30,6 +31,7 @@ TEST_PROGS +=			\
 	task-1			\
 	thread-1		\
 	ws-queue-1		\
+	rrobin-1		\
 	$(NULL)
 
 INCLUDES = -I$(top_srcdir)
@@ -50,3 +52,4 @@ lf_queue_1_sources = lf-queue-1.c
 ws_queue_1_sources = ws-queue-1.c
 task_1_sources = task-1.c
 thread_1_sources = thread-1.c
+rrobin_1_sources = rrobin-1.c
