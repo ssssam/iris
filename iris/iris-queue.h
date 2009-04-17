@@ -21,13 +21,15 @@
 #ifndef __IRIS_QUEUE_H__
 #define __IRIS_QUEUE_H__
 
-#include <glib.h>
+#include <glib-object.h>
 
 #include "iris-types.h"
 #include "iris-free-list.h"
 #include "iris-link.h"
 
 G_BEGIN_DECLS
+
+#define IRIS_TYPE_QUEUE (iris_queue_get_type())
 
 struct _IrisQueueVTable
 {
@@ -48,6 +50,7 @@ struct _IrisQueue
 	GAsyncQueue     *impl_queue;
 };
 
+GType      iris_queue_get_type  (void) G_GNUC_CONST;
 IrisQueue* iris_queue_new       (void);
 
 IrisQueue* iris_queue_ref       (IrisQueue *queue);

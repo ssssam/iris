@@ -233,3 +233,15 @@ iris_queue_length (IrisQueue *queue)
 	g_return_val_if_fail (queue != NULL, 0);
 	return queue->vtable->length (queue);
 }
+
+GType
+iris_queue_get_type (void)
+{
+	static GType queue_type = 0;
+	if (G_UNLIKELY (!queue_type))
+		queue_type = g_boxed_type_register_static (
+				"IrisQueue",
+				(GBoxedCopyFunc)iris_queue_ref,
+				(GBoxedFreeFunc)iris_queue_unref);
+	return queue_type;
+}
