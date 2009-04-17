@@ -46,6 +46,8 @@ tests/rrobin-1
 tests/rrobin-1.o
 tests/scheduler-manager-1
 tests/scheduler-manager-1.o
+tests/gstamppointer-1
+tests/gstamppointer-1.o
 tests/lf-queue-1
 tests/lf-queue-1.o
 tests/ws-queue-1

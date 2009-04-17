@@ -3,6 +3,7 @@ include $(top_srcdir)/Makefile.decl
 NULL = 
 	
 noinst_PROGRAMS =		\
+	gstamppointer-1		\
 	message-1		\
 	port-1			\
 	receiver-1		\
@@ -19,6 +20,7 @@ noinst_PROGRAMS =		\
 	$(NULL)
 
 TEST_PROGS +=			\
+	gstamppointer-1		\
 	message-1		\
 	port-1			\
 	receiver-1		\
@@ -53,3 +55,4 @@ ws_queue_1_sources = ws-queue-1.c
 task_1_sources = task-1.c
 thread_1_sources = thread-1.c
 rrobin_1_sources = rrobin-1.c
+gstamppointer_1_sources = gstamppointer-1.c
