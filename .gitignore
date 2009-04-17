@@ -84,3 +84,5 @@ examples/basic
 examples/basic.o
 examples/recursive
 examples/recursive.o
+iris/Iris-1.0.gir
+iris/Iris-1.0.typelib

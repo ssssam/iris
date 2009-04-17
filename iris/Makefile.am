@@ -18,6 +18,7 @@ sources_public_h =					\
 	$(top_srcdir)/iris/iris-stack.h			\
 	$(top_srcdir)/iris/iris-task.h			\
 	$(top_srcdir)/iris/iris-thread.h		\
+	$(top_srcdir)/iris/iris-types.h			\
 	$(top_srcdir)/iris/iris-wsqueue.h		\
 	$(top_srcdir)/iris/iris-wsscheduler.h		\
 	$(NULL)
@@ -105,3 +106,39 @@ EXTRA_DIST =						\
 	iris.h						\
 	$(NULL)
 
+
+if ENABLE_INTROSPECTION
+
+Iris-1.0.gir: $(sources_c)
+Iris-1.0.gir: $(sources_public_h)
+Iris-1.0.gir: $(G_IR_SCANNER)
+	$(G_IR_SCANNER) -v --namespace Iris             \
+		--nsversion=1.0                         \
+		--add-include-path=$(srcdir)            \
+		--add-include-path=.                    \
+		--include=Gio-2.0                       \
+		--library=iris-1.0                      \
+		--output $@                             \
+		--pkg gobject-2.0                       \
+		--pkg gio-2.0                           \
+		-I$(top_srcdir)                         \
+		$(sources_c)                            \
+		$(sources_public_h)
+
+girdir = $(GIRDIR)
+gir_DATA = Iris-1.0.gir
+
+EXTRA_DIST += Iris-1.0.gir
+
+typelibsdir = $(TYPELIBDIR)
+typelibs_DATA = Iris-1.0.typelib
+
+Iris-1.0.typelib: Iris-1.0.gir
+	$(G_IR_COMPILER)                                \
+	--includedir=$(srcdir)                          \
+	--includedir=.                                  \
+	--shared-library=iris-1.0                       \
+	$(G_IR_COMPILER_OPTS)                           \
+	$< -o $(top_builddir)/iris/$(@F)
+
+endif # ENABLE_INTROSPECTION

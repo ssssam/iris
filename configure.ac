@@ -104,6 +104,35 @@ fi
 
 AC_SUBST(IRIS_MAINTAINER_CFLAGS)
 
+dnl = Check for GObject Introspection ======================================
+
+AC_MSG_CHECKING([whether GObject introspection is requested])
+AC_ARG_ENABLE([introspection],
+	      AS_HELP_STRING([--enable-introspection],[Enable GObject introspection]),
+	      [],[enable_introspection=no])
+AC_MSG_RESULT([$enable_introspection])
+
+G_IR_SCANNER=
+G_IR_COMPILER=
+G_IR_GENERATE=
+GIRDIR=
+TYPELIBDIR=
+if test "$enable_introspection" = "yes"; then
+   G_IR_SCANNER=`pkg-config --variable=g_ir_scanner gobject-introspection-1.0`
+   G_IR_COMPILER=`pkg-config --variable=g_ir_compiler gobject-introspection-1.0`
+   G_IR_GENERATE=`pkg-config --variable=g_ir_generate gobject-introspection-1.0`
+   GIRDIR=`pkg-config --variable=girdir gobject-introspection-1.0`
+   TYPELIBDIR="$(pkg-config --variable=typelibdir gobject-introspection-1.0)"
+fi
+
+AC_SUBST(G_IR_SCANNER)
+AC_SUBST(G_IR_COMPILER)
+AC_SUBST(G_IR_GENERATE)
+AC_SUBST(GIRDIR)
+AC_SUBST(TYPELIBDIR)
+
+AM_CONDITIONAL([ENABLE_INTROSPECTION],[test "$enable_introspection" = "yes"])
+
 GTK_DOC_CHECK([1.11])
 
 SHAVE_INIT([build/autotools], [enable])
@@ -127,9 +156,10 @@ AC_OUTPUT
 echo ""
 echo " Iris $VERSION"
 echo ""
-echo "                            Prefix: ${prefix}"
-echo "                       Debug level: ${enable_debug}"
-echo "         Maintainer Compiler flags: ${enable_maintainer_flags}"
-echo "               Build API reference: ${enable_gtk_doc}"
-echo "                 Enable test suite: ${enable_glibtest}"
+echo "   Prefix...................:  ${prefix}"
+echo "   Debug level..............:  ${enable_debug}"
+echo "   Maintainer Compiler flags:  ${enable_maintainer_flags}"
+echo "   Build API reference......:  ${enable_gtk_doc}"
+echo "   Enable test suite........:  ${enable_glibtest}"
+echo "   GObject Introspection....:  ${enable_introspection}"
 echo ""
