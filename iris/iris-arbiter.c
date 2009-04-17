@@ -26,7 +26,7 @@ struct _IrisArbiterPrivate
 	gpointer dummy;
 };
 
-G_DEFINE_TYPE (IrisArbiter, iris_arbiter, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (IrisArbiter, iris_arbiter, G_TYPE_OBJECT);
 
 static void
 iris_arbiter_finalize (GObject *object)
@@ -50,12 +50,6 @@ iris_arbiter_init (IrisArbiter *arbiter)
 	arbiter->priv = G_TYPE_INSTANCE_GET_PRIVATE (arbiter,
 	                                          IRIS_TYPE_ARBITER,
 	                                          IrisArbiterPrivate);
-}
-
-IrisArbiter*
-iris_arbiter_new (void)
-{
-	return g_object_new (IRIS_TYPE_ARBITER, NULL);
 }
 
 IrisReceiveDecision
