@@ -440,6 +440,30 @@ test25 (void)
 	g_assert (iris_task_is_finished (t4) == TRUE);
 }
 
+static void
+test26 (void)
+{
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisScheduler *sched = mock_scheduler_new ();
+	iris_task_set_scheduler (task, sched);
+	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
+	iris_task_add_dependency (task2, task);
+	iris_task_cancel (task);
+	g_assert (iris_task_is_canceled (task2));
+}
+
+static void
+test27 (void)
+{
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisScheduler *sched = mock_scheduler_new ();
+	iris_task_set_scheduler (task, sched);
+	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
+	iris_task_add_dependency (task, task2);
+	iris_task_cancel (task);
+	g_assert (!iris_task_is_canceled (task2));
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -473,6 +497,8 @@ main (int   argc,
 	g_test_add_func ("/task/callback-after-finish1", test23);
 	g_test_add_func ("/task/callback-after-finish-cancel1", test24);
 	g_test_add_func ("/task/all_of1", test25);
+	g_test_add_func ("/task/dep_canceled", test26);
+	g_test_add_func ("/task/cancel-dont-affect1", test27);
 
 	return g_test_run ();
 }
