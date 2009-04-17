@@ -464,6 +464,25 @@ test27 (void)
 	g_assert (!iris_task_is_canceled (task2));
 }
 
+static void
+test28 (void)
+{
+	IrisTask *t1 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *t2 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *t3 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *t4 = iris_task_any_of (t1, t2, t3, NULL);
+	iris_task_run (t4);
+	g_assert (!iris_task_is_finished (t1));
+	g_assert (!iris_task_is_finished (t2));
+	g_assert (!iris_task_is_finished (t3));
+	g_assert (!iris_task_is_finished (t4));
+	iris_task_run (t3);
+	g_assert (!iris_task_is_finished (t1));
+	g_assert (!iris_task_is_finished (t2));
+	g_assert (iris_task_is_finished (t3));
+	g_assert (iris_task_is_finished (t4));
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -499,6 +518,7 @@ main (int   argc,
 	g_test_add_func ("/task/all_of1", test25);
 	g_test_add_func ("/task/dep_canceled", test26);
 	g_test_add_func ("/task/cancel-dont-affect1", test27);
+	g_test_add_func ("/task/any_of1", test28);
 
 	return g_test_run ();
 }

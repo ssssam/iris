@@ -87,4 +87,6 @@ struct _IrisTaskPrivate
 	                              */
 };
 
+void iris_task_remove_dependency_sync (IrisTask *task, IrisTask *dep);
+
 #endif /* __IRIS_TASK_PRIVATE_H__ */
