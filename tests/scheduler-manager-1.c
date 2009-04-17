@@ -30,12 +30,10 @@ main_context1 (void)
 	// Use basic scheduler
 	scheduler = iris_scheduler_new ();
 	g_assert (scheduler != NULL);
-	receiver = iris_receiver_new_full (scheduler, NULL, main_context1_cb, &counter);
-	g_assert (receiver != NULL);
-
 	port = iris_port_new ();
 	g_assert (port != NULL);
-	iris_port_set_receiver (port, receiver);
+	receiver = iris_arbiter_receive (scheduler, port, main_context1_cb, &counter);
+	g_assert (receiver != NULL);
 
 	for (i = 0; i < 100; i++) {
 		message = iris_message_new (1);

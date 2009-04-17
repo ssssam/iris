@@ -166,11 +166,12 @@ namespace Iris {
 	}
 	public class Arbiter: GLib.Object {
 		public virtual void can_receive (Iris.Receiver receiver);
+		public virtual void receive_completed (Iris.Receiver receiver);
+		public static Arbiter coordinate (Iris.Receiver? exclusive, Iris.Receiver? concurrent, Iris.Receiver? teardown);
+		[CCode (instance_pos = "-1")]
+		public static Receiver receive (Iris.Scheduler? scheduler, Iris.Port port, Iris.MessageHandler handler);
 	}
 	public class Receiver: GLib.Object {
-		public Receiver ();
-		[CCode (instance_pos = "-1")]
-		public Receiver.full (Iris.Scheduler? scheduler, Iris.Arbiter? arbiter, Iris.MessageHandler handler);
 		public void set_scheduler (Iris.Scheduler scheduler);
 		public Iris.Scheduler get_scheduler ();
 		public void deliver (Iris.Message message);

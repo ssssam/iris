@@ -2,6 +2,15 @@
 #include "mocks/mock-scheduler.h"
 #include <iris/iris-task-private.h>
 #include <iris/iris-receiver-private.h>
+#include <iris/iris-scheduler-private.h>
+
+static IrisScheduler *default_scheduler = NULL;
+
+#define SETUP()                                                 \
+	G_STMT_START {                                          \
+		default_scheduler = mock_scheduler_new();       \
+		iris_scheduler_set_default(default_scheduler);  \
+	} G_STMT_END
 
 static void
 test1 (void)
@@ -30,6 +39,7 @@ test3 (void)
 static void
 test4 (void)
 {
+	SETUP();
 	GError *error = g_error_new (1, 1, "Something %s", "blah");
 	IrisScheduler *sched = mock_scheduler_new ();
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
@@ -42,6 +52,7 @@ test4 (void)
 static void
 test5 (void)
 {
+	SETUP();
 	GError *error = g_error_new (1, 1, "Something %s", "blah");
 	IrisScheduler *sched = mock_scheduler_new ();
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
@@ -55,6 +66,7 @@ test5 (void)
 static void
 test6 (void)
 {
+	SETUP();
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_get_error (task) == NULL);
@@ -65,6 +77,7 @@ test6 (void)
 static void
 test7 (void)
 {
+	SETUP();
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_get_error (task) == NULL);
@@ -78,6 +91,8 @@ static void
 test8 (void)
 {
 	GError *e = NULL;
+
+	SETUP();
 
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
@@ -97,6 +112,7 @@ test8 (void)
 static void
 test9 (void)
 {
+	SETUP();
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_get_result (task) != NULL);
@@ -110,6 +126,7 @@ test9 (void)
 static void
 test10 (void)
 {
+	SETUP();
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_get_result (task) != NULL);
@@ -127,6 +144,7 @@ test10 (void)
 static void
 test11 (void)
 {
+	SETUP();
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_is_canceled (task) == FALSE);
@@ -137,6 +155,7 @@ test11 (void)
 static void
 test12 (void)
 {
+	SETUP();
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	iris_task_set_main_context (task, g_main_context_default ());
@@ -146,6 +165,7 @@ test12 (void)
 static void
 test13 (void)
 {
+	SETUP();
 	IrisTask *task = iris_task_new_full (NULL, NULL, NULL, TRUE, NULL, NULL);
 	g_assert (task != NULL);
 	g_assert (iris_task_is_async (task) == TRUE);
@@ -341,11 +361,9 @@ test20 (void)
 static void
 test21 (void)
 {
-	IrisScheduler *sched = mock_scheduler_new ();
+	SETUP();
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, sched);
 	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, sched);
 	iris_task_add_dependency (task2, task);
 	iris_task_run (task2);
 	g_assert ((task2->priv->flags & IRIS_TASK_FLAG_NEED_EXECUTE) != 0);
@@ -359,11 +377,9 @@ test21 (void)
 static void
 test22 (void)
 {
-	IrisScheduler *sched = mock_scheduler_new ();
+	SETUP();
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, sched);
 	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, sched);
 	iris_task_add_dependency (task2, task);
 	iris_task_cancel (task);
 	g_assert (iris_task_is_canceled (task));
@@ -381,9 +397,8 @@ test23_cb (IrisTask *task,
 static void
 test23 (void)
 {
-	IrisScheduler *sched = mock_scheduler_new ();
+	SETUP();
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, sched);
 	g_assert (iris_task_is_finished (task) == FALSE);
 	iris_task_run (task);
 	g_assert (iris_task_is_finished (task) == TRUE);
@@ -414,16 +429,12 @@ test24 (void)
 static void
 test25 (void)
 {
+	SETUP();
+
 	IrisTask *t1 = iris_task_new (NULL, NULL, NULL);
 	IrisTask *t2 = iris_task_new (NULL, NULL, NULL);
 	IrisTask *t3 = iris_task_new (NULL, NULL, NULL);
 	IrisTask *t4 = iris_task_all_of (t1, t2, t3, NULL);
-
-	IrisScheduler *sched = mock_scheduler_new ();
-	iris_task_set_scheduler (t1, sched);
-	iris_task_set_scheduler (t2, sched);
-	iris_task_set_scheduler (t3, sched);
-	iris_task_set_scheduler (t4, sched);
 
 	g_assert (g_list_find (t1->priv->observers, t4) != NULL);
 	g_assert (g_list_find (t2->priv->observers, t4) != NULL);
@@ -443,9 +454,9 @@ test25 (void)
 static void
 test26 (void)
 {
+	SETUP();
+
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
-	IrisScheduler *sched = mock_scheduler_new ();
-	iris_task_set_scheduler (task, sched);
 	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
 	iris_task_add_dependency (task2, task);
 	iris_task_cancel (task);
@@ -455,9 +466,9 @@ test26 (void)
 static void
 test27 (void)
 {
+	SETUP();
+
 	IrisTask *task = iris_task_new (NULL, NULL, NULL);
-	IrisScheduler *sched = mock_scheduler_new ();
-	iris_task_set_scheduler (task, sched);
 	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
 	iris_task_add_dependency (task, task2);
 	iris_task_cancel (task);

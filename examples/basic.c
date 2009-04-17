@@ -47,16 +47,13 @@ basic (void)
 	//scheduler = iris_wsscheduler_new ();
 	scheduler = iris_lfscheduler_new ();
 
-	/* Create a receiver which turns messages into action items
-	 * that can be executed by the scheduler.
-	 */
-	receiver = iris_receiver_new_full (scheduler, NULL, do_something, NULL);
-
 	/* Create a port to deliver messages to */
 	port = iris_port_new ();
 
-	/* Attach the receiver to the port */
-	iris_port_set_receiver (port, receiver);
+	/* Create a receiver which turns messages into action items
+	 * that can be executed by the scheduler.
+	 */
+	receiver = iris_arbiter_receive (scheduler, port, do_something, NULL);
 
 	/* create mutex and cond to wait on for finished */
 	mutex = g_mutex_new ();

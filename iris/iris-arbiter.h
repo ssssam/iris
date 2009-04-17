@@ -72,10 +72,21 @@ struct _IrisArbiterClass
 };
 
 GType               iris_arbiter_get_type          (void) G_GNUC_CONST;
+
 IrisReceiveDecision iris_arbiter_can_receive       (IrisArbiter  *arbiter,
                                                     IrisReceiver *receiver);
+
 void                iris_arbiter_receive_completed (IrisArbiter  *arbiter,
                                                     IrisReceiver *receiver);
+
+IrisReceiver*       iris_arbiter_receive           (IrisScheduler      *scheduler,
+                                                    IrisPort           *port,
+                                                    IrisMessageHandler  handler,
+                                                    gpointer            user_data);
+
+IrisArbiter*        iris_arbiter_coordinate        (IrisReceiver *exclusive,
+                                                    IrisReceiver *concurrent,
+                                                    IrisReceiver *teardown);
 
 G_END_DECLS
 

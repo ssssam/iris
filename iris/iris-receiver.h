@@ -71,18 +71,12 @@ struct _IrisReceiverClass
 
 GType              iris_receiver_get_type (void) G_GNUC_CONST;
 
-IrisReceiver*      iris_receiver_new      (void);
-IrisReceiver*      iris_receiver_new_full (IrisScheduler      *scheduler,
-                                           IrisArbiter        *arbiter,
-                                           IrisMessageHandler  callback,
-                                           gpointer            data);
-
 IrisScheduler*     iris_receiver_get_scheduler (IrisReceiver  *receiver);
 void               iris_receiver_set_scheduler (IrisReceiver  *receiver,
                                                 IrisScheduler *scheduler);
 
-IrisDeliveryStatus iris_receiver_deliver  (IrisReceiver       *receiver,
-                                           IrisMessage        *message);
+IrisDeliveryStatus iris_receiver_deliver       (IrisReceiver       *receiver,
+                                                IrisMessage        *message);
 
 G_END_DECLS
 

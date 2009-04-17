@@ -1379,11 +1379,12 @@ iris_task_init (IrisTask *task)
 	priv = task->priv = IRIS_TASK_GET_PRIVATE (task);
 
 	priv->port = iris_port_new ();
-	priv->receiver = iris_receiver_new_full (iris_scheduler_default (),
-	                                         NULL, /* IrisArbiter */
-	                                         iris_task_handle_message,
-	                                         task);
-	iris_port_set_receiver (priv->port, priv->receiver);
+	priv->receiver = iris_arbiter_receive (iris_scheduler_default (),
+	                                       priv->port,
+	                                       iris_task_handle_message,
+	                                       task);
+	/* FIXME: We should have a teardown port for dispose */
+	//iris_arbiter_coordinate (priv->receiver, NULL, NULL);
 }
 
 static void

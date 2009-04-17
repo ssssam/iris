@@ -25,37 +25,44 @@ G_DEFINE_TYPE (IrisReceiver, iris_receiver, G_TYPE_OBJECT);
 
 typedef struct
 {
-	IrisReceiverPrivate *priv;
-	IrisMessage         *message;
+	IrisReceiver *receiver;
+	IrisMessage  *message;
 } IrisWorkerData;
 
 static void
 iris_receiver_worker_cb (gpointer data)
 {
-	IrisWorkerData *worker;
+	IrisReceiverPrivate *priv;
+	IrisWorkerData      *worker;
 
 	g_return_if_fail (data != NULL);
 
 	worker = data;
+	priv = worker->receiver->priv;
 
-	if (g_atomic_int_dec_and_test (&worker->priv->active)) {}
-
+	if (g_atomic_int_dec_and_test (&priv->active)) {}
 	iris_message_unref (worker->message);
-
 	g_slice_free (IrisWorkerData, worker);
 }
 
 static void
 iris_receiver_worker (gpointer data)
 {
-	IrisWorkerData *worker;
+	IrisReceiverPrivate *priv;
+	IrisWorkerData      *worker;
 
 	g_return_if_fail (data != NULL);
 
 	worker = data;
+	priv = worker->receiver->priv;
 
-	worker->priv->callback (worker->message,
-	                        worker->priv->data);
+	/* Execute the callback */
+	priv->callback (worker->message, priv->data);
+
+	/* notify the arbiter we are complete */
+	if (priv->arbiter)
+		iris_arbiter_receive_completed (priv->arbiter,
+		                                worker->receiver);
 }
 
 static IrisDeliveryStatus
@@ -147,7 +154,7 @@ _post_decision:
 
 	if (execute) {
 		worker = g_slice_new0 (IrisWorkerData);
-		worker->priv = priv;
+		worker->receiver = receiver;
 		worker->message = iris_message_ref (message);
 
 		iris_scheduler_queue (priv->scheduler,
@@ -191,21 +198,6 @@ iris_receiver_init (IrisReceiver *receiver)
 }
 
 /**
- * iris_receiver_new:
- *
- * Creates a new instance of #IrisReceiver.  Receivers are used to
- * translate incoming messages on ports into actionable work items
- * to be pushed onto the scheduler.
- *
- * Return value: The newly created #IrisReceiver.
- */
-IrisReceiver*
-iris_receiver_new (void)
-{
-	return g_object_new (IRIS_TYPE_RECEIVER, NULL);
-}
-
-/**
  * iris_receiver_deliver:
  * @receiver: An #IrisReceiver
  * @message: An #IrisMessage
@@ -221,42 +213,6 @@ iris_receiver_deliver (IrisReceiver *receiver,
 {
 	g_return_val_if_fail (IRIS_IS_RECEIVER (receiver), IRIS_DELIVERY_REMOVE);
 	return IRIS_RECEIVER_GET_CLASS (receiver)->deliver (receiver, message);
-}
-
-/**
- * iris_receiver_new_full:
- * @scheduler: An #IrisScheduler
- * @arbiter: An #IrisArbiter
- * @callback: a callback to execute
- * @data: user data for the callback
- *
- * Creates a new instance of #IrisReceiver.  The receiver is initialized
- * to dispatch work items to @scheduler.  Messages can only be dispatched
- * if the arbiter allows us to.
- *
- * Return value: The newly created #IrisReceiver instance.
- */
-IrisReceiver*
-iris_receiver_new_full (IrisScheduler      *scheduler,
-                        IrisArbiter        *arbiter,
-                        IrisMessageHandler  callback,
-                        gpointer            data)
-{
-	IrisReceiver        *receiver;
-	IrisReceiverPrivate *priv;
-
-	g_return_val_if_fail (IRIS_IS_SCHEDULER (scheduler), NULL);
-	g_return_val_if_fail (arbiter == NULL || IRIS_IS_ARBITER (arbiter), NULL);
-
-	receiver = iris_receiver_new ();
-	priv = receiver->priv;
-
-	priv->scheduler = g_object_ref (scheduler);
-	priv->arbiter = arbiter ? g_object_ref (arbiter) : NULL;
-	priv->callback = callback;
-	priv->data = data;
-
-	return receiver;
 }
 
 /**

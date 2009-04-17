@@ -20,6 +20,8 @@
 
 #include "iris-arbiter.h"
 #include "iris-arbiter-private.h"
+#include "iris-port.h"
+#include "iris-receiver-private.h"
 
 struct _IrisArbiterPrivate
 {
@@ -67,4 +69,43 @@ iris_arbiter_receive_completed (IrisArbiter  *arbiter,
                                 IrisReceiver *receiver)
 {
 	IRIS_ARBITER_GET_CLASS (arbiter)->receive_completed (arbiter, receiver);
+}
+
+/**
+ * iris_receiver_receive:
+ * @scheduler: An #IrisScheduler or %NULL
+ * @port: An #IrisPort
+ * @callback: An #IrisMessageHandler to execute when a message is received
+ * @user_data: data for @callback
+ *
+ * Creates a new #IrisReceiver instance that executes @callback when a message
+ * is received on the receiver.  Note that if you attach this to an arbiter,
+ * a message posted to @port may not result in @callback being executed right
+ * away.
+ *
+ * Return value: the newly created #IrisReceiver instance
+ */
+IrisReceiver*
+iris_arbiter_receive (IrisScheduler      *scheduler,
+                      IrisPort           *port,
+                      IrisMessageHandler  callback,
+                      gpointer            user_data)
+{
+	IrisReceiver *receiver;
+
+	receiver = g_object_new (IRIS_TYPE_RECEIVER, NULL);
+	receiver->priv->callback = callback;
+	receiver->priv->data = user_data;
+	receiver->priv->scheduler = scheduler;
+	iris_port_set_receiver (port, receiver);
+
+	return receiver;
+}
+
+IrisArbiter*
+iris_arbiter_coordinate (IrisReceiver *exclusive,
+                         IrisReceiver *concurrent,
+                         IrisReceiver *teardown)
+{
+	return iris_concurrency_arbiter_new (exclusive, concurrent, teardown);
 }

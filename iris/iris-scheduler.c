@@ -30,6 +30,10 @@
 #include "iris-scheduler-private.h"
 #include "iris-scheduler-manager.h"
 
+G_LOCK_DEFINE (default_scheduler);
+
+static IrisScheduler *default_scheduler = NULL;
+
 /**
  * SECTION:iris-scheduler
  * @short_description: A generic, extendable scheduler for work items
@@ -247,7 +251,13 @@ iris_scheduler_new_full (guint min_threads,
 	return scheduler;
 }
 
-G_LOCK_DEFINE (default_scheduler);
+void
+iris_scheduler_set_default (IrisScheduler *scheduler)
+{
+	G_LOCK (default_scheduler);
+	g_atomic_pointer_set (&default_scheduler, scheduler);
+	G_UNLOCK (default_scheduler);
+}
 
 /**
  * iris_scheduler_default:
@@ -259,15 +269,12 @@ G_LOCK_DEFINE (default_scheduler);
 IrisScheduler*
 iris_scheduler_default (void)
 {
-	static IrisScheduler *default_scheduler = NULL;
-
 	if (G_UNLIKELY (default_scheduler == NULL)) {
 		G_LOCK (default_scheduler);
 		if (!g_atomic_pointer_get (&default_scheduler))
 			default_scheduler = iris_scheduler_new ();
 		G_UNLOCK (default_scheduler);
 	}
-
 	return default_scheduler;
 }
 

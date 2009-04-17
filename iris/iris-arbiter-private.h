@@ -23,7 +23,9 @@
 
 G_BEGIN_DECLS
 
-IrisArbiter* iris_arbiter_new (void);
+IrisArbiter* iris_concurrency_arbiter_new (IrisReceiver *exclusive,
+                                           IrisReceiver *concurrent,
+                                           IrisReceiver *teardown);
 
 G_END_DECLS
 

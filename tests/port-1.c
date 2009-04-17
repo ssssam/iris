@@ -14,16 +14,19 @@ get_type1 (void)
 }
 
 static void
+has_receiver1_cb (IrisMessage *msg,
+                  gpointer     data)
+{
+}
+
+static void
 has_receiver1 (void)
 {
 	IrisPort     *port;
 	IrisReceiver *receiver;
 
 	port = iris_port_new ();
-	receiver = iris_receiver_new ();
-
-	g_assert (iris_port_has_receiver (port) == FALSE);
-	iris_port_set_receiver (port, receiver);
+	receiver = iris_arbiter_receive (NULL, port, has_receiver1_cb, NULL);
 	g_assert (iris_port_has_receiver (port) == TRUE);
 	iris_port_set_receiver (port, NULL);
 	g_assert (iris_port_has_receiver (port) == FALSE);

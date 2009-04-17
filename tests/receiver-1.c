@@ -14,6 +14,12 @@ get_type1 (void)
 }
 
 static void
+message_handler (IrisMessage *message,
+                 gpointer     data)
+{
+}
+
+static void
 new_full1 (void)
 {
 	IrisReceiver  *receiver;
@@ -21,8 +27,8 @@ new_full1 (void)
 	IrisArbiter   *arbiter;
 
 	scheduler = mock_scheduler_new ();
-	arbiter = iris_arbiter_new ();
-	receiver = iris_receiver_new_full (scheduler, arbiter, NULL, NULL);
+	receiver = iris_arbiter_receive (scheduler, iris_port_new (), message_handler, NULL);
+	arbiter = iris_arbiter_coordinate (NULL, receiver, NULL);
 
 	g_assert (IRIS_IS_SCHEDULER (scheduler));
 	g_assert (IRIS_IS_ARBITER (arbiter));
@@ -51,16 +57,10 @@ message_delivered1 (void)
 	gboolean       completed = FALSE;
 
 	scheduler = mock_scheduler_new ();
-	receiver = iris_receiver_new_full (scheduler,
-	                                   NULL,
-	                                   message_delivered1_cb,
-	                                   &completed);
-
 	g_assert (IRIS_IS_SCHEDULER (scheduler));
-	g_assert (IRIS_IS_RECEIVER (receiver));
 
 	port = iris_port_new ();
-	iris_port_set_receiver (port, receiver);
+	receiver = iris_arbiter_receive (scheduler, port, message_delivered1_cb, &completed);
 	g_assert (receiver == iris_port_get_receiver (port));
 
 	msg = iris_message_new (1);
@@ -88,16 +88,10 @@ many_message_delivered1 (void)
 	gint           i;
 
 	scheduler = mock_scheduler_new ();
-	receiver = iris_receiver_new_full (scheduler,
-	                                   NULL,
-	                                   many_message_delivered1_cb,
-	                                   &counter);
-
 	g_assert (IRIS_IS_SCHEDULER (scheduler));
-	g_assert (IRIS_IS_RECEIVER (receiver));
 
 	port = iris_port_new ();
-	iris_port_set_receiver (port, receiver);
+	receiver = iris_arbiter_receive (scheduler, port, many_message_delivered1_cb, &counter);
 	g_assert (receiver == iris_port_get_receiver (port));
 
 	for (i = 0; i < 100; i++) {
@@ -123,7 +117,7 @@ set_scheduler1 (void)
 	s1 = iris_scheduler_new ();
 	s2 = iris_scheduler_new ();
 
-	r = iris_receiver_new_full (s1, NULL, set_scheduler1_cb, NULL);
+	r = iris_arbiter_receive (s1, iris_port_new (), message_handler, NULL);
 	g_assert (iris_receiver_get_scheduler (r) == s1);
 
 	iris_receiver_set_scheduler (r, s2);

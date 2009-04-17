@@ -4,6 +4,7 @@ BUILT_SOURCES = iris-version.h
 
 sources_public_h =					\
 	$(top_srcdir)/iris/iris-arbiter.h		\
+	$(top_srcdir)/iris/iris-concurrency-arbiter.h	\
 	$(top_srcdir)/iris/iris-free-list.h		\
 	$(top_srcdir)/iris/iris-link.h			\
 	$(top_srcdir)/iris/iris-lfqueue.h		\
@@ -37,6 +38,7 @@ sources_c = 						\
 	iris-all-task.c					\
 	iris-any-task.c					\
 	iris-arbiter.c					\
+	iris-concurrency-arbiter.c			\
 	iris-free-list.c				\
 	iris-lfqueue.c					\
 	iris-lfscheduler.c				\

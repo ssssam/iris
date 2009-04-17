@@ -49,7 +49,8 @@ struct _IrisSchedulerPrivate
 	gboolean     initialized;
 };
 
-IrisScheduler* iris_scheduler_new (void);
+IrisScheduler* iris_scheduler_new         (void);
+void           iris_scheduler_set_default (IrisScheduler *scheduler);
 
 G_END_DECLS
 
