@@ -92,6 +92,12 @@ test8 (void)
 	g_assert (test7_data == TRUE);
 }
 
+static void
+test9 (void)
+{
+	g_assert_cmpint (IRIS_TYPE_LFQUEUE, !=, G_TYPE_INVALID);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -108,6 +114,7 @@ main (int   argc,
 	g_test_add_func ("/lfqueue/length", test6);
 	g_test_add_func ("/lfqueue/unref1", test7);
 	g_test_add_func ("/lfqueue/unref2", test8);
+	g_test_add_func ("/lfqueue/get_type", test9);
 
 	return g_test_run ();
 }

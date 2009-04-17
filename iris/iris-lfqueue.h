@@ -21,7 +21,7 @@
 #ifndef __IRIS_LFQUEUE_H__
 #define __IRIS_LFQUEUE_H__
 
-#include <glib.h>
+#include <glib-object.h>
 
 #include "iris-free-list.h"
 #include "iris-link.h"
@@ -29,6 +29,8 @@
 #include "iris-types.h"
 
 G_BEGIN_DECLS
+
+#define IRIS_TYPE_LFQUEUE (iris_lfqueue_get_type())
 
 struct _IrisLFQueue
 {
@@ -41,7 +43,8 @@ struct _IrisLFQueue
 	guint         length;
 };
 
-IrisQueue* iris_lfqueue_new (void);
+GType      iris_lfqueue_get_type (void) G_GNUC_CONST;
+IrisQueue* iris_lfqueue_new      (void);
 
 G_END_DECLS
 

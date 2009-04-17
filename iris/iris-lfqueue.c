@@ -233,3 +233,15 @@ iris_lfqueue_new (void)
 
 	return (IrisQueue*)queue;
 }
+
+GType
+iris_lfqueue_get_type (void)
+{
+	static GType lfqueue_type = 0;
+	if (G_UNLIKELY (!lfqueue_type))
+		lfqueue_type = g_boxed_type_register_static (
+				"IrisLFQueue",
+				(GBoxedCopyFunc)iris_queue_ref,
+				(GBoxedFreeFunc)iris_queue_unref);
+	return lfqueue_type;
+}
