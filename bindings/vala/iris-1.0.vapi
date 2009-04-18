@@ -35,6 +35,7 @@ namespace Iris {
 		public virtual int get_max_threads ();
 		public virtual int get_min_threads ();
 	}
+	[CCode (cprefix = "iris_wsscheduler_")]
 	public class WSScheduler: Iris.Scheduler {
 		public WSScheduler ();
 		public WSScheduler.full (int min_threads, int max_threads);
@@ -109,7 +110,6 @@ namespace Iris {
 		[CCode (instance_pos = "-1")]
 		public void foreach (Iris.RRobinForeachFunc func);
 	}
-	[CCode (instance_pos = "-1")]
 	public delegate void MessageHandler (Iris.Message message);
 	[CCode (ref_function = "iris_message_ref", unref_function = "iris_message_unref")]
 	public class Message: Boxed {

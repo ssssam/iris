@@ -1,4 +1,4 @@
-SUBDIRS = iris doc examples
+SUBDIRS = iris bindings doc examples
 
 if ENABLE_GLIB_TEST
 SUBDIRS += tests

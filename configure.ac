@@ -65,6 +65,17 @@ AC_SUBST(IRIS_LIBS)
 
 AM_CONDITIONAL(ENABLE_GLIB_TEST, test "x$enable_glibtest" = "xyes")
 
+dnl = Enable Vala ==========================================================
+has_vala=no
+PKG_CHECK_MODULES(VALA, vala-1.0, has_vala=yes, has_vala=no)
+if test "x$has_vala" = "xyes"; then
+	VAPI_DIR=`pkg-config --variable=vapidir vala-1.0`
+else
+	VAPI_DIR=
+fi
+AM_CONDITIONAL(HAVE_VALA, [test "x$has_vala" = "xyes"])
+AC_SUBST(VAPI_DIR)
+
 dnl = Enable debug level ===================================================
 
 m4_define([debug_default],
@@ -143,6 +154,8 @@ AC_CONFIG_FILES([
         Makefile
         iris/Makefile
         iris/iris-version.h
+        bindings/Makefile
+        bindings/vala/Makefile
         examples/Makefile
         tests/Makefile
         doc/Makefile
@@ -162,4 +175,5 @@ echo "   Maintainer Compiler flags:  ${enable_maintainer_flags}"
 echo "   Build API reference......:  ${enable_gtk_doc}"
 echo "   Enable test suite........:  ${enable_glibtest}"
 echo "   GObject Introspection....:  ${enable_introspection}"
+echo "   Vala Bindings............:  ${has_vala}"
 echo ""
