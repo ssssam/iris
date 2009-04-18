@@ -20,6 +20,7 @@
 
 #include "iris-receiver.h"
 #include "iris-receiver-private.h"
+#include "iris-port.h"
 
 G_DEFINE_TYPE (IrisReceiver, iris_receiver, G_TYPE_OBJECT);
 
@@ -91,7 +92,7 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 		goto _post_decision;
 	}
 
-	g_mutex_lock (priv->mutex);
+	g_static_rec_mutex_lock (&priv->mutex);
 
 	if (g_atomic_int_get (&priv->completed) == TRUE) {
 		decision = IRIS_DELIVERY_REMOVE;
@@ -132,7 +133,7 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 	}
 	else g_assert_not_reached ();
 
-	g_mutex_unlock (priv->mutex);
+	g_static_rec_mutex_unlock (&priv->mutex);
 
 _post_decision:
 
@@ -193,7 +194,7 @@ iris_receiver_init (IrisReceiver *receiver)
 	                                              IRIS_TYPE_RECEIVER,
 	                                              IrisReceiverPrivate);
 
-	receiver->priv->mutex = g_mutex_new ();
+	g_static_rec_mutex_init (&receiver->priv->mutex);
 	receiver->priv->persistent = TRUE;
 }
 

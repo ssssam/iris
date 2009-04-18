@@ -41,7 +41,10 @@ struct _IrisReceiverPrivate
 	                            * an incoming message.
 	                            */
 
-	GMutex        *mutex;      /* Used to synchronous our requests to the
+	IrisPort      *port;       /* Pointer to port for flushing */
+
+	GStaticRecMutex
+	               mutex;      /* Used to synchronize our requests to the
 	                            * the arbiter.
 	                            */
 
