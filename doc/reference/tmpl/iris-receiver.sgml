@@ -33,26 +33,6 @@ IrisReceiver
 @parent: 
 @priv: 
 
-<!-- ##### FUNCTION iris_receiver_new ##### -->
-<para>
-
-</para>
-
-@Returns: 
-
-
-<!-- ##### FUNCTION iris_receiver_new_full ##### -->
-<para>
-
-</para>
-
-@scheduler: 
-@arbiter: 
-@callback: 
-@data: 
-@Returns: 
-
-
 <!-- ##### FUNCTION iris_receiver_deliver ##### -->
 <para>
 
