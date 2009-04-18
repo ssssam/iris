@@ -31,14 +31,14 @@
 		if (r && !r->priv->arbiter)                      \
 			r->priv->arbiter = g_object_ref (a);     \
 	} G_STMT_END
-#define FLAG_IS_ON(p,f) ((p->flags & f) != 0)
-#define FLAG_IS_OFF(p,f) ((p->flags & f) == 0)
-#define ENABLE_FLAG(p,f) G_STMT_START{p->flags|=f;}G_STMT_END
-#define DISABLE_FLAG(p,f) G_STMT_START{p->flags&=~f;}G_STMT_END
+#define FLAG_IS_ON(p,f)   ((p->flags & (f)) != 0)
+#define FLAG_IS_OFF(p,f)  ((p->flags & (f)) == 0)
+#define ENABLE_FLAG(p,f)  p->flags |= (f)
+#define DISABLE_FLAG(p,f) p->flags &= ~(f)
 #define NEEDS_SWITCH(p)                                         \
-	(((p->flags & IRIS_COORD_NEEDS_EXCLUSIVE) != 0)  ||     \
-	 ((p->flags & IRIS_COORD_NEEDS_CONCURRENT) != 0) ||     \
-	 ((p->flags & IRIS_COORD_NEEDS_TEARDOWN) != 0))
+	((p->flags & (IRIS_COORD_NEEDS_EXCLUSIVE  |             \
+	              IRIS_COORD_NEEDS_CONCURRENT |             \
+	              IRIS_COORD_NEEDS_TEARDOWN)) != 0)
 
 /**
  * SECTION:iris-coordination-receiver
