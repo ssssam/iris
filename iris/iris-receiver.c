@@ -304,3 +304,36 @@ iris_receiver_set_scheduler (IrisReceiver  *receiver,
 
 	g_object_unref (old_sched);
 }
+
+/**
+ * iris_receiver_resume:
+ * @receiver: An #IrisReceiver
+ *
+ * Resumes delivery of a port. Any pending messages in the receiver
+ * will attempt to redeliver.  The port attached to the receiver will
+ * also be flushed.
+ */
+void
+iris_receiver_resume (IrisReceiver *receiver)
+{
+	IrisReceiverPrivate *priv;
+	IrisMessage         *message = NULL;
+
+	g_return_if_fail (IRIS_IS_RECEIVER (receiver));
+
+	priv = receiver->priv;
+
+	g_static_rec_mutex_lock (&priv->mutex);
+
+	if (priv->message) {
+		message = priv->message;
+		priv->message = NULL;
+	}
+
+	g_static_rec_mutex_unlock (&priv->mutex);
+
+	if (message)
+		iris_receiver_deliver (receiver, message);
+
+	iris_port_flush (priv->port);
+}

@@ -75,8 +75,9 @@ IrisScheduler*     iris_receiver_get_scheduler (IrisReceiver  *receiver);
 void               iris_receiver_set_scheduler (IrisReceiver  *receiver,
                                                 IrisScheduler *scheduler);
 
-IrisDeliveryStatus iris_receiver_deliver       (IrisReceiver       *receiver,
-                                                IrisMessage        *message);
+IrisDeliveryStatus iris_receiver_deliver       (IrisReceiver  *receiver,
+                                                IrisMessage   *message);
+void               iris_receiver_resume        (IrisReceiver  *receiver);
 
 G_END_DECLS
 
