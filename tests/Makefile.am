@@ -3,6 +3,7 @@ include $(top_srcdir)/Makefile.decl
 NULL = 
 	
 noinst_PROGRAMS =		\
+	arbiter-1		\
 	gstamppointer-1		\
 	message-1		\
 	port-1			\
@@ -20,6 +21,7 @@ noinst_PROGRAMS =		\
 	$(NULL)
 
 TEST_PROGS +=			\
+	arbiter-1		\
 	gstamppointer-1		\
 	message-1		\
 	port-1			\
@@ -42,6 +44,7 @@ LDADD = $(top_builddir)/iris/libiris-1.0.la
 AM_CFLAGS = $(IRIS_CFLAGS)
 AM_LDFLAGS = $(IRIS_LIBS)
 
+arbiter_1_sources = arbiter-1.c
 message_1_sources = message-1.c
 port_1_sources = port-1.c mocks/mock-callback-receiver.c
 receiver_1_sources = receiver-1.c

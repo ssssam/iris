@@ -56,6 +56,8 @@ tests/task-1
 tests/task-1.o
 tests/scheduler-1
 tests/scheduler-1.o
+tests/arbiter-1
+tests/arbiter-1.o
 doc/reference/html-build.stamp
 doc/reference/html.stamp
 doc/reference/html/
