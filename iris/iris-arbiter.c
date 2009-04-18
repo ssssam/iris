@@ -100,7 +100,7 @@ iris_arbiter_receive (IrisScheduler      *scheduler,
 	receiver->priv->callback = callback;
 	receiver->priv->data = user_data;
 	receiver->priv->scheduler = g_object_ref (scheduler);
-	receiver->priv->port = port;
+	receiver->priv->port = g_object_ref (port);
 	iris_port_set_receiver (port, receiver);
 
 	return receiver;

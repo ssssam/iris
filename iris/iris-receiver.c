@@ -177,12 +177,28 @@ iris_receiver_finalize (GObject *object)
 }
 
 static void
+iris_receiver_dispose (GObject *object)
+{
+	IrisReceiverPrivate *priv;
+
+	g_return_if_fail (IRIS_IS_RECEIVER (object));
+
+	priv = IRIS_RECEIVER (object)->priv;
+
+	g_object_unref (priv->port);
+	g_object_unref (priv->scheduler);
+
+	G_OBJECT_CLASS (iris_receiver_parent_class)->dispose (object);
+}
+
+static void
 iris_receiver_class_init (IrisReceiverClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
 	klass->deliver = iris_receiver_deliver_real;
 	object_class->finalize = iris_receiver_finalize;
+	object_class->dispose = iris_receiver_dispose;
 
 	g_type_class_add_private (object_class, sizeof (IrisReceiverPrivate));
 }
