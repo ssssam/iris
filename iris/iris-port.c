@@ -18,13 +18,24 @@
  * 02110-1301 USA
  */
 
+#include "iris-debug.h"
 #include "iris-port.h"
 
 #define IRIS_PORT_STATE_PAUSED 1 << 0
-
-#define PORT_PAUSED(port)                         \
-	((g_atomic_int_get (&port->priv->state)   \
+#define PORT_PAUSED(port)                                         \
+	((g_atomic_int_get (&port->priv->state)                   \
 	  & IRIS_PORT_STATE_PAUSED) != 0)
+#define STORE_MESSAGE(p,m)                                        \
+	G_STMT_START {                                            \
+		if (!p->current)                                  \
+			p->current = iris_message_ref (m);        \
+		else {                                            \
+			if (!p->queue)                            \
+				p->queue = g_queue_new ();        \
+			g_queue_push_head (p->queue,              \
+					iris_message_ref (m));    \
+		}                                                 \
+	} G_STMT_END
 
 struct _IrisPortPrivate
 {
@@ -149,6 +160,8 @@ iris_port_post (IrisPort    *port,
 	IrisDeliveryStatus  delivered;
 	gint                state;
 
+	iris_debug (IRIS_DEBUG_PORT);
+
 	g_return_if_fail (IRIS_IS_PORT (port));
 	g_return_if_fail (message != NULL);
 
@@ -157,9 +170,7 @@ iris_port_post (IrisPort    *port,
 	if (PORT_PAUSED (port) || !(receiver = priv->receiver)) {
 		g_mutex_lock (priv->mutex);
 		if (PORT_PAUSED (port) || !priv->receiver) {
-			if (!priv->queue)
-				priv->queue = g_queue_new ();
-			g_queue_push_head (priv->queue, message);
+			STORE_MESSAGE (priv, message);
 		}
 		else {
 			receiver = priv->receiver;
@@ -182,14 +193,17 @@ iris_port_post (IrisPort    *port,
 		case IRIS_DELIVERY_PAUSE:
 			g_mutex_lock (priv->mutex);
 			priv->state |= IRIS_PORT_STATE_PAUSED;
-			g_atomic_pointer_set (&priv->current, message);
+			STORE_MESSAGE (priv, message);
 			g_mutex_unlock (priv->mutex);
 			break;
 		case IRIS_DELIVERY_REMOVE:
 			/* store message and fall-through */
 			g_mutex_lock (priv->mutex);
-			g_atomic_pointer_set (&priv->current, message);
+			STORE_MESSAGE (priv, message);
+			if (priv->receiver == receiver)
+				priv->receiver = NULL;
 			g_mutex_unlock (priv->mutex);
+			break;
 		case IRIS_DELIVERY_ACCEPTED_REMOVE:
 			g_mutex_lock (priv->mutex);
 			if (priv->receiver == receiver)
@@ -285,6 +299,8 @@ iris_port_flush (IrisPort *port)
 	GQueue          *queue   = NULL;
 	IrisMessage     *message = NULL;
 
+	iris_debug (IRIS_DEBUG_PORT);
+
 	g_return_if_fail (IRIS_IS_PORT (port));
 
 	priv = port->priv;
@@ -329,4 +345,18 @@ iris_port_flush (IrisPort *port)
 
 		g_queue_free (queue);
 	}
+}
+
+/**
+ * iris_port_is_paused:
+ * @port: An #IrisPort
+ *
+ * Checks if the port is currently paused.
+ *
+ * Return value: %TRUE if the port is paused.
+ */
+gboolean
+iris_port_is_paused (IrisPort *port)
+{
+	return PORT_PAUSED (port);
 }
