@@ -18,6 +18,7 @@
  * 02110-1301 USA
  */
 
+#include "iris-debug.h"
 #include "iris-receiver.h"
 #include "iris-receiver-private.h"
 #include "iris-port.h"
@@ -71,9 +72,9 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
                             IrisMessage  *message)
 {
 	IrisReceiverPrivate *priv;
-	IrisDeliveryStatus   status;
+	IrisDeliveryStatus   status = IRIS_DELIVERY_ACCEPTED;
 	IrisReceiveDecision  decision;
-	gboolean             execute;
+	gboolean             execute = TRUE;
 	IrisWorkerData      *worker;
 
 	g_return_val_if_fail (message != NULL, IRIS_DELIVERY_REMOVE);
@@ -334,6 +335,8 @@ iris_receiver_resume (IrisReceiver *receiver)
 {
 	IrisReceiverPrivate *priv;
 	IrisMessage         *message = NULL;
+
+	iris_debug (IRIS_DEBUG_RECEIVER);
 
 	g_return_if_fail (IRIS_IS_RECEIVER (receiver));
 
