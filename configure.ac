@@ -76,6 +76,14 @@ fi
 AM_CONDITIONAL(HAVE_VALA, [test "x$has_vala" = "xyes"])
 AC_SUBST(VAPI_DIR)
 
+dnl = Enable profiling =====================================================
+AC_ARG_ENABLE([profiling],
+              AC_HELP_STRING([--enable-profiling],
+              		     [turn on timer profiling]),
+              ,
+              enable_profiling=no)
+AM_CONDITIONAL(ENABLE_PROFILING, [test "x$enable_profiling" = "xyes"])
+
 dnl = Enable debug level ===================================================
 
 m4_define([debug_default],
@@ -172,6 +180,7 @@ echo ""
 echo "   Prefix...................:  ${prefix}"
 echo "   Debug level..............:  ${enable_debug}"
 echo "   Maintainer Compiler flags:  ${enable_maintainer_flags}"
+echo "   Profiling................:  ${enable_profiling}"
 echo "   Build API reference......:  ${enable_gtk_doc}"
 echo "   Enable test suite........:  ${enable_glibtest}"
 echo "   GObject Introspection....:  ${enable_introspection}"

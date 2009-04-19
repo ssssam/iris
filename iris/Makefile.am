@@ -26,6 +26,7 @@ sources_public_h =					\
 
 sources_private_h =						\
 	$(top_srcdir)/iris/iris-arbiter-private.h		\
+	$(top_srcdir)/iris/iris-debug.h				\
 	$(top_srcdir)/iris/iris-receiver-private.h		\
 	$(top_srcdir)/iris/iris-scheduler-private.h		\
 	$(top_srcdir)/iris/iris-scheduler-manager-private.h	\
@@ -39,6 +40,7 @@ sources_c = 						\
 	iris-any-task.c					\
 	iris-arbiter.c					\
 	iris-coordination-arbiter.c			\
+	iris-debug.c					\
 	iris-free-list.c				\
 	iris-lfqueue.c					\
 	iris-lfscheduler.c				\
@@ -87,6 +89,10 @@ libiris_@IRIS_API_VERSION@_la_CFLAGS =			\
 
 if PLATFORM_LINUX
 libiris_@IRIS_API_VERSION@_la_CFLAGS += "-DLINUX"
+endif
+
+if ENABLE_PROFILING
+libiris_@IRIS_API_VERSION@_la_CFLAGS += "-DENABLE_PROFILING"
 endif
 
 libiris_@IRIS_API_VERSION@_la_LDFLAGS =			\

@@ -20,6 +20,7 @@
 
 #include <glib/gprintf.h>
 
+#include "iris-debug.h"
 #include "iris-scheduler-manager.h"
 #include "iris-thread.h"
 
@@ -101,8 +102,10 @@ static void
 iris_scheduler_manager_init (void)
 {
 	G_LOCK (singleton);
-	if (G_LIKELY (!singleton))
+	if (G_LIKELY (!singleton)) {
+		iris_debug_init ();
 		singleton = g_slice_new0 (IrisSchedulerManager);
+	}
 	G_UNLOCK (singleton);
 }
 

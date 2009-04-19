@@ -20,6 +20,7 @@
 
 #include <glib/gprintf.h>
 
+#include "iris-debug.h"
 #include "iris-message.h"
 #include "iris-queue.h"
 #include "iris-scheduler-manager.h"
@@ -56,6 +57,8 @@ iris_thread_worker_exclusive (IrisThread  *thread,
 	                                      * last quantum. */
 	guint           queued      = 0;     /* Items left in the queue at */
 	gboolean        has_resized = FALSE;
+
+	iris_debug (IRIS_DEBUG_THREAD);
 
 	g_get_current_time (&tv_now);
 	g_get_current_time (&tv_req);
@@ -129,6 +132,8 @@ iris_thread_worker_transient (IrisThread  *thread,
 	IrisThreadWork *thread_work = NULL;
 	GTimeVal        tv_timeout = {0,0};
 
+	iris_debug (IRIS_DEBUG_THREAD);
+
 	/* The transient mode worker is responsible for helping finish off as
 	 * many of the work items as fast as possible.  It is not responsible
 	 * for asking for more helpers, just processing work items.  When done
@@ -189,6 +194,9 @@ iris_thread_worker (IrisThread *thread)
 
 	my_thread = thread;
 
+	iris_debug_init_thread ();
+	iris_debug (IRIS_DEBUG_THREAD);
+
 next_message:
 	message = g_async_queue_pop (thread->queue);
 
@@ -238,9 +246,7 @@ iris_thread_new (gboolean exclusive)
 {
 	IrisThread *thread;
 
-#if 0
-	g_debug ("%s(exclusive=%s)", __func__, exclusive ? "TRUE" : "FALSE");
-#endif
+	iris_debug (IRIS_DEBUG_THREAD);
 
 	thread = g_slice_new0 (IrisThread);
 	thread->exclusive = exclusive;
@@ -293,9 +299,7 @@ iris_thread_manage (IrisThread    *thread,
 	g_return_if_fail (thread != NULL);
 	g_return_if_fail (queue != NULL);
 
-#if 0
-	g_debug ("%s(leader=%s)", __func__, leader ? "TRUE" : "FALSE");
-#endif
+	iris_debug (IRIS_DEBUG_THREAD);
 
 	message = iris_message_new_full (MSG_MANAGE,
 	                                 "exclusive", G_TYPE_BOOLEAN, thread->exclusive,
@@ -316,6 +320,8 @@ iris_thread_shutdown (IrisThread *thread)
 {
 	IrisMessage *message;
 
+	iris_debug (IRIS_DEBUG_THREAD);
+
 	g_return_if_fail (thread != NULL);
 
 	message = iris_message_new (MSG_SHUTDOWN);
@@ -332,12 +338,16 @@ iris_thread_shutdown (IrisThread *thread)
 void
 iris_thread_print_stat (IrisThread *thread)
 {
+	iris_debug (IRIS_DEBUG_THREAD);
+
 	g_mutex_lock (thread->mutex);
+
 	g_fprintf (stderr,
 	           "    Thread 0x%08lx     Active: %s     Queue Size: %d\n",
 	           (long)thread->thread,
 	           thread->active != NULL ? "yes" : "no",
 	           thread->active != NULL ? iris_queue_length (thread->active) : 0);
+
 	g_mutex_unlock (thread->mutex);
 }
 
