@@ -25,9 +25,9 @@
 
 typedef enum
 {
-	IRIS_RECEIVE_NOW,
-	IRIS_RECEIVE_LATER,
-	IRIS_RECEIVE_NEVER
+	IRIS_RECEIVE_NEVER  = 0,
+	IRIS_RECEIVE_NOW    = 1,
+	IRIS_RECEIVE_LATER  = 2,
 } IrisReceiveDecision;
 
 
