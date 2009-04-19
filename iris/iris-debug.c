@@ -95,8 +95,8 @@ iris_debug (IrisDebugSection  section,
 		g_return_if_fail (timer != NULL);
 
 		seconds = g_timer_elapsed (timer, NULL);
-		g_print ("[Thread=%lx] [%f (%f)] %s:%d (%s)\n",
-		         (gulong)thread, seconds, seconds - last,
+		g_print ("[%f (%f)] [Thread=%lx] %s:%d (%s)\n",
+		         seconds, seconds - last, (gulong)thread,
 		         file, line, function);
 		last = seconds;
 #else
@@ -136,8 +136,8 @@ iris_debug_message (IrisDebugSection  section,
 		g_return_if_fail (timer != NULL);
 
 		seconds = g_timer_elapsed (timer, NULL);
-		g_print ("[Thread=%lx] [%f (%f)] %s:%d (%s) %s\n",
-		         (gulong)thread, seconds, seconds - last,
+		g_print ("[%f (%f)] [Thread=%lx] %s:%d (%s) %s\n",
+		         seconds, seconds - last, (gulong)thread,
 		         file, line, function, msg);
 		last = seconds;
 #else
