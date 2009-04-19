@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <iris/iris.h>
+#include <iris/iris-debug.h>
 
 static IrisScheduler *scheduler = NULL;
 static gint counter = 0;
@@ -71,20 +72,20 @@ recursive (void)
 		iris_message_unref (msg);
 	}
 
-	g_debug ("Done pushing items");
+	iris_debug_message (IRIS_DEBUG_THREAD, "Done pushing items");
 
 	g_object_unref (port);
 	g_object_unref (recv);
 
 	if (!done) {
-		g_debug ("Waiting for items to complete");
+		iris_debug_message (IRIS_DEBUG_THREAD, "Waiting for items to complete");
 		g_mutex_lock (mutex);
 		g_cond_wait (cond, mutex);
 		g_mutex_unlock (mutex);
-		g_debug ("Signal received, all done");
+		iris_debug_message (IRIS_DEBUG_THREAD, "Signal received, all done");
 	}
 	else {
-		g_debug ("Items completed before we could block!");
+		iris_debug_message (IRIS_DEBUG_THREAD, "Items completed before we could block!");
 	}
 }
 
