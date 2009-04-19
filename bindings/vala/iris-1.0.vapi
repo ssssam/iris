@@ -22,6 +22,7 @@ using GLib;
 
 [CCode (cheader_filename="iris/iris.h")]
 namespace Iris {
+	public void init ();
 	namespace SchedulerManager {
 		public void prepare (Iris.Scheduler scheduler);
 		public void unprepare (Iris.Scheduler scheduler);
@@ -118,6 +119,8 @@ namespace Iris {
 		public Message.data (int what, GLib.Type type, ...);
 		public Message.full (int what, string first_name, ...);
 		public Message copy ();
+		public void ref ();
+		public void unref ();
 		public weak Value get_data ();
 		public void set_data (Value value);
 		public uint count_names ();
@@ -163,6 +166,7 @@ namespace Iris {
 		public void flush ();
 		public bool has_receiver ();
 		public uint get_queue_count ();
+		public bool is_paused ();
 	}
 	public class Arbiter: GLib.Object {
 		public virtual void can_receive (Iris.Receiver receiver);
