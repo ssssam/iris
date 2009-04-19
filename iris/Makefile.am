@@ -36,6 +36,7 @@ sources_private_h =						\
 	$(NULL)
 
 sources_c = 						\
+	iris.c						\
 	iris-all-task.c					\
 	iris-any-task.c					\
 	iris-arbiter.c					\

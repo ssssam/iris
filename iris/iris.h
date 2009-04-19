@@ -40,4 +40,6 @@
 #include "iris-task.h"
 #include "iris-wsqueue.h"
 
+void iris_init (void);
+
 #endif /* __IRIS_H__ */
