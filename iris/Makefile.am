@@ -27,6 +27,7 @@ sources_public_h =					\
 sources_private_h =						\
 	$(top_srcdir)/iris/iris-arbiter-private.h		\
 	$(top_srcdir)/iris/iris-debug.h				\
+	$(top_srcdir)/iris/iris-port-private.h			\
 	$(top_srcdir)/iris/iris-receiver-private.h		\
 	$(top_srcdir)/iris/iris-scheduler-private.h		\
 	$(top_srcdir)/iris/iris-scheduler-manager-private.h	\

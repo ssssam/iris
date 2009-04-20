@@ -20,6 +20,7 @@
 
 #include "iris-debug.h"
 #include "iris-port.h"
+#include "iris-port-private.h"
 
 #define IRIS_PORT_STATE_PAUSED 1 << 0
 #define PORT_PAUSED(port)                                         \
@@ -36,34 +37,6 @@
 					iris_message_ref (m));    \
 		}                                                 \
 	} G_STMT_END
-
-struct _IrisPortPrivate
-{
-	IrisMessage  *current;      /* Contains the current message in the
-	                             * port. This happens if the receiver
-	                             * did not accept our message and we
-	                             * removed the receiver, or if we have
-	                             * no receiver. After a message is in
-	                             * current, all future post's go into
-	                             * the queue.
-	                             */
-
-	GQueue       *queue;        /* Queue for incoming messages that
-	                             * cannot yet be delivered.
-	                             */
-
-	IrisReceiver *receiver;     /* Our receiver to deliver messages. */
-
-	GMutex       *mutex;        /* Mutex for synchronizing port access.
-	                             * We try to avoid acquiring this lock
-	                             * unless we cannot deliver to the
-	                             * receiver.
-	                             */
-
-	gint          state;        /* Flags for our current state, such
-	                             * as if we are currently paused.
-	                             */
-};
 
 G_DEFINE_TYPE (IrisPort, iris_port, G_TYPE_OBJECT);
 
