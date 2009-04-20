@@ -66,6 +66,7 @@ test4 (void)
 {
 	SETUP ();
 
+	IrisCoordinationArbiter *coord;
 	IrisArbiter  *arbiter;
 	IrisPort     *e_port, *c_port;
 	IrisReceiver *e_recv, *c_recv;
@@ -77,18 +78,19 @@ test4 (void)
 	g_assert (e_port);
 	g_assert (c_port);
 
-	e_recv = iris_arbiter_receive (NULL, e_port, test4_cb, &e);
-	c_recv = iris_arbiter_receive (NULL, c_port, test4_cb, &c);
+	e_recv = iris_arbiter_receive (mock_scheduler_new (), e_port, test4_cb, &e);
+	c_recv = iris_arbiter_receive (mock_scheduler_new (), c_port, test4_cb, &c);
 
 	g_assert (e_recv);
 	g_assert (c_recv);
 
 	arbiter = iris_arbiter_coordinate (e_recv, c_recv, NULL);
+	coord = IRIS_COORDINATION_ARBITER (arbiter);
 	
 	g_assert (arbiter);
 
 	iris_port_post (e_port, iris_message_new (1));
-	g_assert (COORD_FLAG_ON (arbiter, IRIS_COORD_EXCLUSIVE));
+	g_assert_cmpint (coord->priv->flags & IRIS_COORD_ANY, ==, IRIS_COORD_EXCLUSIVE);
 	g_assert_cmpint (e, ==, 1);
 
 	iris_port_post (c_port, iris_message_new (1));
@@ -107,11 +109,16 @@ test4 (void)
 	g_assert (COORD_FLAG_ON (arbiter, IRIS_COORD_CONCURRENT));
 	g_assert_cmpint (c, ==, 4);
 
-	/* will end up flushing causing delivery, increments to 5 */
+	/* this is a sort of dead state, as its waiting for the exclusive
+	 * to unpause and flush out items into the arbiter. the message
+	 * wont be delivered now. */
 	COORD_FLAG_SET (arbiter, IRIS_COORD_CONCURRENT | IRIS_COORD_NEEDS_EXCLUSIVE);
 	iris_port_post (c_port, iris_message_new (1));
-	g_assert_cmpint (c, ==, 5);
+	g_assert_cmpint (c, ==, 4);
 
+	/* By passing another exclusive message in, we can finish off
+	 * our hypothetical wait for NEEDS_EXCLUSIVE and then causing the
+	 * concurrent to also process. Ultimately increasing both. */
 	iris_port_post (e_port, iris_message_new (1));
 	g_assert_cmpint (e, ==, 3);
 	g_assert_cmpint (c, ==, 5);
@@ -124,6 +131,7 @@ main (int   argc,
 	g_type_init ();
 	g_test_init (&argc, &argv, NULL);
 	g_thread_init (NULL);
+	iris_init ();
 
 	g_test_add_func ("/arbiter/receive1", test1);
 	g_test_add_func ("/arbiter/receive2", test2);
