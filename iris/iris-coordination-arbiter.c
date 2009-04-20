@@ -252,6 +252,11 @@ iris_coordination_arbiter_new (IrisReceiver *exclusive,
 	g_return_val_if_fail (exclusive  == NULL || IRIS_IS_RECEIVER (exclusive),  NULL);
 	g_return_val_if_fail (concurrent == NULL || IRIS_IS_RECEIVER (concurrent), NULL);
 	g_return_val_if_fail (teardown   == NULL || IRIS_IS_RECEIVER (teardown),   NULL);
+
+	g_return_val_if_fail (exclusive  && exclusive  == concurrent, NULL);
+	g_return_val_if_fail (teardown   && exclusive  == teardown,   NULL);
+	g_return_val_if_fail (concurrent && concurrent == teardown,   NULL);
+	g_return_val_if_fail (exclusive || concurrent || teardown,    NULL);
 	
 	arbiter = g_object_new (IRIS_TYPE_COORDINATION_ARBITER, NULL);
 	arbiter->priv->exclusive = exclusive ? g_object_ref (exclusive) : NULL;
