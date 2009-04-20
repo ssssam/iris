@@ -54,7 +54,8 @@ can_receive (IrisArbiter  *arbiter,
 {
 	IrisCoordinationArbiter        *coord;
 	IrisCoordinationArbiterPrivate *priv;
-	IrisReceiveDecision             decision;
+	IrisReceiver                   *resume   = NULL;
+	IrisReceiveDecision             decision = IRIS_RECEIVE_NEVER;
 
 	g_return_val_if_fail (IRIS_IS_COORDINATION_ARBITER (arbiter), IRIS_RECEIVE_NEVER);
 	g_return_val_if_fail (IRIS_IS_RECEIVER (receiver), IRIS_RECEIVE_NEVER);
@@ -134,7 +135,7 @@ can_receive (IrisArbiter  *arbiter,
 			if (((priv->flags & IRIS_COORD_NEEDS_ANY) | IRIS_COORD_NEEDS_CONCURRENT) == IRIS_COORD_NEEDS_CONCURRENT) {
 				decision = IRIS_RECEIVE_NOW;
 				priv->flags &= ~IRIS_COORD_NEEDS_CONCURRENT;
-				// RESUME CONCURRENT IF WE CAN?
+				resume = priv->concurrent;
 				goto finish;
 			}
 		}
@@ -343,7 +344,7 @@ can_receive (IrisArbiter  *arbiter,
 					decision = IRIS_RECEIVE_NOW;
 					priv->flags &= ~(IRIS_COORD_EXCLUSIVE | IRIS_COORD_NEEDS_CONCURRENT);
 					priv->flags |= IRIS_COORD_CONCURRENT;
-					// RESUME CONCURRENT IF WE CAN?
+					resume = priv->concurrent;
 					goto finish;
 				}
 			}
@@ -449,6 +450,9 @@ can_receive (IrisArbiter  *arbiter,
 finish:
 	if (decision == IRIS_RECEIVE_NOW)
 		g_atomic_int_inc ((gint*)&priv->active);
+
+	if (resume)
+		iris_receiver_resume (resume);
 
 	g_static_rec_mutex_unlock (&priv->mutex);
 
