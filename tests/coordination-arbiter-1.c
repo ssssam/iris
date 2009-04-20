@@ -28,10 +28,12 @@ test2_e (IrisMessage *message,
 {
 	gboolean *exc_b = user_data;
 
+	G_LOCK (exclusive);
 	g_mutex_lock (sync);
 	*exc_b = !(*exc_b);
 	g_cond_signal (cond);
 	g_mutex_unlock (sync);
+	G_UNLOCK (exclusive);
 }
 
 static void
@@ -40,10 +42,12 @@ test2_c (IrisMessage *message,
 {
 	gboolean *cnc_b = user_data;
 
+	G_LOCK (concurrent);
 	g_mutex_lock (sync);
 	*cnc_b = !(*cnc_b);
 	g_cond_signal (cond);
 	g_mutex_unlock (sync);
+	G_UNLOCK (concurrent);
 }
 
 static void
@@ -146,7 +150,34 @@ test2 (void)
 	g_assert_cmpint ((IRIS_COORDINATION_ARBITER (arbiter)->priv->flags & IRIS_COORD_ANY),==,IRIS_COORD_CONCURRENT);
 	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,1);
 
+	/* send 5 more messages to make our total count up to 6 */
+	iris_port_post (cnc, iris_message_new (1));
+	iris_port_post (cnc, iris_message_new (1));
+	iris_port_post (cnc, iris_message_new (1));
+	iris_port_post (cnc, iris_message_new (1));
+	iris_port_post (cnc, iris_message_new (1));
 
+	/* now all 6 are blocked on our mutex until we wait for them */
+	g_assert (cnc->priv->current == NULL);
+	g_assert (cnc->priv->queue == NULL);
+	g_assert_cmpint ((IRIS_COORDINATION_ARBITER (arbiter)->priv->flags & IRIS_COORD_ANY),==,IRIS_COORD_CONCURRENT);
+	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,6);
+
+	/* let 2 of them complete */
+	g_cond_wait (cond, sync);
+	g_cond_wait (cond, sync);
+	g_assert_cmpint ((IRIS_COORDINATION_ARBITER (arbiter)->priv->flags & IRIS_COORD_ANY),==,IRIS_COORD_CONCURRENT);
+	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,4);
+
+	/* and 2 more */
+	g_cond_wait (cond, sync);
+	g_cond_wait (cond, sync);
+	g_assert_cmpint ((IRIS_COORDINATION_ARBITER (arbiter)->priv->flags & IRIS_COORD_ANY),==,IRIS_COORD_CONCURRENT);
+	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,2);
+
+	g_cond_wait (cond, sync);
+	g_assert_cmpint ((IRIS_COORDINATION_ARBITER (arbiter)->priv->flags & IRIS_COORD_ANY),==,IRIS_COORD_CONCURRENT);
+	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,1);
 }
 
 gint
