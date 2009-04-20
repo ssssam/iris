@@ -29,6 +29,7 @@ test2_cb (IrisMessage *msg,
 static void
 test2 (void)
 {
+	SETUP ();
 	gboolean success = FALSE;
 	IrisPort *port = iris_port_new ();
 	iris_arbiter_receive (NULL, port, test2_cb, &success);
@@ -39,6 +40,8 @@ test2 (void)
 static void
 test3 (void)
 {
+	SETUP ();
+
 	IrisArbiter *arbiter;
 
 	arbiter = iris_arbiter_coordinate (
@@ -128,10 +131,8 @@ gint
 main (int   argc,
       char *argv[])
 {
-	g_type_init ();
-	g_test_init (&argc, &argv, NULL);
-	g_thread_init (NULL);
 	iris_init ();
+	g_test_init (&argc, &argv, NULL);
 
 	g_test_add_func ("/arbiter/receive1", test1);
 	g_test_add_func ("/arbiter/receive2", test2);
