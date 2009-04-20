@@ -107,12 +107,18 @@ iris_coordination_arbiter_can_receive (IrisArbiter  *arbiter,
 			DISABLE_FLAG (priv, IRIS_COORD_EXCLUSIVE
 			                  | IRIS_COORD_CONCURRENT
 			                  | IRIS_COORD_TEARDOWN);
-			if (receiver == priv->exclusive)
+			if (receiver == priv->exclusive) {
 				ENABLE_FLAG (priv, IRIS_COORD_EXCLUSIVE);
-			else if (receiver == priv->concurrent)
+				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_EXCLUSIVE);
+			}
+			else if (receiver == priv->concurrent) {
 				ENABLE_FLAG (priv, IRIS_COORD_CONCURRENT);
-			else if (receiver == priv->teardown)
+				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_CONCURRENT);
+			}
+			else if (receiver == priv->teardown) {
 				ENABLE_FLAG (priv, IRIS_COORD_TEARDOWN);
+				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_TEARDOWN);
+			}
 			decision = IRIS_RECEIVE_NOW;
 		}
 	}
@@ -139,6 +145,14 @@ iris_coordination_arbiter_can_receive (IrisArbiter  *arbiter,
 	}
 	else {
 		decision = IRIS_RECEIVE_LATER;
+		if (receiver == priv->exclusive)
+			ENABLE_FLAG (priv, IRIS_COORD_NEEDS_EXCLUSIVE);
+		else if (receiver == priv->concurrent)
+			ENABLE_FLAG (priv, IRIS_COORD_NEEDS_CONCURRENT);
+		else if (receiver == priv->teardown)
+			ENABLE_FLAG (priv, IRIS_COORD_NEEDS_TEARDOWN);
+		else
+			g_assert_not_reached ();
 	}
 
 _unlock:
@@ -170,22 +184,22 @@ iris_coordination_arbiter_receive_completed (IrisArbiter  *arbiter,
 	if (G_UNLIKELY (g_atomic_int_dec_and_test ((int*)&priv->active))) {
 		if (NEEDS_SWITCH (priv)) {
 			if (FLAG_IS_ON (priv, IRIS_COORD_NEEDS_EXCLUSIVE)) {
-				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_EXCLUSIVE);
+				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_EXCLUSIVE | IRIS_COORD_CONCURRENT);
 				ENABLE_FLAG (priv, IRIS_COORD_EXCLUSIVE);
 				resume = priv->exclusive;
 			}
 			else if (FLAG_IS_ON (priv, IRIS_COORD_NEEDS_CONCURRENT)) {
-				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_CONCURRENT);
+				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_CONCURRENT | IRIS_COORD_EXCLUSIVE);
 				ENABLE_FLAG (priv, IRIS_COORD_CONCURRENT);
-				resume = priv->exclusive;
+				resume = priv->concurrent;
 			}
 			else if (FLAG_IS_ON (priv, IRIS_COORD_NEEDS_TEARDOWN)) {
 				/* NOTE: This might needs to go first to prevent
 				 *   starvation of immediate teardown.
 				 */
-				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_TEARDOWN);
+				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_TEARDOWN | IRIS_COORD_EXCLUSIVE | IRIS_COORD_CONCURRENT);
 				ENABLE_FLAG (priv, IRIS_COORD_TEARDOWN);
-				resume = priv->exclusive;
+				resume = priv->teardown;
 			}
 			else
 				g_assert_not_reached ();
@@ -194,8 +208,9 @@ iris_coordination_arbiter_receive_completed (IrisArbiter  *arbiter,
 
 	g_mutex_unlock (priv->mutex);
 
-	if (resume)
+	if (resume) {
 		iris_receiver_resume (resume);
+	}
 }
 
 static void
