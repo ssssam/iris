@@ -88,7 +88,7 @@ iris_coordination_arbiter_can_receive (IrisArbiter  *arbiter,
 		g_assert_not_reached ();
 
 	if (!NEEDS_SWITCH (priv)) {
-		if (receiver == active_receiver) {
+		if (receiver == active_receiver && (receiver != priv->exclusive || !priv->active)) {
 			decision = IRIS_RECEIVE_NOW;
 			goto _unlock;
 		}
