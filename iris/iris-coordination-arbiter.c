@@ -183,7 +183,8 @@ can_receive (IrisArbiter  *arbiter,
 			if (priv->active == 0) {
 				if (((priv->flags & IRIS_COORD_NEEDS_ANY) | IRIS_COORD_NEEDS_EXCLUSIVE) == IRIS_COORD_NEEDS_EXCLUSIVE) {
 					decision = IRIS_RECEIVE_NOW;
-					priv->flags &= ~IRIS_COORD_NEEDS_EXCLUSIVE;
+					priv->flags &= ~(IRIS_COORD_CONCURRENT | IRIS_COORD_NEEDS_EXCLUSIVE);
+					priv->flags |= IRIS_COORD_EXCLUSIVE;
 					goto finish;
 				}
 			}
@@ -201,7 +202,8 @@ can_receive (IrisArbiter  *arbiter,
 			if (priv->active == 0) {
 				if ((priv->flags & IRIS_COORD_NEEDS_ANY) != IRIS_COORD_NEEDS_CONCURRENT) {
 					decision = IRIS_RECEIVE_NOW;
-					priv->flags &= ~IRIS_COORD_NEEDS_EXCLUSIVE;
+					priv->flags &= ~(IRIS_COORD_CONCURRENT | IRIS_COORD_NEEDS_EXCLUSIVE);
+					priv->flags |= IRIS_COORD_EXCLUSIVE;
 					goto finish;
 				}
 			}
@@ -219,7 +221,8 @@ can_receive (IrisArbiter  *arbiter,
 			if (priv->active == 0) {
 				if (((priv->flags & IRIS_COORD_NEEDS_ANY) | IRIS_COORD_NEEDS_TEARDOWN) == IRIS_COORD_NEEDS_TEARDOWN) {
 					decision = IRIS_RECEIVE_NOW;
-					priv->flags &= ~IRIS_COORD_NEEDS_TEARDOWN;
+					priv->flags &= ~(IRIS_COORD_CONCURRENT | IRIS_COORD_NEEDS_TEARDOWN);
+					priv->flags |= IRIS_COORD_TEARDOWN;
 					goto finish;
 				}
 			}
@@ -252,7 +255,8 @@ can_receive (IrisArbiter  *arbiter,
 		if (receiver == priv->teardown) {
 			if (priv->active == 0) {
 				decision = IRIS_RECEIVE_NOW;
-				priv->flags &= ~IRIS_COORD_NEEDS_TEARDOWN;
+				priv->flags &= ~(IRIS_COORD_CONCURRENT | IRIS_COORD_NEEDS_TEARDOWN);
+				priv->flags |= IRIS_COORD_TEARDOWN;
 				goto finish;
 			}
 		}
@@ -337,7 +341,8 @@ can_receive (IrisArbiter  *arbiter,
 			if (priv->active == 0) {
 				if (((priv->flags & IRIS_COORD_NEEDS_ANY) | IRIS_COORD_NEEDS_CONCURRENT) == IRIS_COORD_NEEDS_CONCURRENT) {
 					decision = IRIS_RECEIVE_NOW;
-					priv->flags &= ~IRIS_COORD_NEEDS_CONCURRENT;
+					priv->flags &= ~(IRIS_COORD_EXCLUSIVE | IRIS_COORD_NEEDS_CONCURRENT);
+					priv->flags |= IRIS_COORD_CONCURRENT;
 					// RESUME CONCURRENT IF WE CAN?
 					goto finish;
 				}
@@ -390,7 +395,8 @@ can_receive (IrisArbiter  *arbiter,
 			if (priv->active == 0) {
 				if (((priv->flags & IRIS_COORD_NEEDS_ANY) | IRIS_COORD_NEEDS_TEARDOWN) == IRIS_COORD_NEEDS_TEARDOWN) {
 					decision = IRIS_RECEIVE_NOW;
-					priv->flags &= ~IRIS_COORD_NEEDS_TEARDOWN;
+					priv->flags &= ~(IRIS_COORD_EXCLUSIVE | IRIS_COORD_NEEDS_TEARDOWN);
+					priv->flags |= IRIS_COORD_TEARDOWN;
 					goto finish;
 				}
 			}
