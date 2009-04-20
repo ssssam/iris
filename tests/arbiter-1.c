@@ -33,7 +33,7 @@ test2 (void)
 	IrisPort *port = iris_port_new ();
 	iris_arbiter_receive (NULL, port, test2_cb, &success);
 	iris_port_post (port, iris_message_new (1));
-	g_assert (success = TRUE);
+	g_assert (success == TRUE);
 }
 
 static void
