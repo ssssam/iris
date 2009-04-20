@@ -34,6 +34,7 @@ typedef enum
 	IRIS_COORD_NEEDS_CONCURRENT = 1 << 3,  // 8
 	IRIS_COORD_NEEDS_TEARDOWN   = 1 << 4,  // 16
 	IRIS_COORD_TEARDOWN         = 1 << 5,  // 32
+	IRIS_COORD_COMPLETE         = 1 << 15, // 32768
 
 	IRIS_COORD_ANY              = IRIS_COORD_EXCLUSIVE
 	                            | IRIS_COORD_CONCURRENT
@@ -46,12 +47,12 @@ typedef enum
 
 struct _IrisCoordinationArbiterPrivate
 {
-	IrisReceiver *exclusive;
-	IrisReceiver *concurrent;
-	IrisReceiver *teardown;
-	GMutex       *mutex;
-	guint         flags;
-	glong         active;
+	IrisReceiver    *exclusive;
+	IrisReceiver    *concurrent;
+	IrisReceiver    *teardown;
+	GStaticRecMutex  mutex;
+	guint            flags;
+	glong            active;
 };
 
 #endif /* __IRIS_COORDINATION_ARBITER_PRIVATE_H__ */

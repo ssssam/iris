@@ -31,14 +31,6 @@
 		if (r && !r->priv->arbiter)                      \
 			r->priv->arbiter = g_object_ref (a);     \
 	} G_STMT_END
-#define FLAG_IS_ON(p,f)   ((p->flags & (f)) != 0)
-#define FLAG_IS_OFF(p,f)  ((p->flags & (f)) == 0)
-#define ENABLE_FLAG(p,f)  p->flags |= (f)
-#define DISABLE_FLAG(p,f) p->flags &= ~(f)
-#define NEEDS_SWITCH(p)                                         \
-	((p->flags & (IRIS_COORD_NEEDS_EXCLUSIVE  |             \
-	              IRIS_COORD_NEEDS_CONCURRENT |             \
-	              IRIS_COORD_NEEDS_TEARDOWN)) != 0)
 
 /**
  * SECTION:iris-coordination-receiver
@@ -57,160 +49,458 @@ G_DEFINE_TYPE (IrisCoordinationArbiter,
                IRIS_TYPE_ARBITER);
 
 static IrisReceiveDecision
-iris_coordination_arbiter_can_receive (IrisArbiter  *arbiter,
-                                       IrisReceiver *receiver)
+can_receive (IrisArbiter  *arbiter,
+             IrisReceiver *receiver)
 {
+	IrisCoordinationArbiter        *coord;
 	IrisCoordinationArbiterPrivate *priv;
-	gboolean                        can_switch;
-	IrisReceiver                   *active_receiver;
-	IrisReceiver                   *resume = NULL;
 	IrisReceiveDecision             decision;
 
 	g_return_val_if_fail (IRIS_IS_COORDINATION_ARBITER (arbiter), IRIS_RECEIVE_NEVER);
 	g_return_val_if_fail (IRIS_IS_RECEIVER (receiver), IRIS_RECEIVE_NEVER);
 
-	priv = IRIS_COORDINATION_ARBITER (arbiter)->priv;
+	coord = IRIS_COORDINATION_ARBITER (arbiter);
+	priv = coord->priv;
 
-	g_mutex_lock (priv->mutex);
+	g_static_rec_mutex_lock (&priv->mutex);
 
-	if (FLAG_IS_ON (priv, IRIS_COORD_TEARDOWN)) {
+	/* Current Receiver: ANY
+	 * Request Receiver: ANY
+	 * Has Active......: ANY
+	 * Pending.........: ANY
+	 * Completed.......: YES
+	 * Receive.........: NEVER
+	 */
+	if (priv->flags & IRIS_COORD_COMPLETE) {
 		decision = IRIS_RECEIVE_NEVER;
-		goto _unlock;
+		goto finish;
 	}
 
-	can_switch = (priv->active == 0);
-
-	if (FLAG_IS_ON (priv, IRIS_COORD_EXCLUSIVE))
-		active_receiver = priv->exclusive;
-	else if (FLAG_IS_ON (priv, IRIS_COORD_CONCURRENT))
-		active_receiver = priv->concurrent;
-	else
-		g_assert_not_reached ();
-
-	if (!NEEDS_SWITCH (priv)) {
-		if (receiver == active_receiver && (receiver != priv->exclusive || !priv->active)) {
-			decision = IRIS_RECEIVE_NOW;
-			goto _unlock;
-		}
-		else if (!can_switch) {
-			if (receiver == priv->exclusive)
-				ENABLE_FLAG (priv, IRIS_COORD_NEEDS_EXCLUSIVE);
-			else if (receiver == priv->concurrent)
-				ENABLE_FLAG (priv, IRIS_COORD_NEEDS_CONCURRENT);
-			else if (receiver == priv->teardown)
-				ENABLE_FLAG (priv, IRIS_COORD_NEEDS_TEARDOWN);
-			else
-				g_assert_not_reached ();
-			decision = IRIS_RECEIVE_LATER;
-		}
-		else {
-			DISABLE_FLAG (priv, IRIS_COORD_EXCLUSIVE
-			                  | IRIS_COORD_CONCURRENT
-			                  | IRIS_COORD_TEARDOWN);
-			if (receiver == priv->exclusive) {
-				ENABLE_FLAG (priv, IRIS_COORD_EXCLUSIVE);
-				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_EXCLUSIVE);
-			}
-			else if (receiver == priv->concurrent) {
-				ENABLE_FLAG (priv, IRIS_COORD_CONCURRENT);
-				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_CONCURRENT);
-			}
-			else if (receiver == priv->teardown) {
-				ENABLE_FLAG (priv, IRIS_COORD_TEARDOWN);
-				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_TEARDOWN);
-			}
-			decision = IRIS_RECEIVE_NOW;
+	/* Current Receiver: TEARDOWN
+	 * Request Receiver: CONCURRENT or EXCLUSIVE
+	 * Has Active......: ANY
+	 * Pending.........: ANY
+	 * Receive.........: NEVER
+	 */
+	if (priv->flags & IRIS_COORD_TEARDOWN) {
+		if (receiver == priv->concurrent || receiver == priv->exclusive) {
+			decision = IRIS_RECEIVE_NEVER;
+			goto finish;
 		}
 	}
-	else if (can_switch) {
+
+	/* Current Receiver: TEARDOWN
+	 * Request Receiver: TEARDOWN
+	 * Has Active......: 0
+	 * Pending.........: NONE
+	 * Completed.......: NO
+	 * Receive.........: NOW
+	 */
+	if (priv->flags & IRIS_COORD_TEARDOWN) {
+		if ((priv->flags & IRIS_COORD_COMPLETE) == 0) {
+			if (receiver == priv->teardown) {
+				if (priv->active == 0) {
+					decision = IRIS_RECEIVE_NOW;
+					priv->flags &= ~IRIS_COORD_NEEDS_TEARDOWN;
+					priv->flags |= IRIS_COORD_COMPLETE;
+					goto finish;
+				}
+			}
+		}
+	}
+
+
+	/* Current Receiver: ANY
+	 * Request Receiver: CONCURRENT or EXCUSIVE
+	 * Has Active......: ANY
+	 * Pending.........: TEARDOWN
+	 * Receive.........: NEVER
+	 */
+	if (receiver == priv->concurrent || receiver == priv->exclusive) {
+		if (priv->flags & IRIS_COORD_NEEDS_TEARDOWN) {
+			decision = IRIS_RECEIVE_NEVER;
+			goto finish;
+		}
+	}
+
+	/* Current Receiver: CONCURRENT
+	 * Request Receiver: CONCURRENT
+	 * Has Active......: *
+	 * Pending.........: NONE or CONCURRENT
+	 * Receive.........: NOW
+	 */
+	if ((priv->flags & IRIS_COORD_CONCURRENT) != 0) {
+		if (receiver == priv->concurrent) {
+			if (((priv->flags & IRIS_COORD_NEEDS_ANY) | IRIS_COORD_NEEDS_CONCURRENT) == IRIS_COORD_NEEDS_CONCURRENT) {
+				decision = IRIS_RECEIVE_NOW;
+				priv->flags &= ~IRIS_COORD_NEEDS_CONCURRENT;
+				// RESUME CONCURRENT IF WE CAN?
+				goto finish;
+			}
+		}
+	}
+
+	/* Current Receiver: CONCURRENT
+	 * Request Receiver: CONCURRENT
+	 * Has Active......: *
+	 * Pending.........: ANY
+	 * Receive.........: LATER
+	 */
+	if ((priv->flags & IRIS_COORD_CONCURRENT) != 0) {
+		if (receiver == priv->concurrent) {
+			if ((priv->flags & IRIS_COORD_NEEDS_ANY) != 0) {
+				decision = IRIS_RECEIVE_LATER;
+				priv->flags |= IRIS_COORD_NEEDS_CONCURRENT;
+				goto finish;
+			}
+		}
+	}
+
+	/* Current Receiver: CONCURRENT
+	 * Request Receiver: EXCLUSIVE
+	 * Has Active......: YES
+	 * Pending.........: ANY
+	 * Receive.........: LATER
+	 */
+	if ((priv->flags & IRIS_COORD_CONCURRENT) != 0) {
 		if (receiver == priv->exclusive) {
-			DISABLE_FLAG (priv, IRIS_COORD_NEEDS_EXCLUSIVE);
-			ENABLE_FLAG (priv, IRIS_COORD_EXCLUSIVE);
-			resume = priv->exclusive;
+			if (priv->active > 0) {
+				decision = IRIS_RECEIVE_LATER;
+				priv->flags |= IRIS_COORD_NEEDS_EXCLUSIVE;
+				goto finish;
+			}
 		}
-		else if (receiver == priv->concurrent) {
-			DISABLE_FLAG (priv, IRIS_COORD_NEEDS_CONCURRENT);
-			ENABLE_FLAG (priv, IRIS_COORD_CONCURRENT);
-			resume = priv->concurrent;
-		}
-		else if (receiver == priv->teardown) {
-			DISABLE_FLAG (priv, IRIS_COORD_NEEDS_TEARDOWN);
-			ENABLE_FLAG (priv, IRIS_COORD_TEARDOWN);
-			resume = priv->teardown;
-		}
-		else
-			g_assert_not_reached ();
-		decision = IRIS_RECEIVE_NOW;
-
-	}
-	else {
-		decision = IRIS_RECEIVE_LATER;
-		if (receiver == priv->exclusive)
-			ENABLE_FLAG (priv, IRIS_COORD_NEEDS_EXCLUSIVE);
-		else if (receiver == priv->concurrent)
-			ENABLE_FLAG (priv, IRIS_COORD_NEEDS_CONCURRENT);
-		else if (receiver == priv->teardown)
-			ENABLE_FLAG (priv, IRIS_COORD_NEEDS_TEARDOWN);
-		else
-			g_assert_not_reached ();
 	}
 
-_unlock:
+	/* Current Receiver: CONCURRENT
+	 * Request Receiver: EXCLUSIVE
+	 * Has Active......: NO
+	 * Pending.........: NONE or EXCLUSIVE
+	 * Receive.........: NOW
+	 */
+	if ((priv->flags & IRIS_COORD_CONCURRENT) != 0) {
+		if (receiver == priv->exclusive) {
+			if (priv->active == 0) {
+				if (((priv->flags & IRIS_COORD_NEEDS_ANY) | IRIS_COORD_NEEDS_EXCLUSIVE) == IRIS_COORD_NEEDS_EXCLUSIVE) {
+					decision = IRIS_RECEIVE_NOW;
+					priv->flags &= ~IRIS_COORD_NEEDS_EXCLUSIVE;
+					goto finish;
+				}
+			}
+		}
+	}
+
+	/* Current Receiver: CONCURRENT
+	 * Request Receiver: EXCLUSIVE
+	 * Has Active......: NO
+	 * Pending.........: EXCLUSIVE or TEARDOWN
+	 * Receive.........: NOW
+	 */
+	if ((priv->flags & IRIS_COORD_CONCURRENT) != 0) {
+		if (receiver == priv->exclusive) {
+			if (priv->active == 0) {
+				if ((priv->flags & IRIS_COORD_NEEDS_ANY) != IRIS_COORD_NEEDS_CONCURRENT) {
+					decision = IRIS_RECEIVE_NOW;
+					priv->flags &= ~IRIS_COORD_NEEDS_EXCLUSIVE;
+					goto finish;
+				}
+			}
+		}
+	}
+
+	/* Current Receiver: CONCURRENT
+	 * Request Receiver: TEARDOWN
+	 * Has Active......: NO
+	 * Pending.........: NONE or TEARDOWN
+	 * Receive.........: NOW
+	 */
+	if ((priv->flags & IRIS_COORD_CONCURRENT) != 0) {
+		if (receiver == priv->teardown) {
+			if (priv->active == 0) {
+				if (((priv->flags & IRIS_COORD_NEEDS_ANY) | IRIS_COORD_NEEDS_TEARDOWN) == IRIS_COORD_NEEDS_TEARDOWN) {
+					decision = IRIS_RECEIVE_NOW;
+					priv->flags &= ~IRIS_COORD_NEEDS_TEARDOWN;
+					goto finish;
+				}
+			}
+		}
+	}
+
+	/* Current Receiver: CONCURRENT
+	 * Request Receiver: TEARDOWN
+	 * Has Active......: YES
+	 * Pending.........: ANY
+	 * Receive.........: LATER
+	 */
+	if ((priv->flags & IRIS_COORD_CONCURRENT) != 0) {
+		if (receiver == priv->teardown) {
+			if (priv->active > 0) {
+				decision = IRIS_RECEIVE_LATER;
+				priv->flags |= IRIS_COORD_NEEDS_TEARDOWN;
+				goto finish;
+			}
+		}
+	}
+
+	/* Current Receiver: CONCURRENT
+	 * Request Receiver: TEARDOWN
+	 * Has Active......: NO
+	 * Pending.........: ANY
+	 * Receive.........: NOW
+	 */
+	if ((priv->flags & IRIS_COORD_CONCURRENT) != 0) {
+		if (receiver == priv->teardown) {
+			if (priv->active == 0) {
+				decision = IRIS_RECEIVE_NOW;
+				priv->flags &= ~IRIS_COORD_NEEDS_TEARDOWN;
+				goto finish;
+			}
+		}
+	}
+
+	/* Current Receiver: EXCLUSIVE
+	 * Request Receiver: EXCLUSIVE
+	 * Has Active......: YES
+	 * Pending.........: ANY
+	 * Receive.........: LATER
+	 */
+	if ((priv->flags & IRIS_COORD_EXCLUSIVE) != 0) {
+		if (receiver == priv->exclusive) {
+			if (priv->active > 0) {
+				decision = IRIS_RECEIVE_LATER;
+				priv->flags |= IRIS_COORD_NEEDS_EXCLUSIVE;
+				goto finish;
+			}
+		}
+	}
+
+	/* Current Receiver: EXCLUSIVE
+	 * Request Receiver: EXCLUSIVE
+	 * Has Active......: NO
+	 * Pending.........: NONE or EXCLUSIVE
+	 * Receive.........: NOW
+	 */
+	if ((priv->flags & IRIS_COORD_EXCLUSIVE) != 0) {
+		if (receiver == priv->exclusive) {
+			if (priv->active == 0) {
+				if (((priv->flags & IRIS_COORD_NEEDS_ANY) | IRIS_COORD_NEEDS_EXCLUSIVE) == IRIS_COORD_NEEDS_EXCLUSIVE) {
+					decision = IRIS_RECEIVE_NOW;
+					priv->flags &= ~IRIS_COORD_NEEDS_EXCLUSIVE;
+					goto finish;
+				}
+			}
+		}
+	}
+
+	/* Current Receiver: EXCLUSIVE
+	 * Request Receiver: EXCLUSIVE
+	 * Has Active......: NO
+	 * Pending.........: CONCURRENT or TEARDOWN
+	 * Receive.........: LATER
+	 */
+	if ((priv->flags & IRIS_COORD_EXCLUSIVE) != 0) {
+		if (receiver == priv->exclusive) {
+			if (priv->active == 0) {
+				if ((priv->flags & IRIS_COORD_NEEDS_ANY) & ~IRIS_COORD_NEEDS_EXCLUSIVE) {
+					decision = IRIS_RECEIVE_LATER;
+					priv->flags |= IRIS_COORD_NEEDS_EXCLUSIVE;
+					goto finish;
+				}
+			}
+		}
+	}
+
+	/* Current Receiver: EXCLUSIVE
+	 * Request Receiver: EXCLUSIVE
+	 * Has Active......: YES
+	 * Pending.........: ANY
+	 * Receive.........: LATER
+	 */
+	if ((priv->flags & IRIS_COORD_EXCLUSIVE) != 0) {
+		if (receiver == priv->exclusive) {
+			if (priv->active > 0) {
+				decision = IRIS_RECEIVE_LATER;
+				priv->flags |= IRIS_COORD_NEEDS_EXCLUSIVE;
+				goto finish;
+			}
+		}
+	}
+
+	/* Current Receiver: EXCLUSIVE
+	 * Request Receiver: CONCURRENT
+	 * Has Active......: NO
+	 * Pending.........: NONE or CONCURRENT
+	 * Receive.........: NOW
+	 */
+	if ((priv->flags & IRIS_COORD_EXCLUSIVE) != 0) {
+		if (receiver == priv->concurrent) {
+			if (priv->active == 0) {
+				if (((priv->flags & IRIS_COORD_NEEDS_ANY) | IRIS_COORD_NEEDS_CONCURRENT) == IRIS_COORD_NEEDS_CONCURRENT) {
+					decision = IRIS_RECEIVE_NOW;
+					priv->flags &= ~IRIS_COORD_NEEDS_CONCURRENT;
+					// RESUME CONCURRENT IF WE CAN?
+					goto finish;
+				}
+			}
+		}
+	}
+
+	/* Current Receiver: EXCLUSIVE
+	 * Request Receiver: CONCURRENT
+	 * Has Active......: NO
+	 * Pending.........: EXCLUSIVE or TEARDOWN
+	 * Receive.........: LATER
+	 */
+	if ((priv->flags & IRIS_COORD_EXCLUSIVE) != 0) {
+		if (receiver == priv->concurrent) {
+			if (priv->active == 0) {
+				if ((priv->flags & IRIS_COORD_NEEDS_ANY) & ~IRIS_COORD_NEEDS_CONCURRENT) {
+					decision = IRIS_RECEIVE_LATER;
+					priv->flags |= IRIS_COORD_NEEDS_CONCURRENT;
+					goto finish;
+				}
+			}
+		}
+	}
+
+	/* Current Receiver: EXCLUSIVE
+	 * Request Receiver: CONCURRENT
+	 * Has Active......: YES
+	 * Pending.........: ANY
+	 * Receive.........: LATER
+	 */
+	if ((priv->flags & IRIS_COORD_EXCLUSIVE) != 0) {
+		if (receiver == priv->concurrent) {
+			if (priv->active > 0) {
+				decision = IRIS_RECEIVE_LATER;
+				priv->flags |= IRIS_COORD_NEEDS_CONCURRENT;
+				goto finish;
+			}
+		}
+	}
+
+	/* Current Receiver: EXCLUSIVE
+	 * Request Receiver: TEARDOWN
+	 * Has Active......: NO
+	 * Pending.........: NONE or TEARDOWN
+	 * Receive.........: NOW
+	 */
+	if ((priv->flags & IRIS_COORD_EXCLUSIVE) != 0) {
+		if (receiver == priv->teardown) {
+			if (priv->active == 0) {
+				if (((priv->flags & IRIS_COORD_NEEDS_ANY) | IRIS_COORD_NEEDS_TEARDOWN) == IRIS_COORD_NEEDS_TEARDOWN) {
+					decision = IRIS_RECEIVE_NOW;
+					priv->flags &= ~IRIS_COORD_NEEDS_TEARDOWN;
+					goto finish;
+				}
+			}
+		}
+	}
+
+	/* Current Receiver: EXCLUSIVE
+	 * Request Receiver: TEARDOWN
+	 * Has Active......: YES
+	 * Pending.........: ANY
+	 * Receive.........: LATER
+	 */
+	if ((priv->flags & IRIS_COORD_EXCLUSIVE) != 0) {
+		if (receiver == priv->teardown) {
+			if (priv->active > 0) {
+				decision = IRIS_RECEIVE_LATER;
+				priv->flags |= IRIS_COORD_NEEDS_TEARDOWN;
+				goto finish;
+			}
+		}
+	}
+
+	/* Current Receiver: EXCLUSIVE
+	 * Request Receiver: TEARDOWN
+	 * Has Active......: NO
+	 * Pending.........: ANY
+	 * Receive.........: LATER
+	 */
+	if ((priv->flags & IRIS_COORD_EXCLUSIVE) != 0) {
+		if (receiver == priv->teardown) {
+			if (priv->active > 0) {
+				decision = IRIS_RECEIVE_LATER;
+				priv->flags |= IRIS_COORD_NEEDS_TEARDOWN;
+				goto finish;
+			}
+		}
+	}
+
+	g_print ("\nMISSING ARBITER BRANCH REPORT\n"
+		 "====================================\n"
+		 "Current.....: %s\n"
+		 "Receiver....: %s\n"
+		 "Active......: %lu\n"
+		 "Pending.....: %u\n",
+		 (priv->flags & IRIS_COORD_EXCLUSIVE) ? "EXCLUSIVE" : (priv->flags & IRIS_COORD_CONCURRENT) ? "CONCURRENT" : "TEARDOWN",
+		 (receiver == priv->exclusive)        ? "EXCLUSIVE" : (receiver == priv->concurrent)        ? "CONCURRENT" : "TEARDOWN",
+		 priv->active,
+		 priv->flags & IRIS_COORD_NEEDS_ANY);
+
+finish:
 	if (decision == IRIS_RECEIVE_NOW)
 		g_atomic_int_inc ((gint*)&priv->active);
 
-	g_mutex_unlock (priv->mutex);
-
-	if (resume)
-		iris_receiver_resume (resume);
+	g_static_rec_mutex_unlock (&priv->mutex);
 
 	return decision;
 }
 
 static void
-iris_coordination_arbiter_receive_completed (IrisArbiter  *arbiter,
-                                             IrisReceiver *receiver)
+receive_completed (IrisArbiter  *arbiter,
+                   IrisReceiver *receiver)
 {
+	IrisCoordinationArbiter        *coord;
 	IrisCoordinationArbiterPrivate *priv;
 	IrisReceiver                   *resume = NULL;
 
 	g_return_if_fail (IRIS_IS_COORDINATION_ARBITER (arbiter));
 	g_return_if_fail (IRIS_IS_RECEIVER (receiver));
 
-	priv = IRIS_COORDINATION_ARBITER (arbiter)->priv;
+	coord = IRIS_COORDINATION_ARBITER (arbiter);
+	priv = coord->priv;
 
-	g_mutex_lock (priv->mutex);
+	g_static_rec_mutex_lock (&priv->mutex);
 
-	if (G_UNLIKELY (g_atomic_int_dec_and_test ((int*)&priv->active))) {
-		if (NEEDS_SWITCH (priv)) {
-			if (FLAG_IS_ON (priv, IRIS_COORD_NEEDS_EXCLUSIVE)) {
-				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_EXCLUSIVE | IRIS_COORD_CONCURRENT);
-				ENABLE_FLAG (priv, IRIS_COORD_EXCLUSIVE);
+	if (g_atomic_int_dec_and_test ((gint*)&priv->active)) {
+		if (priv->flags & IRIS_COORD_CONCURRENT) {
+			if (priv->flags & IRIS_COORD_NEEDS_EXCLUSIVE) {
+				priv->flags &= ~(IRIS_COORD_CONCURRENT | IRIS_COORD_NEEDS_EXCLUSIVE);
+				priv->flags |= IRIS_COORD_EXCLUSIVE;
 				resume = priv->exclusive;
 			}
-			else if (FLAG_IS_ON (priv, IRIS_COORD_NEEDS_CONCURRENT)) {
-				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_CONCURRENT | IRIS_COORD_EXCLUSIVE);
-				ENABLE_FLAG (priv, IRIS_COORD_CONCURRENT);
-				resume = priv->concurrent;
-			}
-			else if (FLAG_IS_ON (priv, IRIS_COORD_NEEDS_TEARDOWN)) {
-				/* NOTE: This might needs to go first to prevent
-				 *   starvation of immediate teardown.
-				 */
-				DISABLE_FLAG (priv, IRIS_COORD_NEEDS_TEARDOWN | IRIS_COORD_EXCLUSIVE | IRIS_COORD_CONCURRENT);
-				ENABLE_FLAG (priv, IRIS_COORD_TEARDOWN);
+			else if (priv->flags & IRIS_COORD_NEEDS_TEARDOWN) {
+				priv->flags &= ~(IRIS_COORD_CONCURRENT | IRIS_COORD_NEEDS_TEARDOWN);
+				priv->flags |= IRIS_COORD_TEARDOWN;
 				resume = priv->teardown;
 			}
-			else
-				g_assert_not_reached ();
+		}
+		else if (priv->flags & IRIS_COORD_EXCLUSIVE) {
+			if (priv->flags & IRIS_COORD_NEEDS_CONCURRENT) {
+				priv->flags &= ~(IRIS_COORD_EXCLUSIVE | IRIS_COORD_NEEDS_CONCURRENT);
+				priv->flags |= IRIS_COORD_CONCURRENT;
+				resume = priv->concurrent;
+			}
+			else if (priv->flags & IRIS_COORD_NEEDS_TEARDOWN) {
+				priv->flags &= ~(IRIS_COORD_EXCLUSIVE | IRIS_COORD_NEEDS_TEARDOWN);
+				priv->flags |= IRIS_COORD_TEARDOWN;
+				resume = priv->teardown;
+			}
+		}
+		else if (priv->flags & IRIS_COORD_TEARDOWN) {
+		}
+		else {
+			g_assert_not_reached ();
 		}
 	}
 
-	g_mutex_unlock (priv->mutex);
+	g_static_rec_mutex_unlock (&priv->mutex);
 
-	if (resume) {
+	if (resume)
 		iris_receiver_resume (resume);
-	}
 }
 
 static void
@@ -225,8 +515,8 @@ iris_coordination_arbiter_class_init (IrisCoordinationArbiterClass *klass)
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 	IrisArbiterClass *arbiter_class = IRIS_ARBITER_CLASS (klass);
 
-	arbiter_class->can_receive = iris_coordination_arbiter_can_receive;
-	arbiter_class->receive_completed = iris_coordination_arbiter_receive_completed;
+	arbiter_class->can_receive = can_receive;
+	arbiter_class->receive_completed = receive_completed;
 	object_class->finalize = iris_coordination_arbiter_finalize;
 
 	g_type_class_add_private (object_class, sizeof(IrisCoordinationArbiterPrivate));
@@ -238,8 +528,8 @@ iris_coordination_arbiter_init (IrisCoordinationArbiter *arbiter)
 	arbiter->priv = G_TYPE_INSTANCE_GET_PRIVATE (arbiter,
 	                                             IRIS_TYPE_COORDINATION_ARBITER,
 	                                             IrisCoordinationArbiterPrivate);
-	arbiter->priv->mutex = g_mutex_new ();
-	ENABLE_FLAG (arbiter->priv, IRIS_COORD_CONCURRENT);
+	g_static_rec_mutex_init (&arbiter->priv->mutex);
+	arbiter->priv->flags = IRIS_COORD_CONCURRENT;
 }
 
 IrisArbiter*

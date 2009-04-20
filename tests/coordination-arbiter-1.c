@@ -28,12 +28,10 @@ test2_e (IrisMessage *message,
 {
 	gboolean *exc_b = user_data;
 
-	G_LOCK (exclusive);
 	g_mutex_lock (sync);
 	*exc_b = !(*exc_b);
 	g_cond_signal (cond);
 	g_mutex_unlock (sync);
-	G_UNLOCK (exclusive);
 }
 
 static void
@@ -42,12 +40,10 @@ test2_c (IrisMessage *message,
 {
 	gboolean *cnc_b = user_data;
 
-	G_LOCK (concurrent);
 	g_mutex_lock (sync);
 	*cnc_b = !(*cnc_b);
 	g_cond_signal (cond);
 	g_mutex_unlock (sync);
-	G_UNLOCK (concurrent);
 }
 
 static void
@@ -55,10 +51,7 @@ test2_t (IrisMessage *message,
          gpointer     user_data)
 {
 	gboolean *tdn_b= user_data;
-
-	G_LOCK (teardown);
 	*tdn_b = TRUE;
-	G_UNLOCK (teardown);
 }
 
 static void
@@ -104,13 +97,13 @@ test2 (void)
 	/* Make sure the other thread is blocked, and holds the active, we will
 	 * hold the arbiter lock so we know it cannot progress until we do our
 	 * active check. */
-	g_mutex_lock (IRIS_COORDINATION_ARBITER (arbiter)->priv->mutex);
+	g_static_rec_mutex_lock (&IRIS_COORDINATION_ARBITER (arbiter)->priv->mutex);
 	g_cond_wait (cond, sync);
 	g_assert (exc_b == TRUE);
 	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,1);
 	g_assert (exc_r->priv->message != NULL);
 	g_assert (iris_port_is_paused (exc));
-	g_mutex_unlock (IRIS_COORDINATION_ARBITER (arbiter)->priv->mutex);
+	g_static_rec_mutex_unlock (&IRIS_COORDINATION_ARBITER (arbiter)->priv->mutex);
 
 	/*****************************************************************/
 	/*  BEGIN TEST PART TWO, CONCURRENT SEND WHILE EXCLUSIVE ACTIVE  */
@@ -130,7 +123,7 @@ test2 (void)
 
 	/* Signal the exclusive thread, allowing it to complete and then
 	 * switch to the concurrent mode. */
-	g_mutex_lock (IRIS_COORDINATION_ARBITER (arbiter)->priv->mutex);
+	g_static_rec_mutex_lock (&IRIS_COORDINATION_ARBITER (arbiter)->priv->mutex);
 	g_cond_wait (cond, sync);
 	g_assert (exc_b == FALSE);
 	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,1);
@@ -138,7 +131,7 @@ test2 (void)
 	g_assert (exc->priv->queue == NULL);
 	g_assert (cnc_r->priv->message != NULL);
 	g_assert (iris_port_is_paused (cnc));
-	g_mutex_unlock (IRIS_COORDINATION_ARBITER (arbiter)->priv->mutex);
+	g_static_rec_mutex_unlock (&IRIS_COORDINATION_ARBITER (arbiter)->priv->mutex);
 
 	/* The arbiter should now be switching to the concurrent mode */
 	g_usleep (G_USEC_PER_SEC / 100);
@@ -166,16 +159,19 @@ test2 (void)
 	/* let 2 of them complete */
 	g_cond_wait (cond, sync);
 	g_cond_wait (cond, sync);
+	g_usleep (G_USEC_PER_SEC / 100);
 	g_assert_cmpint ((IRIS_COORDINATION_ARBITER (arbiter)->priv->flags & IRIS_COORD_ANY),==,IRIS_COORD_CONCURRENT);
 	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,4);
 
 	/* and 2 more */
 	g_cond_wait (cond, sync);
 	g_cond_wait (cond, sync);
+	g_usleep (G_USEC_PER_SEC / 100);
 	g_assert_cmpint ((IRIS_COORDINATION_ARBITER (arbiter)->priv->flags & IRIS_COORD_ANY),==,IRIS_COORD_CONCURRENT);
 	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,2);
 
 	g_cond_wait (cond, sync);
+	g_usleep (G_USEC_PER_SEC / 100);
 	g_assert_cmpint ((IRIS_COORDINATION_ARBITER (arbiter)->priv->flags & IRIS_COORD_ANY),==,IRIS_COORD_CONCURRENT);
 	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,1);
 }
