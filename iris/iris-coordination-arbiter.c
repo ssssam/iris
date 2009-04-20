@@ -497,10 +497,10 @@ receive_completed (IrisArbiter  *arbiter,
 		}
 	}
 
-	g_static_rec_mutex_unlock (&priv->mutex);
-
 	if (resume)
 		iris_receiver_resume (resume);
+
+	g_static_rec_mutex_unlock (&priv->mutex);
 }
 
 static void
