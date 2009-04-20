@@ -28,12 +28,20 @@
 
 typedef enum
 {
-	IRIS_COORD_EXCLUSIVE        = 1 << 0,
-	IRIS_COORD_NEEDS_EXCLUSIVE  = 1 << 1,
-	IRIS_COORD_CONCURRENT       = 1 << 2,
-	IRIS_COORD_NEEDS_CONCURRENT = 1 << 3,
-	IRIS_COORD_NEEDS_TEARDOWN   = 1 << 4,
-	IRIS_COORD_TEARDOWN         = 1 << 5,
+	IRIS_COORD_EXCLUSIVE        = 1 << 0,  // 1
+	IRIS_COORD_NEEDS_EXCLUSIVE  = 1 << 1,  // 2
+	IRIS_COORD_CONCURRENT       = 1 << 2,  // 4
+	IRIS_COORD_NEEDS_CONCURRENT = 1 << 3,  // 8
+	IRIS_COORD_NEEDS_TEARDOWN   = 1 << 4,  // 16
+	IRIS_COORD_TEARDOWN         = 1 << 5,  // 32
+
+	IRIS_COORD_ANY              = IRIS_COORD_EXCLUSIVE
+	                            | IRIS_COORD_CONCURRENT
+	                            | IRIS_COORD_TEARDOWN,
+	IRIS_COORD_NEEDS_ANY        = IRIS_COORD_NEEDS_EXCLUSIVE
+	                            | IRIS_COORD_NEEDS_CONCURRENT
+	                            | IRIS_COORD_NEEDS_TEARDOWN,
+	IRIS_COORD_ALL              = IRIS_COORD_ANY | IRIS_COORD_NEEDS_ANY,
 } IrisCoordinationFlags;
 
 struct _IrisCoordinationArbiterPrivate
