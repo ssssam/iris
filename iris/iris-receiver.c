@@ -75,6 +75,7 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 	IrisDeliveryStatus   status = IRIS_DELIVERY_ACCEPTED;
 	IrisReceiveDecision  decision;
 	gboolean             execute = TRUE;
+	gboolean             unpause = FALSE;
 	IrisWorkerData      *worker;
 
 	g_return_val_if_fail (message != NULL, IRIS_DELIVERY_REMOVE);
@@ -99,8 +100,7 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 		decision = IRIS_DELIVERY_REMOVE;
 		execute = FALSE;
 	}
-	else if ((priv->max_active > 0 && priv->active == priv->max_active)
-	         || g_atomic_pointer_get (&priv->message))
+	else if ((priv->max_active > 0 && priv->active == priv->max_active) || g_atomic_pointer_get (&priv->message))
 	{
 		/* We cannot accept an item at this time, so let
 		 * the port queue the item for us.
@@ -116,6 +116,8 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 			/* We can execute this now */
 			execute = TRUE;
 			status = IRIS_DELIVERY_ACCEPTED;
+			/* We also need to unpause the port */
+			unpause = TRUE;
 			break;
 		case IRIS_RECEIVE_LATER:
 			/* We queue this item ourselves */
@@ -167,6 +169,9 @@ _post_decision:
 		if (!priv->persistent)
 			status = IRIS_DELIVERY_ACCEPTED_REMOVE;
 	}
+
+	if (unpause && iris_port_is_paused (priv->port))
+		iris_port_flush (priv->port);
 
 	return status;
 }
@@ -352,7 +357,7 @@ iris_receiver_resume (IrisReceiver *receiver)
 	g_static_rec_mutex_unlock (&priv->mutex);
 
 	if (message)
-		iris_receiver_deliver (receiver, message);
+		iris_port_post (priv->port, message);
 
 	iris_port_flush (priv->port);
 }
