@@ -4,6 +4,7 @@ NULL =
 	
 noinst_PROGRAMS =		\
 	arbiter-1		\
+	coordination-arbiter-1	\
 	gstamppointer-1		\
 	message-1		\
 	port-1			\
@@ -22,6 +23,7 @@ noinst_PROGRAMS =		\
 
 TEST_PROGS +=			\
 	arbiter-1		\
+	coordination-arbiter-1	\
 	gstamppointer-1		\
 	message-1		\
 	port-1			\
@@ -59,3 +61,4 @@ task_1_sources = task-1.c
 thread_1_sources = thread-1.c
 rrobin_1_sources = rrobin-1.c
 gstamppointer_1_sources = gstamppointer-1.c
+coordination_arbiter_1_sources = coordination-arbiter-1.c
