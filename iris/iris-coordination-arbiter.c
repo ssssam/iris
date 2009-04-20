@@ -282,17 +282,18 @@ can_receive (IrisArbiter  *arbiter,
 	/* Current Receiver: EXCLUSIVE
 	 * Request Receiver: EXCLUSIVE
 	 * Has Active......: NO
-	 * Pending.........: NONE or EXCLUSIVE
+	 * Pending.........: ANY
 	 * Receive.........: NOW
+	 * Notes...........: This should help us utilize our exclusive mode
+	 *                   better so we don't do so many switches when
+	 *                   already in exclusive mode.
 	 */
 	if ((priv->flags & IRIS_COORD_EXCLUSIVE) != 0) {
 		if (receiver == priv->exclusive) {
 			if (priv->active == 0) {
-				if (((priv->flags & IRIS_COORD_NEEDS_ANY) | IRIS_COORD_NEEDS_EXCLUSIVE) == IRIS_COORD_NEEDS_EXCLUSIVE) {
-					decision = IRIS_RECEIVE_NOW;
-					priv->flags &= ~IRIS_COORD_NEEDS_EXCLUSIVE;
-					goto finish;
-				}
+				decision = IRIS_RECEIVE_NOW;
+				priv->flags &= ~IRIS_COORD_NEEDS_EXCLUSIVE;
+				goto finish;
 			}
 		}
 	}
@@ -489,7 +490,12 @@ receive_completed (IrisArbiter  *arbiter,
 			}
 		}
 		else if (priv->flags & IRIS_COORD_EXCLUSIVE) {
-			if (priv->flags & IRIS_COORD_NEEDS_CONCURRENT) {
+			if (priv->flags & IRIS_COORD_NEEDS_EXCLUSIVE) {
+				/* Try to save mode switches by running exclusive now
+				 * regardless of what other modes want to run. */
+				resume = priv->exclusive;
+			}
+			else if (priv->flags & IRIS_COORD_NEEDS_CONCURRENT) {
 				priv->flags &= ~(IRIS_COORD_EXCLUSIVE | IRIS_COORD_NEEDS_CONCURRENT);
 				priv->flags |= IRIS_COORD_CONCURRENT;
 				resume = priv->concurrent;
