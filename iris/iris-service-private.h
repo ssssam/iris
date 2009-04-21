@@ -1,4 +1,4 @@
-/* iris.h
+/* iris-service-private.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -18,29 +18,30 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_H__
-#define __IRIS_H__
+#ifndef __IRIS_SERVICE_PRIVATE_H__
+#define __IRIS_SERVICE_PRIVATE_H__
 
-#include "iris-types.h"
-#include "iris-arbiter.h"
-#include "iris-coordination-arbiter.h"
-#include "iris-free-list.h"
-#include "iris-link.h"
-#include "iris-lfqueue.h"
-#include "iris-lfscheduler.h"
-#include "iris-message.h"
-#include "iris-queue.h"
-#include "iris-port.h"
-#include "iris-receiver.h"
-#include "iris-rrobin.h"
-#include "iris-scheduler.h"
-#include "iris-wsscheduler.h"
-#include "iris-scheduler-manager.h"
 #include "iris-service.h"
-#include "iris-stack.h"
-#include "iris-task.h"
-#include "iris-wsqueue.h"
+#include "iris-scheduler.h"
 
-void iris_init (void);
+G_BEGIN_DECLS
 
-#endif /* __IRIS_H__ */
+struct _IrisServicePrivate
+{
+	IrisPort      *exclusive_port;
+	IrisPort      *concurrent_port;
+	IrisPort      *teardown_port;
+
+	IrisReceiver  *exclusive_receiver;
+	IrisReceiver  *concurrent_receiver;
+	IrisReceiver  *teardown_receiver;
+
+	IrisArbiter   *arbiter;
+
+	IrisScheduler *scheduler;
+	gboolean       started;
+};
+
+G_END_DECLS
+
+#endif /* __IRIS_SERVICE_PRIVATE_H__ */

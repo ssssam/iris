@@ -16,6 +16,7 @@ sources_public_h =					\
 	$(top_srcdir)/iris/iris-rrobin.h		\
 	$(top_srcdir)/iris/iris-scheduler.h		\
 	$(top_srcdir)/iris/iris-scheduler-manager.h	\
+	$(top_srcdir)/iris/iris-service.h		\
 	$(top_srcdir)/iris/iris-stack.h			\
 	$(top_srcdir)/iris/iris-task.h			\
 	$(top_srcdir)/iris/iris-thread.h		\
@@ -31,6 +32,7 @@ sources_private_h =						\
 	$(top_srcdir)/iris/iris-receiver-private.h		\
 	$(top_srcdir)/iris/iris-scheduler-private.h		\
 	$(top_srcdir)/iris/iris-scheduler-manager-private.h	\
+	$(top_srcdir)/iris/iris-service-private.h		\
 	$(top_srcdir)/iris/iris-task-private.h			\
 	$(top_srcdir)/iris/iris-util.h				\
 	$(top_srcdir)/iris/gstamppointer.h			\
@@ -53,6 +55,7 @@ sources_c = 						\
 	iris-rrobin.c					\
 	iris-scheduler.c				\
 	iris-scheduler-manager.c			\
+	iris-service.c					\
 	iris-stack.c					\
 	iris-task.c					\
 	iris-thread.c					\

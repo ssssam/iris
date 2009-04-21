@@ -5,39 +5,41 @@ NULL =
 noinst_PROGRAMS =		\
 	arbiter-1		\
 	coordination-arbiter-1	\
+	free-list-1		\
 	gstamppointer-1		\
+	lf-queue-1		\
 	message-1		\
 	port-1			\
+	queue-1			\
 	receiver-1		\
+	rrobin-1		\
 	scheduler-manager-1	\
 	scheduler-1		\
-	free-list-1		\
+	service-1		\
 	stack-1			\
-	queue-1			\
-	lf-queue-1		\
 	task-1			\
 	thread-1		\
 	ws-queue-1		\
-	rrobin-1		\
 	$(NULL)
 
 TEST_PROGS +=			\
 	arbiter-1		\
 	coordination-arbiter-1	\
+	free-list-1		\
 	gstamppointer-1		\
+	lf-queue-1		\
 	message-1		\
 	port-1			\
+	queue-1			\
 	receiver-1		\
+	rrobin-1		\
 	scheduler-manager-1	\
 	scheduler-1		\
-	free-list-1		\
+	service-1		\
 	stack-1			\
-	queue-1			\
-	lf-queue-1		\
 	task-1			\
 	thread-1		\
 	ws-queue-1		\
-	rrobin-1		\
 	$(NULL)
 
 INCLUDES = -I$(top_srcdir)
@@ -62,3 +64,4 @@ thread_1_sources = thread-1.c
 rrobin_1_sources = rrobin-1.c
 gstamppointer_1_sources = gstamppointer-1.c
 coordination_arbiter_1_sources = coordination-arbiter-1.c
+service_1_sources = service-1.c
