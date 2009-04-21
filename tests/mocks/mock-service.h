@@ -3,6 +3,8 @@
 
 #include <glib-object.h>
 #include <iris/iris.h>
+#include "mock-scheduler.h"
+#include <iris/iris-service-private.h>
 
 G_BEGIN_DECLS
 
@@ -51,9 +53,24 @@ mock_service_finalize (GObject *object)
 }
 
 static void
+mock_service_handle_exclusive (IrisService *service, IrisMessage *message)
+{
+	g_assert (message != NULL);
+	g_assert (message->what == 1);
+
+	GFunc func = iris_message_get_pointer (message, "func");
+	g_assert (func);
+	gpointer data = iris_message_get_pointer (message, "data");
+	func (data, NULL);
+}
+
+static void
 mock_service_class_init (MockServiceClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
+	IrisServiceClass *service_class = IRIS_SERVICE_CLASS (klass);
+
+	service_class->handle_exclusive = mock_service_handle_exclusive;
 	
 	object_class->finalize = mock_service_finalize;
 
@@ -69,5 +86,18 @@ mock_service_init (MockService *self)
 IrisService*
 mock_service_new ()
 {
-	return g_object_new (MOCK_TYPE_SERVICE, NULL);
+	IrisService *service = g_object_new (MOCK_TYPE_SERVICE, NULL);
+	service->priv->scheduler = mock_scheduler_new ();
+	return service;
+}
+
+void
+mock_service_send_exclusive (MockService *service, GCallback func, gpointer data)
+{
+	IrisMessage *message = iris_message_new (1);
+
+	iris_message_set_pointer (message, "func", func);
+	iris_message_set_pointer (message, "data", data);
+
+	iris_service_send_exclusive (IRIS_SERVICE (service), message);
 }

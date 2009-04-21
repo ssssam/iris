@@ -216,3 +216,45 @@ iris_service_stop (IrisService *service)
 
 	IRIS_SERVICE_GET_CLASS (service)->handle_stop (service);
 }
+
+/**
+ * iris_service_send_exclusive:
+ * @service: An #IrisService
+ * @message: An #IrisMessage
+ *
+ * Sends an exclusive message to the service. The message is guaranteed
+ * to be handled while no other handlers are executing.
+ */
+void
+iris_service_send_exclusive (IrisService *service,
+                             IrisMessage *message)
+{
+	IrisServicePrivate *priv;
+
+	g_return_if_fail (IRIS_IS_SERVICE (service));
+
+	priv = service->priv;
+
+	iris_port_post (priv->exclusive_port, message);
+}
+
+/**
+ * iris_service_send_concurrent:
+ * @service: An #IrisService
+ * @message: An #IrisMessage
+ *
+ * Sends a concurrent message to the service. The message can be handled
+ * concurrently with other concurrent messages to the service.
+ */
+void
+iris_service_send_concurrent (IrisService *service,
+                              IrisMessage *message)
+{
+	IrisServicePrivate *priv;
+
+	g_return_if_fail (IRIS_IS_SERVICE (service));
+
+	priv = service->priv;
+
+	iris_port_post (priv->exclusive_port, message);
+}
