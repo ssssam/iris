@@ -90,5 +90,7 @@ examples/recursive
 examples/recursive.o
 examples/coordinator
 examples/coordinator.o
+examples/task-ls
+examples/task-ls.o
 iris/Iris-1.0.gir
 iris/Iris-1.0.typelib
