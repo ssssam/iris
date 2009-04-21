@@ -256,5 +256,5 @@ iris_service_send_concurrent (IrisService *service,
 
 	priv = service->priv;
 
-	iris_port_post (priv->exclusive_port, message);
+	iris_port_post (priv->concurrent_port, message);
 }
