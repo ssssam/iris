@@ -65,12 +65,26 @@ mock_service_handle_exclusive (IrisService *service, IrisMessage *message)
 }
 
 static void
+mock_service_handle_concurrent (IrisService *service, IrisMessage *message)
+{
+	g_assert (message != NULL);
+	g_assert (message->what == 2);
+
+	GFunc func = iris_message_get_pointer (message, "func");
+	g_assert (func);
+	gpointer data = iris_message_get_pointer (message, "data");
+	func (data, NULL);
+}
+
+
+static void
 mock_service_class_init (MockServiceClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 	IrisServiceClass *service_class = IRIS_SERVICE_CLASS (klass);
 
 	service_class->handle_exclusive = mock_service_handle_exclusive;
+	service_class->handle_concurrent = mock_service_handle_concurrent;
 	
 	object_class->finalize = mock_service_finalize;
 
@@ -100,4 +114,15 @@ mock_service_send_exclusive (MockService *service, GCallback func, gpointer data
 	iris_message_set_pointer (message, "data", data);
 
 	iris_service_send_exclusive (IRIS_SERVICE (service), message);
+}
+
+void
+mock_service_send_concurrent (MockService *service, GCallback func, gpointer data)
+{
+	IrisMessage *message = iris_message_new (2);
+
+	iris_message_set_pointer (message, "func", func);
+	iris_message_set_pointer (message, "data", data);
+
+	iris_service_send_concurrent (IRIS_SERVICE (service), message);
 }
