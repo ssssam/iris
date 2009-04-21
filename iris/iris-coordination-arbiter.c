@@ -110,6 +110,23 @@ can_receive (IrisArbiter  *arbiter,
 		}
 	}
 
+	/* Current Receiver: TEARDOWN
+	 * Request Receiver: TEARDOWN
+	 * Has Active......: YES
+	 * Pending.........: NONE
+	 * Completed.......: NO
+	 * Receive.........: NEVER
+	 */
+	if (priv->flags & IRIS_COORD_TEARDOWN) {
+		if (receiver == priv->teardown) {
+			if (priv->active > 0) {
+				if ((priv->flags & IRIS_COORD_COMPLETE) == 0) {
+					decision = IRIS_RECEIVE_NEVER;
+					goto finish;
+				}
+			}
+		}
+	}
 
 	/* Current Receiver: ANY
 	 * Request Receiver: CONCURRENT or EXCUSIVE
@@ -449,8 +466,11 @@ can_receive (IrisArbiter  *arbiter,
 		 priv->flags & IRIS_COORD_NEEDS_ANY);
 
 finish:
-	if (decision == IRIS_RECEIVE_NOW)
+	if (decision == IRIS_RECEIVE_NOW) {
+		if (receiver == priv->teardown)
+			priv->flags |= IRIS_COORD_COMPLETE;
 		g_atomic_int_inc ((gint*)&priv->active);
+	}
 
 	if (resume)
 		iris_receiver_resume (resume);
