@@ -472,10 +472,15 @@ finish:
 		g_atomic_int_inc ((gint*)&priv->active);
 	}
 
+	/* It would be nice to hold on to this lock while we resume to make
+	 * sure our resuming receiver gets more in, but it can create a
+	 * dead-lock if we are calling resume and try to lock on the receiver
+	 * while someone in the receiver thread is trying to lock on us to
+	 * try to deliver. */
+	g_static_rec_mutex_unlock (&priv->mutex);
+
 	if (resume)
 		iris_receiver_resume (resume);
-
-	g_static_rec_mutex_unlock (&priv->mutex);
 
 	return decision;
 }
@@ -497,7 +502,9 @@ receive_completed (IrisArbiter  *arbiter,
 	g_static_rec_mutex_lock (&priv->mutex);
 
 	if (g_atomic_int_dec_and_test ((gint*)&priv->active)) {
-		if (priv->flags & IRIS_COORD_CONCURRENT) {
+		if (priv->flags & IRIS_COORD_COMPLETE) {
+		}
+		else if (priv->flags & IRIS_COORD_CONCURRENT) {
 			if (priv->flags & IRIS_COORD_NEEDS_EXCLUSIVE) {
 				priv->flags &= ~(IRIS_COORD_CONCURRENT | IRIS_COORD_NEEDS_EXCLUSIVE);
 				priv->flags |= IRIS_COORD_EXCLUSIVE;
@@ -527,16 +534,20 @@ receive_completed (IrisArbiter  *arbiter,
 			}
 		}
 		else if (priv->flags & IRIS_COORD_TEARDOWN) {
+			if ((priv->flags & IRIS_COORD_COMPLETE) == 0) {
+				priv->flags &= ~IRIS_COORD_NEEDS_TEARDOWN;
+				resume = priv->teardown;
+			}
 		}
 		else {
 			g_assert_not_reached ();
 		}
 	}
 
+	g_static_rec_mutex_unlock (&priv->mutex);
+
 	if (resume)
 		iris_receiver_resume (resume);
-
-	g_static_rec_mutex_unlock (&priv->mutex);
 }
 
 static void
