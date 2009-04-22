@@ -39,6 +39,54 @@ to the schedulers who need it.
 II. API Overview
 ---------------------------------------------------------------------------
 
+Iris can be split up into three areas.  It has reusable lock-free data
+structures, message passing, and high-level constructs to make writing
+concurrent applications easier.
+
+Currently, Iris has the following lock-free data structures.
+
+ * IrisStack - A lock free Stack
+ * IrisLFQueue - A lock free queue
+ * IrisFreeList - A lock free free-list
+ * IrisRRobin - A lock free round-robin
+
+Also, not lock-free, however the fast path is, is the
+
+ * IrisWSQueue
+
+which is used by the work-stealing scheduler for balancing work items
+efficiently between multiple cores.
+
+As previously mentioned, Iris is built upon message passing.  The message
+passing system is built upon some of the previous data structures.  Lets
+look at the data structures involved in the message passing.  You wont
+neccessarily be using all of them all the time.
+
+ * IrisMessage - A message encapsulation
+ * IrisPort - A post-office so to speak for your messages
+ * IrisReceiver - Converts messages delivered on ports to executable work
+ * IrisArbiter - Arbitrates when and how receivers can execute
+ * IrisScheduler - Manages scheduling of work items on cpus
+
+You can see examples of how to use these constructs in following chapters.
+
+High Level Constructs:
+
+ * IrisTask - Single shot execution like Twisted Deferreds
+ * IrisService - Helper for writing concurrent services
+
+As for higher level constructs, currently there is IrisTask and IrisService.
+IrisTask is a single shot work item that can have callbacks and errbacks
+just like you do with Python Twisted.  However, Tasks are implemented as a
+class similar to that of Apple's NSOperation.  So if it is easier for you
+to maintain your tasks as self contained classes, go right ahead.
+
+The IrisService goal of IrisService is to help in building application
+services that need to perform concurrent operations.  The of serving HTTP
+as a concurrent service in your app.  Or data storage, or whatever really.
+IrisService is also a GObject like IrisTask and provides some simple
+methods you can override.  More detail on these will be provided in their
+respective documentation.
 
 ---------------------------------------------------------------------------
 III. Message Delivery Cycle
