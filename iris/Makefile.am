@@ -3,6 +3,7 @@ NULL =
 BUILT_SOURCES = iris-version.h
 
 sources_public_h =					\
+	$(top_srcdir)/iris/iris.h			\
 	$(top_srcdir)/iris/iris-arbiter.h		\
 	$(top_srcdir)/iris/iris-coordination-arbiter.h	\
 	$(top_srcdir)/iris/iris-free-list.h		\
@@ -27,6 +28,7 @@ sources_public_h =					\
 
 sources_private_h =						\
 	$(top_srcdir)/iris/iris-arbiter-private.h		\
+	$(top_srcdir)/iris/iris-coordination-arbiter-private.h	\
 	$(top_srcdir)/iris/iris-debug.h				\
 	$(top_srcdir)/iris/iris-port-private.h			\
 	$(top_srcdir)/iris/iris-receiver-private.h		\
