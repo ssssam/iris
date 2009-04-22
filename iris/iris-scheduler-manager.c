@@ -38,12 +38,6 @@ static IrisSchedulerManager *singleton = NULL;
 /* Lock for syncrhonizing intitialization. */
 G_LOCK_DEFINE (singleton);
 
-/**
- * iris_scheduler_manager_yield:
- * @thread: The thread to yield
- *
- * Will yields a thread back to a scheduler.
- */
 void
 iris_scheduler_manager_yield (IrisThread *thread)
 {
@@ -51,6 +45,16 @@ iris_scheduler_manager_yield (IrisThread *thread)
 
 	/* Remove the thread from the scheduler. */
 	iris_scheduler_remove_thread (thread->scheduler, thread);
+}
+
+void
+iris_scheduler_manager_destroy (IrisThread *thread)
+{
+	iris_debug_message (IRIS_DEBUG_SCHEDULER, "Destroying thread %lu", (gulong)thread);
+
+	G_LOCK (singleton);
+	singleton->free_list = g_list_remove (singleton->free_list, thread);
+	G_UNLOCK (singleton);
 }
 
 /**

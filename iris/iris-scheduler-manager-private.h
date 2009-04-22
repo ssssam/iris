@@ -25,7 +25,8 @@
 
 G_BEGIN_DECLS
 
-void iris_scheduler_manager_yield (IrisThread *thread);
+void iris_scheduler_manager_yield   (IrisThread *thread);
+void iris_scheduler_manager_destroy (IrisThread *thread);
 
 G_END_DECLS
 

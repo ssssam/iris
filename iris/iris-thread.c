@@ -188,6 +188,7 @@ static gpointer
 iris_thread_worker (IrisThread *thread)
 {
 	IrisMessage *message;
+	GTimeVal     timeout = {0,0};
 
 	g_return_val_if_fail (thread != NULL, NULL);
 	g_return_val_if_fail (thread->queue != NULL, NULL);
@@ -198,7 +199,26 @@ iris_thread_worker (IrisThread *thread)
 	iris_debug (IRIS_DEBUG_THREAD);
 
 next_message:
-	message = g_async_queue_pop (thread->queue);
+	if (thread->exclusive) {
+		message = g_async_queue_pop (thread->queue);
+	}
+	else {
+		/* If we do not get any schedulers to work for within our
+		 * timeout period, we can safely shutdown. */
+		g_get_current_time (&timeout);
+		g_time_val_add (&timeout, G_USEC_PER_SEC * 5);
+		message = g_async_queue_timed_pop (thread->queue, &timeout);
+
+		if (!message) {
+			/* Make sure that the manager removes us from the
+			 * free thread list. */
+			iris_scheduler_manager_destroy (thread);
+
+			/* make sure nothing was added while we
+			 * removed ourselves */
+			message = g_async_queue_try_pop (thread->queue);
+		}
+	}
 
 	if (!message)
 		return NULL;
