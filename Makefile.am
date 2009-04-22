@@ -4,7 +4,7 @@ if ENABLE_GLIB_TEST
 SUBDIRS += tests
 endif
 
-DIST_SUBDIRS = iris doc tests
+DIST_SUBDIRS = iris bindings doc tests examples
 
 pcfiles = iris-$(IRIS_API_VERSION).pc
 
