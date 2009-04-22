@@ -97,7 +97,18 @@ static void
 iris_wsscheduler_remove_thread_real (IrisScheduler *scheduler,
                                      IrisThread    *thread)
 {
-	/* FIXME: Implement */
+	IrisWSSchedulerPrivate *priv;
+	IrisQueue              *queue;
+
+	g_return_if_fail (IRIS_IS_WSSCHEDULER (scheduler));
+
+	priv = IRIS_WSSCHEDULER (scheduler)->priv;
+
+	queue = thread->user_data;
+	thread->user_data = NULL;
+
+	iris_rrobin_remove (priv->rrobin, queue);
+	iris_queue_unref (queue);
 }
 
 static void
