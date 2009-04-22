@@ -1,6 +1,6 @@
 noinst_PROGRAMS = basic recursive coordinator task-ls
 
-INCLUDES = -I$(top_srcdir)/iris
+INCLUDES = -I$(top_srcdir)
 LDADD = $(top_builddir)/iris/libiris-1.0.la
 
 AM_CFLAGS = $(IRIS_CFLAGS)
