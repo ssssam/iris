@@ -2,7 +2,7 @@
         Iris - Message Passing and Asynchronous Toolkit for GLib
 ---------------------------------------------------------------------------
 
-                                     Last Updated: Saturday April 4th, 2009
+                                    Last Updated: Saturday April 22nd, 2009
 
 Iris is an asynchronous toolkit for GLib to ease development of concurrent
 applications through message passing.  Ontop of the message passing core,

@@ -65,7 +65,7 @@ sources_c = 						\
 	$(NULL)
 
 irisincludedir = $(includedir)/iris-$(IRIS_API_VERSION)/iris
-irisinclude_DATA = \
+irisinclude_DATA =					\
 	$(sources_public_h) 				\
 	$(top_srcdir)/iris/iris.h 			\
 	$(NULL)
