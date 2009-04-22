@@ -1,0 +1,111 @@
+<!-- ##### SECTION Title ##### -->
+IrisService
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION Stability_Level ##### -->
+
+
+<!-- ##### MACRO IRIS_SERVICE_CONST ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT IrisServicePrivate ##### -->
+<para>
+
+</para>
+
+@exclusive_port: 
+@concurrent_port: 
+@teardown_port: 
+@exclusive_receiver: 
+@concurrent_receiver: 
+@teardown_receiver: 
+@arbiter: 
+@scheduler: 
+@started: 
+
+<!-- ##### STRUCT IrisService ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### FUNCTION iris_service_start ##### -->
+<para>
+
+</para>
+
+@service: 
+
+
+<!-- ##### FUNCTION iris_service_stop ##### -->
+<para>
+
+</para>
+
+@service: 
+
+
+<!-- ##### FUNCTION iris_service_stat ##### -->
+<para>
+
+</para>
+
+@service: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_service_send_exclusive ##### -->
+<para>
+
+</para>
+
+@service: 
+@message: 
+
+
+<!-- ##### FUNCTION iris_service_send_concurrent ##### -->
+<para>
+
+</para>
+
+@service: 
+@message: 
+
+
+<!-- ##### FUNCTION iris_service_set_scheduler ##### -->
+<para>
+
+</para>
+
+@service: 
+@scheduler: 
+
+
+<!-- ##### FUNCTION iris_service_is_started ##### -->
+<para>
+
+</para>
+
+@service: 
+@Returns: 
+
+

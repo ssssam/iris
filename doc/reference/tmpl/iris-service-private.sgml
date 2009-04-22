@@ -1,0 +1,36 @@
+<!-- ##### SECTION Title ##### -->
+iris-service-private
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION Stability_Level ##### -->
+
+
+<!-- ##### STRUCT IrisServicePrivate ##### -->
+<para>
+
+</para>
+
+@exclusive_port: 
+@concurrent_port: 
+@teardown_port: 
+@exclusive_receiver: 
+@concurrent_receiver: 
+@teardown_receiver: 
+@arbiter: 
+@scheduler: 
+@started: 
+

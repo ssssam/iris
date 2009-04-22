@@ -17,6 +17,13 @@ IrisQueue
 <!-- ##### SECTION Stability_Level ##### -->
 
 
+<!-- ##### MACRO IRIS_TYPE_QUEUE ##### -->
+<para>
+
+</para>
+
+
+
 <!-- ##### STRUCT IrisQueueVTable ##### -->
 <para>
 
@@ -35,6 +42,14 @@ IrisQueue
 </para>
 
 @vtable: 
+
+<!-- ##### FUNCTION iris_queue_get_type ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
 
 <!-- ##### FUNCTION iris_queue_new ##### -->
 <para>

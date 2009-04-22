@@ -1,5 +1,5 @@
 <!-- ##### SECTION Title ##### -->
-IrisLFQueue
+IrisCoordinationArbiter
 
 <!-- ##### SECTION Short_Description ##### -->
 
@@ -9,41 +9,39 @@ IrisLFQueue
 
 </para>
 
+
 <!-- ##### SECTION See_Also ##### -->
 <para>
 
 </para>
 
+
 <!-- ##### SECTION Stability_Level ##### -->
 
 
-<!-- ##### MACRO IRIS_TYPE_LFQUEUE ##### -->
+<!-- ##### MACRO IRIS_COORDINATION_ARBITER_CONST ##### -->
 <para>
 
 </para>
 
+@obj: 
 
 
-<!-- ##### STRUCT IrisLFQueue ##### -->
+<!-- ##### STRUCT IrisCoordinationArbiterPrivate ##### -->
 <para>
 
 </para>
 
-@parent: 
+@exclusive: 
+@concurrent: 
+@teardown: 
+@mutex: 
+@flags: 
+@active: 
 
-<!-- ##### FUNCTION iris_lfqueue_get_type ##### -->
+<!-- ##### STRUCT IrisCoordinationArbiter ##### -->
 <para>
 
 </para>
-
-@Returns: 
-
-
-<!-- ##### FUNCTION iris_lfqueue_new ##### -->
-<para>
-
-</para>
-
-@Returns: 
 
 

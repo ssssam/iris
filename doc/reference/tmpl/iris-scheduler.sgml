@@ -30,7 +30,6 @@ IrisScheduler
 
 </para>
 
-@parent: 
 
 <!-- ##### FUNCTION iris_scheduler_new ##### -->
 <para>
@@ -47,6 +46,14 @@ IrisScheduler
 
 @min_threads: 
 @max_threads: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_scheduler_default ##### -->
+<para>
+
+</para>
+
 @Returns: 
 
 

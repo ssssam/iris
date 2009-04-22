@@ -48,6 +48,17 @@ IrisMessage
 @Returns: 
 
 
+<!-- ##### FUNCTION iris_message_new_data ##### -->
+<para>
+
+</para>
+
+@what: 
+@type: 
+@Varargs: 
+@Returns: 
+
+
 <!-- ##### FUNCTION iris_message_new_full ##### -->
 <para>
 
@@ -83,6 +94,24 @@ IrisMessage
 
 @message: 
 @Returns: 
+
+
+<!-- ##### FUNCTION iris_message_get_data ##### -->
+<para>
+
+</para>
+
+@message: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_message_set_data ##### -->
+<para>
+
+</para>
+
+@message: 
+@value: 
 
 
 <!-- ##### FUNCTION iris_message_count_names ##### -->

@@ -1,5 +1,5 @@
 <!-- ##### SECTION Title ##### -->
-IrisLFQueue
+iris-scheduler-manager-private
 
 <!-- ##### SECTION Short_Description ##### -->
 
@@ -17,33 +17,19 @@ IrisLFQueue
 <!-- ##### SECTION Stability_Level ##### -->
 
 
-<!-- ##### MACRO IRIS_TYPE_LFQUEUE ##### -->
+<!-- ##### FUNCTION iris_scheduler_manager_yield ##### -->
 <para>
 
 </para>
 
+@thread: 
 
 
-<!-- ##### STRUCT IrisLFQueue ##### -->
+<!-- ##### FUNCTION iris_scheduler_manager_destroy ##### -->
 <para>
 
 </para>
 
-@parent: 
-
-<!-- ##### FUNCTION iris_lfqueue_get_type ##### -->
-<para>
-
-</para>
-
-@Returns: 
-
-
-<!-- ##### FUNCTION iris_lfqueue_new ##### -->
-<para>
-
-</para>
-
-@Returns: 
+@thread: 
 
 

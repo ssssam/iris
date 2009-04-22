@@ -1,5 +1,5 @@
 <!-- ##### SECTION Title ##### -->
-IrisLFQueue
+iris-scheduler-private
 
 <!-- ##### SECTION Short_Description ##### -->
 
@@ -17,33 +17,32 @@ IrisLFQueue
 <!-- ##### SECTION Stability_Level ##### -->
 
 
-<!-- ##### MACRO IRIS_TYPE_LFQUEUE ##### -->
+<!-- ##### STRUCT IrisSchedulerPrivate ##### -->
 <para>
 
 </para>
 
+@mutex: 
+@rrobin: 
+@queue: 
+@min_threads: 
+@max_threads: 
+@has_leader: 
+@initialized: 
 
-
-<!-- ##### STRUCT IrisLFQueue ##### -->
-<para>
-
-</para>
-
-@parent: 
-
-<!-- ##### FUNCTION iris_lfqueue_get_type ##### -->
-<para>
-
-</para>
-
-@Returns: 
-
-
-<!-- ##### FUNCTION iris_lfqueue_new ##### -->
+<!-- ##### FUNCTION iris_scheduler_new ##### -->
 <para>
 
 </para>
 
 @Returns: 
+
+
+<!-- ##### FUNCTION iris_scheduler_set_default ##### -->
+<para>
+
+</para>
+
+@scheduler: 
 
 

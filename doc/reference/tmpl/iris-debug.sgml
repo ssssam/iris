@@ -1,0 +1,146 @@
+<!-- ##### SECTION Title ##### -->
+iris-debug
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION Stability_Level ##### -->
+
+
+<!-- ##### ENUM IrisDebugSection ##### -->
+<para>
+
+</para>
+
+@IRIS_DEBUG_SECTION_NONE: 
+@IRIS_DEBUG_SECTION_MESSAGE: 
+@IRIS_DEBUG_SECTION_PORT: 
+@IRIS_DEBUG_SECTION_RECEIVER: 
+@IRIS_DEBUG_SECTION_ARBITER: 
+@IRIS_DEBUG_SECTION_SCHEDULER: 
+@IRIS_DEBUG_SECTION_THREAD: 
+@IRIS_DEBUG_SECTION_TASK: 
+@IRIS_DEBUG_SECTION_QUEUE: 
+@IRIS_DEBUG_SECTION_STACK: 
+@IRIS_DEBUG_SECTION_RROBIN: 
+
+<!-- ##### MACRO IRIS_DEBUG_MESSAGE ##### -->
+<para>
+
+</para>
+
+
+
+<!-- ##### MACRO IRIS_DEBUG_PORT ##### -->
+<para>
+
+</para>
+
+
+
+<!-- ##### MACRO IRIS_DEBUG_RECEIVER ##### -->
+<para>
+
+</para>
+
+
+
+<!-- ##### MACRO IRIS_DEBUG_ARBITER ##### -->
+<para>
+
+</para>
+
+
+
+<!-- ##### MACRO IRIS_DEBUG_SCHEDULER ##### -->
+<para>
+
+</para>
+
+
+
+<!-- ##### MACRO IRIS_DEBUG_THREAD ##### -->
+<para>
+
+</para>
+
+
+
+<!-- ##### MACRO IRIS_DEBUG_TASK ##### -->
+<para>
+
+</para>
+
+
+
+<!-- ##### MACRO IRIS_DEBUG_QUEUE ##### -->
+<para>
+
+</para>
+
+
+
+<!-- ##### MACRO IRIS_DEBUG_STACK ##### -->
+<para>
+
+</para>
+
+
+
+<!-- ##### MACRO IRIS_DEBUG_RROBIN ##### -->
+<para>
+
+</para>
+
+
+
+<!-- ##### FUNCTION iris_debug_init ##### -->
+<para>
+
+</para>
+
+
+
+<!-- ##### FUNCTION iris_debug_init_thread ##### -->
+<para>
+
+</para>
+
+
+
+<!-- ##### FUNCTION iris_debug ##### -->
+<para>
+
+</para>
+
+@section: 
+@file: 
+@line: 
+@function: 
+
+
+<!-- ##### FUNCTION iris_debug_message ##### -->
+<para>
+
+</para>
+
+@section: 
+@file: 
+@line: 
+@function: 
+@format: 
+@Varargs: 
+
+

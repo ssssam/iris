@@ -30,8 +30,24 @@ IrisReceiver
 
 </para>
 
-@parent: 
-@priv: 
+
+<!-- ##### FUNCTION iris_receiver_get_scheduler ##### -->
+<para>
+
+</para>
+
+@receiver: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_receiver_set_scheduler ##### -->
+<para>
+
+</para>
+
+@receiver: 
+@scheduler: 
+
 
 <!-- ##### FUNCTION iris_receiver_deliver ##### -->
 <para>
@@ -41,5 +57,13 @@ IrisReceiver
 @receiver: 
 @message: 
 @Returns: 
+
+
+<!-- ##### FUNCTION iris_receiver_resume ##### -->
+<para>
+
+</para>
+
+@receiver: 
 
 

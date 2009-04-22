@@ -17,6 +17,13 @@ IrisThread
 <!-- ##### SECTION Stability_Level ##### -->
 
 
+<!-- ##### MACRO IRIS_TYPE_THREAD ##### -->
+<para>
+
+</para>
+
+
+
 <!-- ##### STRUCT IrisThread ##### -->
 <para>
 
@@ -34,6 +41,14 @@ IrisThread
 @callback: 
 @data: 
 @taken: 
+
+<!-- ##### FUNCTION iris_thread_get_type ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
 
 <!-- ##### FUNCTION iris_thread_new ##### -->
 <para>

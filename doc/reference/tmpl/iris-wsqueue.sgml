@@ -17,6 +17,13 @@ IrisWSQueue
 <!-- ##### SECTION Stability_Level ##### -->
 
 
+<!-- ##### MACRO IRIS_TYPE_WSQUEUE ##### -->
+<para>
+
+</para>
+
+
+
 <!-- ##### MACRO IRIS_WSQUEUE ##### -->
 <para>
 
@@ -31,6 +38,14 @@ IrisWSQueue
 </para>
 
 @parent: 
+
+<!-- ##### FUNCTION iris_wsqueue_get_type ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
 
 <!-- ##### FUNCTION iris_wsqueue_new ##### -->
 <para>

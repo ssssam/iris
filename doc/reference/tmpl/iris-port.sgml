@@ -30,8 +30,6 @@ IrisPort
 
 </para>
 
-@parent: 
-@priv: 
 
 <!-- ##### FUNCTION iris_port_new ##### -->
 <para>
@@ -50,21 +48,21 @@ IrisPort
 @message: 
 
 
-<!-- ##### FUNCTION iris_port_repost ##### -->
-<para>
-
-</para>
-
-@port: 
-@message: 
-
-
 <!-- ##### FUNCTION iris_port_flush ##### -->
 <para>
 
 </para>
 
 @port: 
+
+
+<!-- ##### FUNCTION iris_port_is_paused ##### -->
+<para>
+
+</para>
+
+@port: 
+@Returns: 
 
 
 <!-- ##### FUNCTION iris_port_has_receiver ##### -->

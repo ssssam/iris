@@ -1,0 +1,75 @@
+<!-- ##### SECTION Title ##### -->
+IrisArbiter
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION Stability_Level ##### -->
+
+
+<!-- ##### MACRO IRIS_ARBITER_CONST ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT IrisArbiter ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### FUNCTION iris_arbiter_can_receive ##### -->
+<para>
+
+</para>
+
+@arbiter: 
+@receiver: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_arbiter_receive_completed ##### -->
+<para>
+
+</para>
+
+@arbiter: 
+@receiver: 
+
+
+<!-- ##### FUNCTION iris_arbiter_receive ##### -->
+<para>
+
+</para>
+
+@scheduler: 
+@port: 
+@handler: 
+@user_data: 
+@Returns: 
+
+
+<!-- ##### FUNCTION iris_arbiter_coordinate ##### -->
+<para>
+
+</para>
+
+@exclusive: 
+@concurrent: 
+@teardown: 
+@Returns: 
+
+

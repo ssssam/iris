@@ -1,5 +1,5 @@
 <!-- ##### SECTION Title ##### -->
-IrisLFQueue
+IrisLFScheduler
 
 <!-- ##### SECTION Short_Description ##### -->
 
@@ -9,29 +9,31 @@ IrisLFQueue
 
 </para>
 
+
 <!-- ##### SECTION See_Also ##### -->
 <para>
 
 </para>
 
+
 <!-- ##### SECTION Stability_Level ##### -->
 
 
-<!-- ##### MACRO IRIS_TYPE_LFQUEUE ##### -->
+<!-- ##### MACRO IRIS_LFSCHEDULER_CONST ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT IrisLFScheduler ##### -->
 <para>
 
 </para>
 
 
-
-<!-- ##### STRUCT IrisLFQueue ##### -->
-<para>
-
-</para>
-
-@parent: 
-
-<!-- ##### FUNCTION iris_lfqueue_get_type ##### -->
+<!-- ##### FUNCTION iris_lfscheduler_new ##### -->
 <para>
 
 </para>
@@ -39,11 +41,13 @@ IrisLFQueue
 @Returns: 
 
 
-<!-- ##### FUNCTION iris_lfqueue_new ##### -->
+<!-- ##### FUNCTION iris_lfscheduler_new_full ##### -->
 <para>
 
 </para>
 
+@min_threads: 
+@max_threads: 
 @Returns: 
 
 

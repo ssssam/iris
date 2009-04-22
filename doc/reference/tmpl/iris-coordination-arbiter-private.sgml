@@ -1,0 +1,42 @@
+<!-- ##### SECTION Title ##### -->
+iris-coordination-arbiter-private
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION Stability_Level ##### -->
+
+
+<!-- ##### ENUM IrisCoordinationFlags ##### -->
+<para>
+
+</para>
+
+@IRIS_COORD_EXCLUSIVE: 
+@IRIS_COORD_NEEDS_ANY: 
+@IRIS_COORD_ALL: 
+
+<!-- ##### STRUCT IrisCoordinationArbiterPrivate ##### -->
+<para>
+
+</para>
+
+@exclusive: 
+@concurrent: 
+@teardown: 
+@mutex: 
+@flags: 
+@active: 
+

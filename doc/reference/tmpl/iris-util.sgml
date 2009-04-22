@@ -1,5 +1,5 @@
 <!-- ##### SECTION Title ##### -->
-IrisLFQueue
+iris-util
 
 <!-- ##### SECTION Short_Description ##### -->
 
@@ -17,33 +17,22 @@ IrisLFQueue
 <!-- ##### SECTION Stability_Level ##### -->
 
 
-<!-- ##### MACRO IRIS_TYPE_LFQUEUE ##### -->
+<!-- ##### FUNCTION g_time_val_compare ##### -->
 <para>
 
 </para>
 
-
-
-<!-- ##### STRUCT IrisLFQueue ##### -->
-<para>
-
-</para>
-
-@parent: 
-
-<!-- ##### FUNCTION iris_lfqueue_get_type ##### -->
-<para>
-
-</para>
-
+@tv1: 
+@tv2: 
 @Returns: 
 
 
-<!-- ##### FUNCTION iris_lfqueue_new ##### -->
+<!-- ##### FUNCTION g_time_val_usec_until ##### -->
 <para>
 
 </para>
 
+@tv: 
 @Returns: 
 
 
