@@ -65,3 +65,11 @@ rrobin_1_sources = rrobin-1.c
 gstamppointer_1_sources = gstamppointer-1.c
 coordination_arbiter_1_sources = coordination-arbiter-1.c
 service_1_sources = service-1.c
+
+EXTRA_DIST =					\
+	mocks/mock-callback-receiver.c		\
+	mocks/mock-callback-receiver.h		\
+	mocks/mock-scheduler.h			\
+	mocks/mock-service.h			\
+	$(NULL)
+
