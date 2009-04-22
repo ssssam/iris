@@ -206,6 +206,7 @@ void
 iris_service_stop (IrisService *service)
 {
 	IrisServicePrivate *priv;
+	IrisMessage        *message;
 
 	g_return_if_fail (IRIS_IS_SERVICE (service));
 
@@ -215,6 +216,10 @@ iris_service_stop (IrisService *service)
 		return;
 
 	IRIS_SERVICE_GET_CLASS (service)->handle_stop (service);
+
+	message = iris_message_new (0);
+	iris_port_post (priv->teardown_port, message);
+	iris_message_unref (message);
 }
 
 /**
