@@ -186,3 +186,9 @@ echo "   Enable test suite........:  ${enable_glibtest}"
 echo "   GObject Introspection....:  ${enable_introspection}"
 echo "   Vala Bindings............:  ${has_vala}"
 echo ""
+
+if test "x$enable_introspection" = "xyes"; then
+echo "   GObject introspection may be broke for older GObject Introspection "
+echo "   versions.  Ubuntu Jaunty Jackalope 9.10 is known to be broken!"
+echo ""
+fi
