@@ -1,4 +1,4 @@
-/* iris.h
+/* iris-gsource.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -18,30 +18,16 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_H__
-#define __IRIS_H__
+#ifndef __IRIS_GSOURCE_H__
+#define __IRIS_GSOURCE_H__
 
-#include "iris-types.h"
-#include "iris-arbiter.h"
-#include "iris-coordination-arbiter.h"
-#include "iris-free-list.h"
-#include "iris-gmainscheduler.h"
-#include "iris-link.h"
-#include "iris-lfqueue.h"
-#include "iris-lfscheduler.h"
-#include "iris-message.h"
+#include <glib.h>
+
 #include "iris-queue.h"
-#include "iris-port.h"
-#include "iris-receiver.h"
-#include "iris-rrobin.h"
-#include "iris-scheduler.h"
-#include "iris-wsscheduler.h"
-#include "iris-scheduler-manager.h"
-#include "iris-service.h"
-#include "iris-stack.h"
-#include "iris-task.h"
-#include "iris-wsqueue.h"
 
-void iris_init (void);
+guint iris_gsource_new (IrisQueue    *queue,
+                        GMainContext *context,
+                        GSourceFunc   callback,
+                        gpointer      user_data);
 
-#endif /* __IRIS_H__ */
+#endif /* __IRIS_GSOURCE_H__ */

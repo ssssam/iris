@@ -40,45 +40,48 @@ typedef enum
 	IRIS_DELIVERY_REMOVE            = 5
 } IrisDeliveryStatus;
 
-typedef struct _IrisReceiver         IrisReceiver;
-typedef struct _IrisReceiverClass    IrisReceiverClass;
-typedef struct _IrisReceiverPrivate  IrisReceiverPrivate;
+typedef struct _IrisReceiver              IrisReceiver;
+typedef struct _IrisReceiverClass         IrisReceiverClass;
+typedef struct _IrisReceiverPrivate       IrisReceiverPrivate;
 
-typedef struct _IrisPort             IrisPort;
-typedef struct _IrisPortClass        IrisPortClass;
-typedef struct _IrisPortPrivate      IrisPortPrivate;
+typedef struct _IrisPort                  IrisPort;
+typedef struct _IrisPortClass             IrisPortClass;
+typedef struct _IrisPortPrivate           IrisPortPrivate;
 
-typedef struct _IrisArbiter          IrisArbiter;
-typedef struct _IrisArbiterClass     IrisArbiterClass;
-typedef struct _IrisArbiterPrivate   IrisArbiterPrivate;
+typedef struct _IrisArbiter               IrisArbiter;
+typedef struct _IrisArbiterClass          IrisArbiterClass;
+typedef struct _IrisArbiterPrivate        IrisArbiterPrivate;
 
-typedef struct _IrisScheduler        IrisScheduler;
-typedef struct _IrisSchedulerClass   IrisSchedulerClass;
-typedef struct _IrisSchedulerPrivate IrisSchedulerPrivate;
-typedef struct _IrisWSScheduler        IrisWSScheduler;
-typedef struct _IrisWSSchedulerClass   IrisWSSchedulerClass;
-typedef struct _IrisWSSchedulerPrivate IrisWSSchedulerPrivate;
-typedef struct _IrisLFScheduler        IrisLFScheduler;
-typedef struct _IrisLFSchedulerClass   IrisLFSchedulerClass;
-typedef struct _IrisLFSchedulerPrivate IrisLFSchedulerPrivate;
+typedef struct _IrisScheduler             IrisScheduler;
+typedef struct _IrisSchedulerClass        IrisSchedulerClass;
+typedef struct _IrisSchedulerPrivate      IrisSchedulerPrivate;
+typedef struct _IrisWSScheduler           IrisWSScheduler;
+typedef struct _IrisWSSchedulerClass      IrisWSSchedulerClass;
+typedef struct _IrisWSSchedulerPrivate    IrisWSSchedulerPrivate;
+typedef struct _IrisLFScheduler           IrisLFScheduler;
+typedef struct _IrisLFSchedulerClass      IrisLFSchedulerClass;
+typedef struct _IrisLFSchedulerPrivate    IrisLFSchedulerPrivate;
+typedef struct _IrisGMainScheduler        IrisGMainScheduler;
+typedef struct _IrisGMainSchedulerClass   IrisGMainSchedulerClass;
+typedef struct _IrisGMainSchedulerPrivate IrisGMainSchedulerPrivate;
 
-typedef struct _IrisThread           IrisThread;
-typedef struct _IrisThreadWork       IrisThreadWork;
+typedef struct _IrisThread                IrisThread;
+typedef struct _IrisThreadWork            IrisThreadWork;
 
-typedef struct _IrisMessage          IrisMessage;
+typedef struct _IrisMessage               IrisMessage;
 
-typedef struct _IrisStack            IrisStack;
+typedef struct _IrisStack                 IrisStack;
 
-typedef struct _IrisFreeList         IrisFreeList;
+typedef struct _IrisFreeList              IrisFreeList;
 
-typedef struct _IrisLink             IrisLink;
+typedef struct _IrisLink                  IrisLink;
 
-typedef struct _IrisQueue            IrisQueue;
-typedef struct _IrisQueueVTable      IrisQueueVTable;
-typedef struct _IrisLFQueue          IrisLFQueue;
-typedef struct _IrisWSQueue          IrisWSQueue;
+typedef struct _IrisQueue                 IrisQueue;
+typedef struct _IrisQueueVTable           IrisQueueVTable;
+typedef struct _IrisLFQueue               IrisLFQueue;
+typedef struct _IrisWSQueue               IrisWSQueue;
 
-typedef struct _IrisRRobin           IrisRRobin;
+typedef struct _IrisRRobin                IrisRRobin;
 
 typedef void     (*IrisCallback)          (gpointer data);
 typedef void     (*IrisMessageHandler)    (IrisMessage *message, gpointer data);

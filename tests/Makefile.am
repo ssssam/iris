@@ -6,6 +6,7 @@ noinst_PROGRAMS =		\
 	arbiter-1		\
 	coordination-arbiter-1	\
 	free-list-1		\
+	gmainscheduler-1	\
 	gstamppointer-1		\
 	lf-queue-1		\
 	message-1		\
@@ -26,6 +27,7 @@ TEST_PROGS +=			\
 	arbiter-1		\
 	coordination-arbiter-1	\
 	free-list-1		\
+	gmainscheduler-1	\
 	gstamppointer-1		\
 	lf-queue-1		\
 	message-1		\
@@ -65,6 +67,7 @@ rrobin_1_sources = rrobin-1.c
 gstamppointer_1_sources = gstamppointer-1.c
 coordination_arbiter_1_sources = coordination-arbiter-1.c
 service_1_sources = service-1.c
+gmainscheduler_1_sources = gmainscheduler-1.c
 
 EXTRA_DIST =					\
 	mocks/mock-callback-receiver.c		\
