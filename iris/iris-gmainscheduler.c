@@ -67,13 +67,13 @@ iris_gmainscheduler_queue_real (IrisScheduler  *scheduler,
 
 static void
 iris_gmainscheduler_remove_thread_real (IrisScheduler *scheduler,
-                                     IrisThread    *thread)
+                                        IrisThread    *thread)
 {
 }
 
 static void
 iris_gmainscheduler_add_thread_real (IrisScheduler  *scheduler,
-                                  IrisThread     *thread)
+                                     IrisThread     *thread)
 {
 }
 
@@ -83,6 +83,11 @@ iris_gmainscheduler_finalize (GObject *object)
 	IrisGMainSchedulerPrivate *priv;
 
 	priv = IRIS_GMAINSCHEDULER (object)->priv;
+
+	priv->source = 0;
+	priv->context = NULL;
+	iris_queue_unref (priv->queue);
+	priv->queue = NULL;
 
 	G_OBJECT_CLASS (iris_gmainscheduler_parent_class)->finalize (object);
 }
