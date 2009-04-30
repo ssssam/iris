@@ -24,6 +24,7 @@
 
 #include <stdlib.h>
 
+#include "iris-debug.h"
 #include "iris-queue.h"
 #include "iris-rrobin.h"
 #include "iris-scheduler.h"
@@ -254,8 +255,12 @@ iris_scheduler_new_full (guint min_threads,
 void
 iris_scheduler_set_default (IrisScheduler *scheduler)
 {
+	iris_debug (IRIS_DEBUG_SCHEDULER);
+
 	G_LOCK (default_scheduler);
-	g_atomic_pointer_set (&default_scheduler, scheduler);
+	if (default_scheduler)
+		g_object_unref (default_scheduler);
+	g_atomic_pointer_set (&default_scheduler, g_object_ref (scheduler));
 	G_UNLOCK (default_scheduler);
 }
 

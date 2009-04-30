@@ -87,6 +87,7 @@ IrisScheduler* iris_scheduler_new             (void);
 IrisScheduler* iris_scheduler_new_full        (guint           min_threads,
                                                guint           max_threads);
 IrisScheduler* iris_scheduler_default         (void);
+void           iris_scheduler_set_default     (IrisScheduler *scheduler);
 
 gint           iris_scheduler_get_min_threads (IrisScheduler  *scheduler);
 gint           iris_scheduler_get_max_threads (IrisScheduler  *scheduler);
