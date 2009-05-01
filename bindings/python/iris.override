@@ -1,0 +1,16 @@
+%%
+headers
+#include <Python.h>
+#include <pygobject.h>
+#include "iris/iris.h"
+#include "pyirismarshal.h"
+
+#define PY_TYPE_OBJECT (py_object_get_type())
+%%
+module iris
+%%
+import gobject.GObject as PyGObject_Type
+%%
+ignore-glob
+  *_get_type
+%%

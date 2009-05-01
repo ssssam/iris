@@ -152,8 +152,107 @@ AC_SUBST(TYPELIBDIR)
 
 AM_CONDITIONAL([ENABLE_INTROSPECTION],[test "$enable_introspection" = "yes"])
 
-GTK_DOC_CHECK([1.11])
+dnl = Enable Python support ================================================
+AC_MSG_CHECKING([whether Python support is requested])
+AC_ARG_ENABLE([python],
+	AS_HELP_STRING([--enable-python],[Enable python support]),
+	[enable_python=$enableval enable_python=$enableval],
+	[enable_python=autodetect enable_python=yes])
+AC_MSG_RESULT([$enable_python])
+if test "x$enable_python" != "xno"; then
+	AM_PATH_PYTHON([2.3],[],[no])
+	if test "x$PYTHON" = "x:"; then
+		enable_python=no
+	fi
+fi
+if test "x$enable_python" != "xno"; then
+	AM_CHECK_PYTHON_HEADERS([],[enable_python=no])
+fi
+if test "x$enable_python" != "xno"; then
+	PY_PREFIX=`$PYTHON -c 'import sys ; print sys.prefix'`
+	PY_EXEC_PREFIX=`$PYTHON -c 'import sys ; print sys.exec_prefix'`
+	PYTHON_LIBS="-lpython$PYTHON_VERSION"
+	PYTHON_LIB_LOC="-L$PY_EXEC_PREFIX/lib/python$PYTHON_VERSION/config"
+	PYTHON_CFLAGS="-I$PY_PREFIX/include/python$PYTHON_VERSION"
+	PYTHON_MAKEFILE="$PY_EXEC_PREFIX/lib/python$PYTHON_VERSION/config/Makefile"
+	PYTHON_LOCALMODLIBS=`sed -n -e 's/^LOCALMODLIBS=\(.*\)/\1/p' $PYTHON_MAKEFILE`
+	PYTHON_BASEMODLIBS=`sed -n -e 's/^BASEMODLIBS=\(.*\)/\1/p' $PYTHON_MAKEFILE`
+	PYTHON_OTHER_LIBS=`sed -n -e 's/^LIBS=\(.*\)/\1/p' $PYTHON_MAKEFILE`
+	PYTHON_EXTRA_LIBS="$PYTHON_LOCALMODLIBS $PYTHON_BASEMODLIBS $PYTHON_OTHER_LIBS"
+	AC_SUBST([PYTHON_LIBS])
+	AC_SUBST([PYTHON_LIB_LOC])
+	AC_SUBST([PYTHON_CFLAGS])
+	AC_SUBST([PYTHON_EXTRA_LIBS])
+fi
+if test "x$enable_python" != "xyes"; then
+	if test "x$enable_python" = "xyes"; then
+		AC_MSG_ERROR([Python not found])
+	elif test "x$enable_python" = "xautodetect"; then
+		enable_python=no
+		AC_MSG_WARN([Python not found, disabling python support])
+	fi
+fi
+if test "x$enable_python" != "xno"; then
+	PYGOBJECT_REQUIRED=2.15.3
+	PYGTK_REQUIRED=2.12.0
 
+	PKG_CHECK_MODULES([PYGTK], [
+		pygobject-2.0 >= $PYGOBJECT_REQUIRED
+		pygtk-2.0 >= $PYGTK_REQUIRED],
+		[],
+		[
+		enable_python=no
+		if test "x$enable_python" = "xyes"; then
+			AC_MSG_ERROR([$PYGTK_PKG_ERRORS])
+		elif test "x$enable_python" = "xautodetect"; then
+                        enable_python=no
+			AC_MSG_WARN([$PYGTK_PKG_ERRORS])
+			AC_MSG_WARN([Disabling python support])
+		fi
+		])
+
+	AC_SUBST([PYGTK_CFLAGS])
+	AC_SUBST([PYGTK_LIBS])
+fi
+if test "x$enable_python" != "xno"; then
+	AC_MSG_CHECKING([for pygtk defs])
+	PYGTK_DEFSDIR=`$PKG_CONFIG --variable=defsdir pygtk-2.0`
+	AC_MSG_RESULT([$PYGTK_DEFSDIR])
+
+	AC_MSG_CHECKING([for pygtk codegen])
+	PYGTK_CODEGEN="$PYTHON `$PKG_CONFIG --variable=codegendir pygtk-2.0`/codegen.py"
+	AC_MSG_RESULT([$PYGTK_CODEGEN])
+
+	AC_MSG_CHECKING([for pygtk h2def])
+	PYGTK_H2DEF="$PYTHON `$PKG_CONFIG --variable=codegendir pygtk-2.0`/h2def.py"
+	AC_MSG_RESULT([$PYGTK_H2DEF])
+
+	AC_SUBST([PYGTK_DEFSDIR])
+	AC_SUBST([PYGTK_CODEGEN])
+	AC_SUBST([PYGTK_H2DEF])
+
+	dnl Check for -fno-strict-aliasing
+	FLAGS="-fno-strict-aliasing"
+	save_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $FLAGS"
+	AC_MSG_CHECKING([whether [$]CC understands $FLAGS])
+	AC_TRY_COMPILE([], [], [compiler_has_option=yes], [compiler_has_option=no])
+	CFLAGS="$save_CFLAGS"
+	AC_MSG_RESULT($compiler_has_option)
+	if test $compiler_has_option = yes; then
+		NO_STRICT_ALIASING_CFLAGS="$FLAGS"
+	fi
+	AC_SUBST([NO_STRICT_ALIASING_CFLAGS])
+fi
+if test "x$enable_python" != "xno" -a "x$enable_python" != "xno"; then
+	enable_python=yes
+	AC_DEFINE([ENABLE_PYTHON],[1],[Define to compile with python support])
+fi
+AM_CONDITIONAL([ENABLE_PYTHON],[test "x$enable_python" = "xyes"])
+
+
+dnl = Misc =================================================================
+GTK_DOC_CHECK([1.11])
 SHAVE_INIT([build/autotools], [enable])
 
 AC_CONFIG_FILES([
@@ -164,6 +263,7 @@ AC_CONFIG_FILES([
         iris/iris-version.h
         bindings/Makefile
         bindings/vala/Makefile
+        bindings/python/Makefile
         examples/Makefile
         tests/Makefile
         doc/Makefile
@@ -184,7 +284,8 @@ echo "   Profiling................:  ${enable_profiling}"
 echo "   Build API reference......:  ${enable_gtk_doc}"
 echo "   Enable test suite........:  ${enable_glibtest}"
 echo "   GObject Introspection....:  ${enable_introspection}"
-echo "   Vala Bindings............:  ${has_vala}"
+echo "   Vala Bindings............:  ${enable_vala}"
+echo "   Python Bindings..........:  ${enable_python}"
 echo ""
 
 if test "x$enable_introspection" = "xyes"; then

@@ -98,3 +98,7 @@ examples/task-ls
 examples/task-ls.o
 iris/Iris-1.0.gir
 iris/Iris-1.0.typelib
+bindings/python/iris.c
+bindings/python/pyirismarshal.c
+bindings/python/pyirismarshal.h
+bindings/python/stamp-pyirismarshal.h
