@@ -54,6 +54,8 @@ G_BEGIN_DECLS
     (G_TYPE_INSTANCE_GET_CLASS ((obj),      \
      IRIS_TYPE_RECEIVER, IrisReceiverClass))
 
+#define IRIS_TYPE_DELIVERY_STATUS (iris_delivery_status_get_type())
+
 struct _IrisReceiver
 {
 	GObject parent;
@@ -69,7 +71,8 @@ struct _IrisReceiverClass
 	                               IrisMessage  *message);
 };
 
-GType              iris_receiver_get_type (void) G_GNUC_CONST;
+GType              iris_delivery_status_get_type (void) G_GNUC_CONST;
+GType              iris_receiver_get_type        (void) G_GNUC_CONST;
 
 IrisScheduler*     iris_receiver_get_scheduler (IrisReceiver  *receiver);
 void               iris_receiver_set_scheduler (IrisReceiver  *receiver,

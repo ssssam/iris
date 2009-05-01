@@ -54,6 +54,8 @@ G_BEGIN_DECLS
     (G_TYPE_INSTANCE_GET_CLASS ((obj),     \
      IRIS_TYPE_ARBITER, IrisArbiterClass))
 
+#define IRIS_TYPE_RECEIVE_DECISION (iris_receive_decision_get_type())
+
 struct _IrisArbiter
 {
 	GObject parent;
@@ -71,6 +73,7 @@ struct _IrisArbiterClass
 	                                          IrisReceiver *receiver);
 };
 
+GType               iris_receive_decision_get_type (void) G_GNUC_CONST;
 GType               iris_arbiter_get_type          (void) G_GNUC_CONST;
 
 IrisReceiveDecision iris_arbiter_can_receive       (IrisArbiter  *arbiter,

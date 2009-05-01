@@ -30,6 +30,23 @@ struct _IrisArbiterPrivate
 
 G_DEFINE_ABSTRACT_TYPE (IrisArbiter, iris_arbiter, G_TYPE_OBJECT);
 
+GType
+iris_receive_decision_get_type (void)
+{
+	static GType      gtype    = 0;
+	static GEnumValue values[] = {
+		{ IRIS_RECEIVE_NEVER, "IRIS_RECEIVE_NEVER", "NEVER" },
+		{ IRIS_RECEIVE_NOW,   "IRIS_RECEIVE_NOW",   "NOW" },
+		{ IRIS_RECEIVE_LATER, "IRIS_RECEIVE_LATER", "LATER" },
+		{ 0, NULL, NULL }
+	};
+
+	if (G_UNLIKELY (!gtype))
+		gtype = g_enum_register_static ("IrisReceiveDecision", values);
+
+	return gtype;
+}
+
 static void
 iris_arbiter_finalize (GObject *object)
 {

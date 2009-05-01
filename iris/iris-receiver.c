@@ -31,6 +31,25 @@ typedef struct
 	IrisMessage  *message;
 } IrisWorkerData;
 
+GType
+iris_delivery_status_get_type (void)
+{
+	static GType      gtype    = 0;
+	static GEnumValue values[] = {
+		{ IRIS_DELIVERY_ACCEPTED,        "IRIS_DELIVERY_ACCEPTED",        "ACCEPTED" },
+		{ IRIS_DELIVERY_PAUSE,           "IRIS_DELIVERY_PAUSE",           "PAUSE" },
+		{ IRIS_DELIVERY_ACCEPTED_PAUSE,  "IRIS_DELIVERY_ACCEPTED_PAUSE",  "ACCEPTED_PAUSE" },
+		{ IRIS_DELIVERY_REMOVE,          "IRIS_DELIVERY_REMOVE",          "REMOVE" },
+		{ IRIS_DELIVERY_ACCEPTED_REMOVE, "IRIS_DELIVERY_ACCEPTED_REMOVE", "ACCEPTED_REMOVE" },
+		{ 0, NULL, NULL }
+	};
+
+	if (G_UNLIKELY (!gtype))
+		gtype = g_enum_register_static ("IrisDeliveryStatus", values);
+
+	return gtype;
+}
+
 static void
 iris_receiver_worker_cb (gpointer data)
 {
