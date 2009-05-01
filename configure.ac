@@ -66,14 +66,14 @@ AC_SUBST(IRIS_LIBS)
 AM_CONDITIONAL(ENABLE_GLIB_TEST, test "x$enable_glibtest" = "xyes")
 
 dnl = Enable Vala ==========================================================
-has_vala=no
-PKG_CHECK_MODULES(VALA, vala-1.0, has_vala=yes, has_vala=no)
-if test "x$has_vala" = "xyes"; then
+enable_vala=no
+PKG_CHECK_MODULES(VALA, vala-1.0, enable_vala=yes, enable_vala=no)
+if test "x$enable_vala" = "xyes"; then
 	VAPI_DIR=`pkg-config --variable=vapidir vala-1.0`
 else
 	VAPI_DIR=
 fi
-AM_CONDITIONAL(HAVE_VALA, [test "x$has_vala" = "xyes"])
+AM_CONDITIONAL(ENABLE_VALA, [test "x$enable_vala" = "xyes"])
 AC_SUBST(VAPI_DIR)
 
 dnl = Enable profiling =====================================================

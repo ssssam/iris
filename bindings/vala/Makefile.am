@@ -1,6 +1,6 @@
 vapidir = @VAPI_DIR@
 
-if HAVE_VALA
+if ENABLE_VALA
 vapi_DATA = iris-1.0.vapi
 endif
 
