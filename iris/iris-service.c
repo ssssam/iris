@@ -263,3 +263,11 @@ iris_service_send_concurrent (IrisService *service,
 
 	iris_port_post (priv->concurrent_port, message);
 }
+
+void
+iris_service_set_scheduler (IrisService   *service,
+                            IrisScheduler *scheduler)
+{
+	/* Not implemented yet */
+	g_assert_not_reached ();
+}
