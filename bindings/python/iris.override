@@ -23,6 +23,9 @@ ignore-glob
   iris_task_new_full
   iris_scheduler_default
   iris_scheduler_manager_print_stat
+  iris_arbiter_coordinate
+
+  iris_gsource_new
 
   iris_scheduler_new_full
   iris_lfscheduler_new_full
@@ -139,5 +142,61 @@ cleanup:
 	if (task)
 		return pygobject_new (G_OBJECT (task));
 
+	return NULL;
+}
+%%
+define IrisArbiter.coordinate kwargs staticmethod
+static PyObject*
+_wrap_iris_arbiter_coordinate (PyObject *self,
+                               PyObject *args,
+                               PyObject *kwargs)
+{
+	IrisArbiter  *arbiter      = NULL;
+	PyObject     *pyexclusive  = NULL,
+	             *pyconcurrent = NULL,
+	             *pyteardown   = NULL;
+	IrisReceiver *exclusive    = NULL,
+	             *concurrent   = NULL,
+	             *teardown     = NULL;
+	Py_ssize_t    length;
+
+	if (!args || (length = PySequence_Length (args)) <= 0) {
+		PyErr_SetString (PyExc_TypeError,
+		                 "iris.Arbiter.coordinate requires at least one argument");
+		return NULL;
+	}
+
+#define ENSURE_ARBITER(pyobj)							\
+	if(!pygobject_check(pyobj, &PyIrisReceiver_Type)) {			\
+		PyErr_SetString (PyExc_TypeError,				\
+		                 "All arguments must be of type iris.Arbiter");	\
+		goto cleanup;							\
+	}
+
+	pyexclusive = PySequence_GetItem (args, 0);
+	ENSURE_ARBITER (pyexclusive);
+	exclusive = IRIS_RECEIVER (((PyGObject*)pyexclusive)->obj);
+
+	if (length > 1) {
+		pyconcurrent = PySequence_GetItem (args, 1);
+		ENSURE_ARBITER (pyconcurrent);
+		concurrent = IRIS_RECEIVER (((PyGObject*)pyconcurrent)->obj);
+	}
+
+	if (length > 2) {
+		pyteardown = PySequence_GetItem (args, 2);
+		ENSURE_ARBITER (pyteardown);
+		teardown = IRIS_RECEIVER (((PyGObject*)pyteardown)->obj);
+	}
+
+	arbiter = iris_arbiter_coordinate (exclusive, concurrent, teardown);
+
+cleanup:
+	Py_XDECREF (pyexclusive);
+	Py_XDECREF (pyconcurrent);
+	Py_XDECREF (pyteardown);
+
+	if (arbiter)
+		return pygobject_new (G_OBJECT (arbiter));
 	return NULL;
 }
