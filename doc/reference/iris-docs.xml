@@ -21,6 +21,7 @@
     <xi:include href="xml/iris-receiver.xml"/>
     <xi:include href="xml/iris-scheduler.xml"/>
     <xi:include href="xml/iris-wsscheduler.xml"/>
+    <xi:include href="xml/iris-lfscheduler.xml"/>
     <xi:include href="xml/iris-scheduler-manager.xml"/>
     <xi:include href="xml/iris-arbiter.xml"/>
     <xi:include href="xml/iris-thread.xml"/>
