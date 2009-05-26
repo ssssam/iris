@@ -16,9 +16,13 @@ ignore-glob
   iris_init
   iris_task_all_of
   iris_task_vall_of
-
   iris_scheduler_default
   iris_task_new_from_closure
+  iris_task_new_from_func
+  iris_scheduler_manager_print_stat
+
+  iris_scheduler_new_full
+  iris_lfscheduler_new_full
   iris_wsscheduler_new_full
 %%
 define IrisScheduler.default noargs staticmethod
@@ -75,4 +79,13 @@ cleanup:
 		return pygobject_new (G_OBJECT (task));
 
 	return NULL;
+}
+%%
+define IrisScheduler.print_stat noargs staticmethod
+static PyObject*
+_wrap_iris_scheduler_print_stat (void)
+{
+	iris_scheduler_manager_print_stat ();
+	Py_INCREF (Py_None);
+	return Py_None;
 }
