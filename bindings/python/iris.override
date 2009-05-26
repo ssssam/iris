@@ -188,6 +188,7 @@ _wrap_iris_arbiter_coordinate (PyObject *self,
 		ENSURE_ARBITER (pyteardown);
 		teardown = IRIS_RECEIVER (((PyGObject*)pyteardown)->obj);
 	}
+#undef ENSURE_ARBITER
 
 	arbiter = iris_arbiter_coordinate (exclusive, concurrent, teardown);
 
