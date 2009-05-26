@@ -44,9 +44,9 @@ _wrap_iris_task_all_of (PyObject *self,
                         PyObject *args,
                         PyObject *kwargs)
 {
-	IrisTask   *task  = NULL;
-	GList      *tasks = NULL;
-	PyObject   *pytask;
+	IrisTask   *task   = NULL;
+	GList      *tasks  = NULL;
+	PyObject   *pytask = NULL;
 	Py_ssize_t  length;
 	gint        i;
 
@@ -79,6 +79,7 @@ _wrap_iris_task_all_of (PyObject *self,
 	}
 
 cleanup:
+	Py_XDECREF (pytask);
 	g_list_free (tasks);
 
 	if (task)
@@ -102,9 +103,9 @@ _wrap_iris_task_any_of (PyObject *self,
                         PyObject *args,
                         PyObject *kwargs)
 {
-	IrisTask   *task  = NULL;
-	GList      *tasks = NULL;
-	PyObject   *pytask;
+	IrisTask   *task   = NULL;
+	GList      *tasks  = NULL;
+	PyObject   *pytask = NULL;
 	Py_ssize_t  length;
 	gint        i;
 
@@ -137,6 +138,7 @@ _wrap_iris_task_any_of (PyObject *self,
 	}
 
 cleanup:
+	Py_XDECREF (pytask);
 	g_list_free (tasks);
 
 	if (task)
