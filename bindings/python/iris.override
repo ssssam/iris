@@ -13,4 +13,66 @@ import gobject.GObject as PyGObject_Type
 %%
 ignore-glob
   *_get_type
+  iris_init
+  iris_task_all_of
+  iris_task_vall_of
+
+  iris_scheduler_default
+  iris_task_new_from_closure
+  iris_wsscheduler_new_full
 %%
+define IrisScheduler.default noargs staticmethod
+static PyObject*
+_wrap_iris_scheduler_default (void)
+{
+	return pygobject_new (G_OBJECT (iris_scheduler_default ()));
+}
+%%
+define IrisTask.all_of kwargs staticmethod
+static PyObject*
+_wrap_iris_task_all_of (PyObject *self,
+                        PyObject *args,
+                        PyObject *kwargs)
+{
+	IrisTask   *task  = NULL;
+	GList      *tasks = NULL;
+	PyObject   *pytask;
+	Py_ssize_t  length;
+	gint        i;
+
+	if (!args || (length = PySequence_Length (args)) == 0) {
+		PyErr_SetString (PyExc_TypeError,
+		                 "iris.Task.all_of takes at least one argument");
+		return NULL;
+	}
+
+	if (PyErr_Occurred ())
+		return NULL;
+
+	for (i = 0; i < length; i++) {
+		if (!(pytask = PySequence_GetItem (args, i))) {
+			goto cleanup;
+		}
+		if (!pygobject_check (pytask, &PyIrisTask_Type)) {
+			PyErr_SetString (PyExc_TypeError,
+			                 "Argument something other than iris.Task");
+			goto cleanup;
+		}
+		tasks = g_list_prepend (tasks, ((PyGObject*)pytask)->obj);
+	}
+
+	if (!(task = iris_task_all_of (tasks))) {
+		PyErr_SetString (PyExc_RuntimeError,
+		                 "An unknown error occurred while creating the task. "
+		                 "Please submit a bug report.");
+		goto cleanup;
+	}
+
+cleanup:
+	g_list_free (tasks);
+
+	if (task)
+		return pygobject_new (G_OBJECT (task));
+
+	return NULL;
+}
