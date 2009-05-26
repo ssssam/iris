@@ -750,6 +750,11 @@
 
 ;; From iris-receiver.h
 
+(define-function iris_delivery_status_get_type
+  (c-name "iris_delivery_status_get_type")
+  (return-type "GType")
+)
+
 (define-function iris_receiver_get_type
   (c-name "iris_receiver_get_type")
   (return-type "GType")
@@ -1075,10 +1080,23 @@
   (c-name "iris_task_new")
   (is-constructor-of "IrisTask")
   (return-type "IrisTask*")
+)
+
+(define-function iris_task_new_with_func
+  (c-name "iris_task_new_with_func")
+  (return-type "IrisTask*")
   (parameters
     '("IrisTaskFunc" "func")
     '("gpointer" "user_data")
     '("GDestroyNotify" "notify")
+  )
+)
+
+(define-function iris_task_new_with_closure
+  (c-name "iris_task_new_with_closure")
+  (return-type "IrisTask*")
+  (parameters
+    '("GClosure*" "closure")
   )
 )
 
@@ -1092,14 +1110,6 @@
     '("gboolean" "async")
     '("IrisScheduler*" "scheduler")
     '("GMainContext*" "context")
-  )
-)
-
-(define-function iris_task_new_from_closure
-  (c-name "iris_task_new_from_closure")
-  (return-type "IrisTask*")
-  (parameters
-    '("GClosure*" "closure")
   )
 )
 
@@ -1286,13 +1296,21 @@
   (varargs #t)
 )
 
-(define-method all_of
+(define-method vall_of
   (of-object "IrisTask")
-  (c-name "iris_task_all_of")
+  (c-name "iris_task_vall_of")
   (return-type "IrisTask*")
   (parameters
   )
   (varargs #t)
+)
+
+(define-function iris_task_all_of
+  (c-name "iris_task_all_of")
+  (return-type "IrisTask*")
+  (parameters
+    '("GList*" "tasks")
+  )
 )
 
 (define-method any_of
