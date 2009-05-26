@@ -18,9 +18,10 @@ ignore-glob
   iris_task_vall_of
   iris_task_any_of
   iris_task_vany_of
+  iris_task_new_with_closure
+  iris_task_new_with_func
+  iris_task_new_full
   iris_scheduler_default
-  iris_task_new_from_closure
-  iris_task_new_from_func
   iris_scheduler_manager_print_stat
 
   iris_scheduler_new_full
