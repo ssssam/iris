@@ -24,6 +24,7 @@ ignore-glob
   iris_scheduler_default
   iris_scheduler_manager_print_stat
   iris_arbiter_coordinate
+  iris_arbiter_receive
 
   iris_gsource_new
 
@@ -201,5 +202,121 @@ cleanup:
 
 	if (arbiter)
 		return pygobject_new (G_OBJECT (arbiter));
+	return NULL;
+}
+%%
+define IrisArbiter.receive kwargs staticmethod
+
+typedef struct {
+	PyObject *callable;
+	PyObject *data;
+} PyIrisMessageHandlerData;
+
+static void
+pyiris_message_handler (IrisMessage *message,
+                        gpointer     data)
+{
+	g_debug ("Python Message Handler Called");
+
+	PyIrisMessageHandlerData *pydata;
+	PyObject                 *result,
+	                         *pyargs;
+
+	g_return_if_fail (data != NULL);
+
+	pydata = data;
+	pyargs = PyTuple_New (0);
+
+	if ((result = PyObject_Call (pydata->callable, pyargs, NULL))) {
+		Py_DECREF (result);
+	}
+	else {
+		/* XXX: Should we do anything if there is an error? */
+	}
+
+	Py_DECREF (pyargs);
+}
+
+static void
+pyiris_receiver_destroy_notify (gpointer data)
+{
+	PyIrisMessageHandlerData *pydata;
+
+	g_return_if_fail (data != NULL);
+
+	pydata = data;
+
+	Py_XDECREF (pydata->callable);
+	Py_XDECREF (pydata->data);
+	g_slice_free (PyIrisMessageHandlerData, pydata);
+}
+
+static PyObject*
+_wrap_iris_arbiter_receive (PyObject *self,
+                            PyObject *args,
+                            PyObject *kwargs)
+{
+	IrisReceiver             *receiver     = NULL;
+	PyObject                 *pyscheduler  = NULL,
+	                         *pyport       = NULL,
+	                         *pyhandler    = NULL,
+	                         *pydata       = NULL;
+	IrisScheduler            *scheduler    = NULL;
+	IrisPort                 *port         = NULL;
+	IrisMessageHandler        handler      = NULL;
+	PyIrisMessageHandlerData *handler_data = NULL;
+	static char              *kwlist[]     = {
+		"port",
+		"handler",
+		"data",
+		"scheduler",
+		NULL
+	};
+
+	if (!PyArg_ParseTupleAndKeywords (args, kwargs,
+	                                  "OO|OO:iris.Arbiter.receive",
+	                                  kwlist,
+	                                  &pyport, &pyhandler,
+	                                  &pydata, &pyscheduler))
+	        return NULL;
+
+	if (!pygobject_check (pyport, &PyIrisPort_Type)) {
+		PyErr_SetString (PyExc_TypeError,
+		                 "port must be of type iris.Port");
+		return NULL;
+	}
+
+	if (!PyCallable_Check (pyhandler)) {
+		PyErr_SetString (PyExc_TypeError,
+		                 "handler must be a callable object");
+		return NULL;
+	}
+
+	if (pyscheduler && pyscheduler != Py_None) {
+		if (!pygobject_check (pyscheduler, &PyIrisScheduler_Type)) {
+			PyErr_SetString (PyExc_TypeError,
+			                 "scheduler must be of type iris.Scheduler");
+			return NULL;
+		}
+		scheduler = IRIS_SCHEDULER (((PyGObject*)pyscheduler)->obj);
+	}
+
+	port = IRIS_PORT (((PyGObject*)pyport)->obj);
+	handler = pyiris_message_handler;
+
+	handler_data = g_slice_new (PyIrisMessageHandlerData);
+	handler_data->callable = pyhandler;
+	handler_data->data = pydata;
+	Py_XINCREF (pydata);
+	Py_XINCREF (pyhandler);
+
+	receiver = iris_arbiter_receive (scheduler, port,
+	                                 handler, handler_data,
+	                                 pyiris_receiver_destroy_notify);
+
+cleanup:
+	if (receiver)
+		return pygobject_new (G_OBJECT (receiver));
+
 	return NULL;
 }
