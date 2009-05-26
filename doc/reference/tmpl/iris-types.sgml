@@ -56,17 +56,6 @@ iris-types
 
 </para>
 
-@scheduler: 
-@arbiter: 
-@port: 
-@mutex: 
-@callback: 
-@data: 
-@persistent: 
-@completed: 
-@message: 
-@active: 
-@max_active: 
 
 <!-- ##### STRUCT IrisPort ##### -->
 <para>
@@ -90,11 +79,6 @@ iris-types
 
 </para>
 
-@current: 
-@queue: 
-@receiver: 
-@mutex: 
-@state: 
 
 <!-- ##### STRUCT IrisArbiter ##### -->
 <para>
@@ -140,13 +124,6 @@ iris-types
 
 </para>
 
-@mutex: 
-@rrobin: 
-@queue: 
-@min_threads: 
-@max_threads: 
-@has_leader: 
-@initialized: 
 
 <!-- ##### STRUCT IrisWSScheduler ##### -->
 <para>

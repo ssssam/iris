@@ -1,5 +1,6 @@
 # We require automake 1.6 at least.
 AUTOMAKE_OPTIONS = 1.6
+NULL = 
 
 # This is a blank Makefile.am for using gtk-doc.
 # Copy this to your project's API docs directory and modify the variables to
@@ -47,7 +48,19 @@ CFILE_GLOB=$(top_srcdir)/iris/iris-*.c
 
 # Header files to ignore when scanning.
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h
-IGNORE_HFILES=iris.h iris-utils.h gstamppointer.h *-private.h
+IGNORE_HFILES=						\
+	iris.h						\
+	iris-utils.h					\
+	gstamppointer.h 				\
+	iris-arbiter-private.h				\
+	iris-coordination-arbiter-private.h		\
+	iris-port-private.h				\
+	iris-receiver-private.h				\
+	iris-scheduler-manager-private.h		\
+	iris-scheduler-private.h			\
+	iris-service-private.h				\
+	iris-task-private.h				\
+	$(NULL)
 
 EXTRA_HFILES=
 

@@ -17,24 +17,9 @@ iris-coordination-arbiter-private
 <!-- ##### SECTION Stability_Level ##### -->
 
 
-<!-- ##### ENUM IrisCoordinationFlags ##### -->
-<para>
-
-</para>
-
-@IRIS_COORD_EXCLUSIVE: 
-@IRIS_COORD_NEEDS_ANY: 
-@IRIS_COORD_ALL: 
-
 <!-- ##### STRUCT IrisCoordinationArbiterPrivate ##### -->
 <para>
 
 </para>
 
-@exclusive: 
-@concurrent: 
-@teardown: 
-@mutex: 
-@flags: 
-@active: 
 

@@ -22,13 +22,4 @@ iris-service-private
 
 </para>
 
-@exclusive_port: 
-@concurrent_port: 
-@teardown_port: 
-@exclusive_receiver: 
-@concurrent_receiver: 
-@teardown_receiver: 
-@arbiter: 
-@scheduler: 
-@started: 
 

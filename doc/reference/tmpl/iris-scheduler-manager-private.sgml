@@ -17,19 +17,3 @@ iris-scheduler-manager-private
 <!-- ##### SECTION Stability_Level ##### -->
 
 
-<!-- ##### FUNCTION iris_scheduler_manager_yield ##### -->
-<para>
-
-</para>
-
-@thread: 
-
-
-<!-- ##### FUNCTION iris_scheduler_manager_destroy ##### -->
-<para>
-
-</para>
-
-@thread: 
-
-

@@ -17,14 +17,3 @@ iris-arbiter-private
 <!-- ##### SECTION Stability_Level ##### -->
 
 
-<!-- ##### FUNCTION iris_coordination_arbiter_new ##### -->
-<para>
-
-</para>
-
-@exclusive: 
-@concurrent: 
-@teardown: 
-@Returns: 
-
-

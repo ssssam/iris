@@ -30,12 +30,6 @@ IrisCoordinationArbiter
 
 </para>
 
-@exclusive: 
-@concurrent: 
-@teardown: 
-@mutex: 
-@flags: 
-@active: 
 
 <!-- ##### STRUCT IrisCoordinationArbiter ##### -->
 <para>

@@ -22,33 +22,4 @@ iris-receiver-private
 
 </para>
 
-@scheduler: 
-@arbiter: 
-@port: 
-@mutex: 
-@callback: 
-@data: 
-@persistent: 
-@completed: 
-@message: 
-@active: 
-@max_active: 
-
-<!-- ##### FUNCTION iris_receiver_has_scheduler ##### -->
-<para>
-
-</para>
-
-@receiver: 
-@Returns: 
-
-
-<!-- ##### FUNCTION iris_receiver_has_arbiter ##### -->
-<para>
-
-</para>
-
-@receiver: 
-@Returns: 
-
 

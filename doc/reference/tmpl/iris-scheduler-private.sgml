@@ -22,13 +22,6 @@ iris-scheduler-private
 
 </para>
 
-@mutex: 
-@rrobin: 
-@queue: 
-@min_threads: 
-@max_threads: 
-@has_leader: 
-@initialized: 
 
 <!-- ##### FUNCTION iris_scheduler_new ##### -->
 <para>

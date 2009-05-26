@@ -17,71 +17,9 @@ iris-task-private
 <!-- ##### SECTION Stability_Level ##### -->
 
 
-<!-- ##### MACRO IRIS_TASK_GET_PRIVATE ##### -->
-<para>
-
-</para>
-
-@object: 
-
-
-<!-- ##### ENUM IrisTaskFlags ##### -->
-<para>
-
-</para>
-
-@IRIS_TASK_FLAG_EXECUTING: 
-@IRIS_TASK_FLAG_CANCELED: 
-@IRIS_TASK_FLAG_FINISHED: 
-@IRIS_TASK_FLAG_ASYNC: 
-@IRIS_TASK_FLAG_CALLBACKS: 
-@IRIS_TASK_FLAG_NEED_EXECUTE: 
-
-<!-- ##### ENUM IrisTaskMessageType ##### -->
-<para>
-
-</para>
-
-@IRIS_TASK_MESSAGE_EXECUTE: 
-@IRIS_TASK_MESSAGE_CANCEL: 
-@IRIS_TASK_MESSAGE_ADD_HANDLER: 
-@IRIS_TASK_MESSAGE_ADD_DEPENDENCY: 
-@IRIS_TASK_MESSAGE_REMOVE_DEPENDENCY: 
-@IRIS_TASK_MESSAGE_COMPLETE: 
-@IRIS_TASK_MESSAGE_CONTEXT: 
-@IRIS_TASK_MESSAGE_ERROR: 
-@IRIS_TASK_MESSAGE_RESULT: 
-@IRIS_TASK_MESSAGE_CALLBACKS: 
-@IRIS_TASK_MESSAGE_FINISH: 
-@IRIS_TASK_MESSAGE_DEP_FINISHED: 
-@IRIS_TASK_MESSAGE_DEP_CANCELED: 
-@IRIS_TASK_MESSAGE_ADD_OBSERVER: 
-
 <!-- ##### STRUCT IrisTaskPrivate ##### -->
 <para>
 
 </para>
-
-@port: 
-@receiver: 
-@result: 
-@error: 
-@closure: 
-@handlers: 
-@dependencies: 
-@observers: 
-@flags: 
-@context: 
-@context_mutex: 
-@context_cond: 
-@async_result: 
-
-<!-- ##### FUNCTION iris_task_remove_dependency_sync ##### -->
-<para>
-
-</para>
-
-@task: 
-@dep: 
 
 

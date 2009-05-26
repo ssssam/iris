@@ -90,19 +90,6 @@ iris-task
 
 </para>
 
-@port: 
-@receiver: 
-@result: 
-@error: 
-@closure: 
-@handlers: 
-@dependencies: 
-@observers: 
-@flags: 
-@context: 
-@context_mutex: 
-@context_cond: 
-@async_result: 
 
 <!-- ##### USER_FUNCTION IrisTaskFunc ##### -->
 <para>

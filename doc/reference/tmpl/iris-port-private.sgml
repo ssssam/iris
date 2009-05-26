@@ -22,9 +22,4 @@ iris-port-private
 
 </para>
 
-@current: 
-@queue: 
-@receiver: 
-@mutex: 
-@state: 
 
