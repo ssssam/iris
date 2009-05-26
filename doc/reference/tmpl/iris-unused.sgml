@@ -94,6 +94,14 @@
 
 @thread: 
 
+<!-- ##### FUNCTION iris_task_new_from_closure ##### -->
+<para>
+
+</para>
+
+@closure: 
+@Returns: 
+
 <!-- ##### FUNCTION iris_task_remove_dependency_sync ##### -->
 <para>
 

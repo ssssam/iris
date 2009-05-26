@@ -1313,13 +1313,21 @@
   )
 )
 
-(define-method any_of
+(define-method vany_of
   (of-object "IrisTask")
-  (c-name "iris_task_any_of")
+  (c-name "iris_task_vany_of")
   (return-type "IrisTask*")
   (parameters
   )
   (varargs #t)
+)
+
+(define-function iris_task_any_of
+  (c-name "iris_task_any_of")
+  (return-type "IrisTask*")
+  (parameters
+    '("GList*" "tasks")
+  )
 )
 
 (define-function iris_task_n_of

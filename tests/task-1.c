@@ -481,7 +481,7 @@ test28 (void)
 	IrisTask *t1 = iris_task_new_with_func (NULL, NULL, NULL);
 	IrisTask *t2 = iris_task_new_with_func (NULL, NULL, NULL);
 	IrisTask *t3 = iris_task_new_with_func (NULL, NULL, NULL);
-	IrisTask *t4 = iris_task_any_of (t1, t2, t3, NULL);
+	IrisTask *t4 = iris_task_vany_of (t1, t2, t3, NULL);
 	iris_task_run (t4);
 	g_assert (!iris_task_is_finished (t1));
 	g_assert (!iris_task_is_finished (t2));

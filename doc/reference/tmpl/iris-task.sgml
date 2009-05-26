@@ -111,9 +111,6 @@ iris-task
 
 </para>
 
-@func: 
-@user_data: 
-@notify: 
 @Returns: 
 
 
@@ -128,15 +125,6 @@ iris-task
 @async: 
 @scheduler: 
 @context: 
-@Returns: 
-
-
-<!-- ##### FUNCTION iris_task_new_from_closure ##### -->
-<para>
-
-</para>
-
-@closure: 
 @Returns: 
 
 
@@ -355,8 +343,7 @@ iris-task
 
 </para>
 
-@first_task: 
-@Varargs: 
+@tasks: 
 @Returns: 
 
 
@@ -365,8 +352,7 @@ iris-task
 
 </para>
 
-@first_task: 
-@Varargs: 
+@tasks: 
 @Returns: 
 
 

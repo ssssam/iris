@@ -102,31 +102,31 @@ iris_any_task_init (IrisAnyTask *task)
 {
 }
 
-static void
-iris_any_task_dummy (IrisTask *task,
-                     gpointer  user_data)
+IrisTask*
+iris_task_any_of (GList *tasks)
 {
+	IrisTask *task;
+
+	g_return_val_if_fail (tasks != NULL, NULL);
+
+	task = g_object_new (IRIS_TYPE_ANY_TASK, NULL);
+	for (; tasks; tasks = tasks->next)
+		iris_task_add_dependency (task, tasks->data);
+	return task;
 }
 
 IrisTask*
-iris_task_any_of (IrisTask *first_task, ...)
+iris_task_vany_of (IrisTask *first_task, ...)
 {
 	IrisTask *task;
 	IrisTask *iter;
-	GClosure *closure;
 	va_list   args;
 
 	if (first_task == NULL)
 		return NULL;
 
-	closure = g_cclosure_new (G_CALLBACK (iris_any_task_dummy), NULL, NULL);
-	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__VOID);
 	task = g_object_new (IRIS_TYPE_ANY_TASK, NULL);
-	task->priv->closure = g_closure_ref (closure);
-	g_closure_unref (closure);
-
 	iter = first_task;
-
 	va_start (args, first_task);
 
 	while (iter) {
