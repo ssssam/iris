@@ -22,18 +22,17 @@
 #include "iris-task-private.h"
 
 IrisTask*
-iris_task_all_of (IrisTask *first_task, ...)
+iris_task_vall_of (IrisTask *first_task, ...)
 {
 	IrisTask *task;
 	IrisTask *iter;
 	va_list   args;
 
-	if (first_task == NULL)
+	if (!first_task)
 		return NULL;
 
-	task = iris_task_new (NULL, NULL, NULL);
+	task = iris_task_new ();
 	iter = first_task;
-
 	va_start (args, first_task);
 
 	while (iter) {
@@ -43,6 +42,20 @@ iris_task_all_of (IrisTask *first_task, ...)
 	}
 
 	va_end (args);
+
+	return task;
+}
+
+IrisTask*
+iris_task_all_of (GList *tasks)
+{
+	IrisTask *task;
+
+	g_return_val_if_fail (tasks != NULL, NULL);
+
+	task = iris_task_new ();
+	for (; tasks; tasks = tasks->next)
+		iris_task_add_dependency (task, tasks->data);
 
 	return task;
 }
