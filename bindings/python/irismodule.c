@@ -39,6 +39,7 @@ initiris (void)
 
 	PyEval_InitThreads ();
 	init_pygobject ();
+	iris_init ();
 
 	m = Py_InitModule ("iris", pyiris_functions);
 	d = PyModule_GetDict (m);
