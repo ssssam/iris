@@ -190,9 +190,6 @@ IrisTask*     iris_task_all_of               (GList *tasks);
 IrisTask*     iris_task_vany_of              (IrisTask            *first_task, ...) __attribute__ ((__sentinel__));
 IrisTask*     iris_task_any_of               (GList *tasks);
 
-IrisTask*     iris_task_n_of                 (gint                 n,
-                                              IrisTask            *first_task, ...) __attribute__ ((__sentinel__));
-
 G_END_DECLS
 
 #endif /* __IRIS_TASK_H__ */
