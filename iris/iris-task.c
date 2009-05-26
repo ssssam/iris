@@ -89,6 +89,19 @@ static IrisTaskHandler* iris_task_next_errback  (IrisTask *task);
 
 /**
  * iris_task_new:
+ *
+ * Creates a new instance of #IrisTask.
+ *
+ * Return value: the newly created instance of #IrisTask
+ */
+IrisTask*
+iris_task_new (void)
+{
+	return g_object_new (IRIS_TYPE_TASK, NULL);
+}
+
+/**
+ * iris_task_new_with_func:
  * @func: An #IrisTaskFunc to execute
  * @user_data: user data for @func
  * @notify: An optional #GDestroyNotify or %NULL
@@ -98,9 +111,9 @@ static IrisTaskHandler* iris_task_next_errback  (IrisTask *task);
  * Return value: the newly created #IrisTask instance
  */
 IrisTask*
-iris_task_new (IrisTaskFunc   func,
-               gpointer       user_data,
-               GDestroyNotify notify)
+iris_task_new_with_func (IrisTaskFunc   func,
+                         gpointer       user_data,
+                         GDestroyNotify notify)
 {
 	IrisTask *task;
 	GClosure *closure;
@@ -112,7 +125,7 @@ iris_task_new (IrisTaskFunc   func,
 	                          user_data,
 	                          (GClosureNotify)notify);
 	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__VOID);
-	task = iris_task_new_from_closure (closure);
+	task = iris_task_new_with_closure (closure);
 	g_closure_unref (closure);
 
 	return task;
@@ -152,7 +165,7 @@ iris_task_new_full (IrisTaskFunc   func,
                     IrisScheduler *scheduler,
                     GMainContext  *context)
 {
-	IrisTask *task = iris_task_new (func, user_data, notify);
+	IrisTask *task = iris_task_new_with_func (func, user_data, notify);
 	if (scheduler)
 		iris_task_set_scheduler (task, scheduler);
 	if (async)
@@ -163,7 +176,7 @@ iris_task_new_full (IrisTaskFunc   func,
 }
 
 /**
- * iris_task_new_from_closure:
+ * iris_task_new_with_closure:
  * @closure: A #GClosure
  *
  * Creates a new task using the closure for execution.
@@ -171,13 +184,16 @@ iris_task_new_full (IrisTaskFunc   func,
  * Return value: the newly created #IrisTask
  */
 IrisTask*
-iris_task_new_from_closure (GClosure *closure)
+iris_task_new_with_closure (GClosure *closure)
 {
 	IrisTask *task;
 
 	g_return_val_if_fail (closure != NULL, NULL);
 
 	task = g_object_new (IRIS_TYPE_TASK, NULL);
+
+	if (G_LIKELY (task->priv->closure))
+		g_closure_unref (task->priv->closure);
 	task->priv->closure = g_closure_ref (closure);
 
 	return task;
@@ -1375,6 +1391,7 @@ static void
 iris_task_init (IrisTask *task)
 {
 	IrisTaskPrivate *priv;
+	GClosure        *closure;
 
 	priv = task->priv = IRIS_TASK_GET_PRIVATE (task);
 
@@ -1383,8 +1400,14 @@ iris_task_init (IrisTask *task)
 	                                       priv->port,
 	                                       iris_task_handle_message,
 	                                       task);
+
 	/* FIXME: We should have a teardown port for dispose */
 	//iris_arbiter_coordinate (priv->receiver, NULL, NULL);
+
+	/* default closure so we can conform to new style constructors */
+	closure = g_cclosure_new (G_CALLBACK (iris_task_dummy), NULL, NULL);
+	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__VOID);
+	task->priv->closure = closure;
 }
 
 static void

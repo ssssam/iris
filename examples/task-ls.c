@@ -54,7 +54,7 @@ main (gint   argc,
 	cond = g_cond_new ();
 
 	g_mutex_lock (mutex);
-	task = iris_task_new (worker, dir, NULL);
+	task = iris_task_new_with_func (worker, dir, NULL);
 	iris_task_add_callback (task, callback, NULL, NULL);
 	iris_task_run (task);
 

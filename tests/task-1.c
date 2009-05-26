@@ -15,14 +15,14 @@ static IrisScheduler *default_scheduler = NULL;
 static void
 test1 (void)
 {
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	g_assert (task != NULL);
 }
 
 static void
 test2 (void)
 {
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	g_assert (task != NULL);
 	g_object_unref (task);
 }
@@ -30,7 +30,7 @@ test2 (void)
 static void
 test3 (void)
 {
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	g_assert (task != NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_object_unref (task);
@@ -42,7 +42,7 @@ test4 (void)
 	SETUP();
 	GError *error = g_error_new (1, 1, "Something %s", "blah");
 	IrisScheduler *sched = mock_scheduler_new ();
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, sched);
 	iris_task_take_error (task, error);
 	g_assert (iris_task_get_error (task) == error);
@@ -55,7 +55,7 @@ test5 (void)
 	SETUP();
 	GError *error = g_error_new (1, 1, "Something %s", "blah");
 	IrisScheduler *sched = mock_scheduler_new ();
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, sched);
 	iris_task_set_error (task, error);
 	const GError *new_error = iris_task_get_error (task);
@@ -67,7 +67,7 @@ static void
 test6 (void)
 {
 	SETUP();
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_get_error (task) == NULL);
 	IRIS_TASK_THROW_NEW (task, 1, 1, "Some message here");
@@ -78,7 +78,7 @@ static void
 test7 (void)
 {
 	SETUP();
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_get_error (task) == NULL);
 	IRIS_TASK_THROW_NEW (task, 1, 1, "Some message here");
@@ -94,7 +94,7 @@ test8 (void)
 
 	SETUP();
 
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_get_error (task) == NULL);
 
@@ -113,7 +113,7 @@ static void
 test9 (void)
 {
 	SETUP();
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_get_result (task) != NULL);
 	g_assert (G_VALUE_TYPE (iris_task_get_result (task)) == G_TYPE_INVALID);
@@ -127,7 +127,7 @@ static void
 test10 (void)
 {
 	SETUP();
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_get_result (task) != NULL);
 	g_assert (G_VALUE_TYPE (iris_task_get_result (task)) == G_TYPE_INVALID);
@@ -145,7 +145,7 @@ static void
 test11 (void)
 {
 	SETUP();
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_is_canceled (task) == FALSE);
 	iris_task_cancel (task);
@@ -156,7 +156,7 @@ static void
 test12 (void)
 {
 	SETUP();
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	iris_task_set_main_context (task, g_main_context_default ());
 	g_assert (iris_task_get_main_context (task) == g_main_context_default ());
@@ -201,7 +201,7 @@ static void
 test16 (void)
 {
 	gboolean success = FALSE;
-	IrisTask *task = iris_task_new (test16_cb, &success, NULL);
+	IrisTask *task = iris_task_new_with_func (test16_cb, &success, NULL);
 	/* run should complete synchronously because of our scheduler */
 	iris_task_run (task);
 	g_assert (success == TRUE);
@@ -230,7 +230,7 @@ static void
 test17 (void)
 {
 	gint count = 0;
-	IrisTask *task = iris_task_new (test17_cb, &count, NULL);
+	IrisTask *task = iris_task_new_with_func (test17_cb, &count, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	/* run should complete synchronously because of our scheduler */
 	iris_task_run_full (task, test17_notify, &count);
@@ -249,7 +249,7 @@ static void
 test18 (void)
 {
 	gboolean success = FALSE;
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	iris_task_add_callback (task, test18_cb, &success, NULL);
 	iris_task_run (task);
@@ -280,7 +280,7 @@ test19 (void)
 {
 	gboolean cb1 = FALSE;
 	gboolean cb2 = FALSE;
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	iris_task_add_callback (task, test19_cb1, &cb1, NULL);
 	iris_task_add_errback (task, test19_cb2, &cb2, NULL);
@@ -341,7 +341,7 @@ test20 (void)
 	gboolean cb3 = FALSE;
 	gboolean cb4 = FALSE;
 	gboolean skip = FALSE;
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
 	iris_task_add_callback (task, test20_cb1, &cb1, NULL);
 	iris_task_add_errback (task, test20_cb2, &cb2, NULL);
@@ -362,8 +362,8 @@ static void
 test21 (void)
 {
 	SETUP();
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
-	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *task2 = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_add_dependency (task2, task);
 	iris_task_run (task2);
 	g_assert ((task2->priv->flags & IRIS_TASK_FLAG_NEED_EXECUTE) != 0);
@@ -378,8 +378,8 @@ static void
 test22 (void)
 {
 	SETUP();
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
-	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *task2 = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_add_dependency (task2, task);
 	iris_task_cancel (task);
 	g_assert (iris_task_is_canceled (task));
@@ -398,7 +398,7 @@ static void
 test23 (void)
 {
 	SETUP();
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	g_assert (iris_task_is_finished (task) == FALSE);
 	iris_task_run (task);
 	g_assert (iris_task_is_finished (task) == TRUE);
@@ -413,7 +413,7 @@ static void
 test24 (void)
 {
 	IrisScheduler *sched = mock_scheduler_new ();
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, sched);
 	g_assert (iris_task_is_finished (task) == FALSE);
 	iris_task_run (task);
@@ -431,10 +431,10 @@ test25 (void)
 {
 	SETUP();
 
-	IrisTask *t1 = iris_task_new (NULL, NULL, NULL);
-	IrisTask *t2 = iris_task_new (NULL, NULL, NULL);
-	IrisTask *t3 = iris_task_new (NULL, NULL, NULL);
-	IrisTask *t4 = iris_task_all_of (t1, t2, t3, NULL);
+	IrisTask *t1 = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *t2 = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *t3 = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *t4 = iris_task_vall_of (t1, t2, t3, NULL);
 
 	g_assert (g_list_find (t1->priv->observers, t4) != NULL);
 	g_assert (g_list_find (t2->priv->observers, t4) != NULL);
@@ -456,8 +456,8 @@ test26 (void)
 {
 	SETUP();
 
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
-	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *task2 = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_add_dependency (task2, task);
 	iris_task_cancel (task);
 	g_assert (iris_task_is_canceled (task2));
@@ -468,8 +468,8 @@ test27 (void)
 {
 	SETUP();
 
-	IrisTask *task = iris_task_new (NULL, NULL, NULL);
-	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *task2 = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_add_dependency (task, task2);
 	iris_task_cancel (task);
 	g_assert (!iris_task_is_canceled (task2));
@@ -478,9 +478,9 @@ test27 (void)
 static void
 test28 (void)
 {
-	IrisTask *t1 = iris_task_new (NULL, NULL, NULL);
-	IrisTask *t2 = iris_task_new (NULL, NULL, NULL);
-	IrisTask *t3 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *t1 = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *t2 = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *t3 = iris_task_new_with_func (NULL, NULL, NULL);
 	IrisTask *t4 = iris_task_any_of (t1, t2, t3, NULL);
 	iris_task_run (t4);
 	g_assert (!iris_task_is_finished (t1));
