@@ -15,7 +15,7 @@ static IrisScheduler *default_scheduler = NULL;
 static void
 test1 (void)
 {
-	g_assert (iris_arbiter_receive (NULL, iris_port_new (), NULL, NULL) != NULL);
+	g_assert (iris_arbiter_receive (NULL, iris_port_new (), NULL, NULL, NULL) != NULL);
 }
 
 static void
@@ -32,7 +32,7 @@ test2 (void)
 	SETUP ();
 	gboolean success = FALSE;
 	IrisPort *port = iris_port_new ();
-	iris_arbiter_receive (NULL, port, test2_cb, &success);
+	iris_arbiter_receive (NULL, port, test2_cb, &success, NULL);
 	iris_port_post (port, iris_message_new (1));
 	g_assert (success == TRUE);
 }
@@ -48,6 +48,7 @@ test3 (void)
 			iris_arbiter_receive (
 				NULL,
 				iris_port_new (),
+				NULL,
 				NULL,
 				NULL),
 			NULL,
@@ -81,8 +82,8 @@ test4 (void)
 	g_assert (e_port);
 	g_assert (c_port);
 
-	e_recv = iris_arbiter_receive (mock_scheduler_new (), e_port, test4_cb, &e);
-	c_recv = iris_arbiter_receive (mock_scheduler_new (), c_port, test4_cb, &c);
+	e_recv = iris_arbiter_receive (mock_scheduler_new (), e_port, test4_cb, &e, NULL);
+	c_recv = iris_arbiter_receive (mock_scheduler_new (), c_port, test4_cb, &c, NULL);
 
 	g_assert (e_recv);
 	g_assert (c_recv);

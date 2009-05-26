@@ -68,19 +68,22 @@ iris_service_handle_start_real (IrisService *service)
 			priv->scheduler,
 			priv->exclusive_port,
 			iris_service_exclusive_message_handler,
-			service),
+			service,
+			NULL),
 		priv->concurrent_receiver =
 		iris_arbiter_receive (
 			priv->scheduler,
 			priv->concurrent_port,
 			iris_service_concurrent_message_handler,
-			service),
+			service,
+			NULL),
 		priv->teardown_receiver =
 		iris_arbiter_receive (
 			priv->scheduler,
 			priv->teardown_port,
 			iris_service_teardown_message_handler,
-			service));
+			service,
+			NULL));
 
 	g_assert (priv->arbiter);
 	g_assert (priv->exclusive_receiver);

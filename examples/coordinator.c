@@ -33,9 +33,9 @@ coordinator (void)
 	IrisPort     *exclusive    = iris_port_new (),
 	             *concurrent   = iris_port_new (),
 	             *teardown     = iris_port_new ();
-	IrisReceiver *exclusive_r  = iris_arbiter_receive (NULL, exclusive,  exclusive_handler, NULL),
-	             *concurrent_r = iris_arbiter_receive (NULL, concurrent, concurrent_handler, NULL),
-	             *teardown_r   = iris_arbiter_receive (NULL, concurrent, teardown_handler, NULL);
+	IrisReceiver *exclusive_r  = iris_arbiter_receive (NULL, exclusive,  exclusive_handler, NULL, NULL),
+	             *concurrent_r = iris_arbiter_receive (NULL, concurrent, concurrent_handler, NULL, NULL),
+	             *teardown_r   = iris_arbiter_receive (NULL, concurrent, teardown_handler, NULL, NULL);
 	IrisArbiter  *arbiter      = iris_arbiter_coordinate (exclusive_r, concurrent_r, teardown_r);
 	IrisMessage  *message;
 	gint          i;

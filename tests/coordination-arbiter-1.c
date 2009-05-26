@@ -15,7 +15,7 @@ static void
 test1 (void)
 {
 	IrisPort     *port     = iris_port_new ();
-	IrisReceiver *receiver = iris_arbiter_receive (NULL, port, NULL, NULL);
+	IrisReceiver *receiver = iris_arbiter_receive (NULL, port, NULL, NULL, NULL);
 	IrisArbiter  *arbiter  = iris_arbiter_coordinate (receiver, NULL, NULL);
 	g_assert (port);
 	g_assert (receiver);
@@ -63,9 +63,9 @@ test2 (void)
 	IrisPort     *exc     = iris_port_new (),
 	             *cnc     = iris_port_new (),
 	             *tdn     = iris_port_new ();
-	IrisReceiver *exc_r   = iris_arbiter_receive (NULL, exc, test2_e, &exc_b),
-	             *cnc_r   = iris_arbiter_receive (NULL, cnc, test2_c, &cnc_b),
-	             *tdn_r   = iris_arbiter_receive (NULL, tdn, test2_t, &tdn_b);
+	IrisReceiver *exc_r   = iris_arbiter_receive (NULL, exc, test2_e, &exc_b, NULL),
+	             *cnc_r   = iris_arbiter_receive (NULL, cnc, test2_c, &cnc_b, NULL),
+	             *tdn_r   = iris_arbiter_receive (NULL, tdn, test2_t, &tdn_b, NULL);
 	IrisArbiter  *arbiter = iris_arbiter_coordinate (exc_r, cnc_r, tdn_r);
 	gint          i;
 

@@ -53,7 +53,7 @@ basic (void)
 	/* Create a receiver which turns messages into action items
 	 * that can be executed by the scheduler.
 	 */
-	receiver = iris_arbiter_receive (scheduler, port, do_something, NULL);
+	receiver = iris_arbiter_receive (scheduler, port, do_something, NULL, NULL);
 
 	/* create mutex and cond to wait on for finished */
 	mutex = g_mutex_new ();

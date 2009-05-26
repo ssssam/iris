@@ -32,7 +32,7 @@ main_context1 (void)
 	g_assert (scheduler != NULL);
 	port = iris_port_new ();
 	g_assert (port != NULL);
-	receiver = iris_arbiter_receive (scheduler, port, main_context1_cb, &counter);
+	receiver = iris_arbiter_receive (scheduler, port, main_context1_cb, &counter, NULL);
 	g_assert (receiver != NULL);
 
 	for (i = 0; i < 100; i++) {

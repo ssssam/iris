@@ -30,7 +30,7 @@ msg_handler_cb (IrisMessage *message,
                 gpointer     data)
 {
 	IrisPort     *port = iris_port_new ();
-	IrisReceiver *recv = iris_arbiter_receive (scheduler, port, msg_handler2_cb, NULL);
+	IrisReceiver *recv = iris_arbiter_receive (scheduler, port, msg_handler2_cb, NULL, NULL);
 
 	gint i;
 	for (i = 0; i < ITER_MAX; i++) {
@@ -60,7 +60,7 @@ recursive (void)
 	//scheduler = iris_scheduler_new ();
 
 	port = iris_port_new ();
-	recv = iris_arbiter_receive (scheduler, port, msg_handler_cb, NULL);
+	recv = iris_arbiter_receive (scheduler, port, msg_handler_cb, NULL, NULL);
 	mutex = g_mutex_new ();
 	cond = g_cond_new ();
 	iris_port_set_receiver (port, recv);

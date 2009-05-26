@@ -26,7 +26,7 @@ has_receiver1 (void)
 	IrisReceiver *receiver;
 
 	port = iris_port_new ();
-	receiver = iris_arbiter_receive (NULL, port, has_receiver1_cb, NULL);
+	receiver = iris_arbiter_receive (NULL, port, has_receiver1_cb, NULL, NULL);
 	g_assert (iris_port_has_receiver (port) == TRUE);
 	iris_port_set_receiver (port, NULL);
 	g_assert (iris_port_has_receiver (port) == FALSE);

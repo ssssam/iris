@@ -56,6 +56,7 @@ struct _IrisReceiverPrivate
 	gpointer       data;       /* The data associated with the worker
 	                            * callback for the method.
 	                            */
+	GDestroyNotify notify;     /* Notification to cleanup above data */
 
 	gboolean       persistent; /* If the receiver is persistent, meaning
 	                            * we can accept more than one message.

@@ -213,6 +213,9 @@ iris_receiver_dispose (GObject *object)
 	g_object_unref (priv->port);
 	g_object_unref (priv->scheduler);
 
+	if (priv->notify)
+		priv->notify (priv->data);
+
 	G_OBJECT_CLASS (iris_receiver_parent_class)->dispose (object);
 }
 

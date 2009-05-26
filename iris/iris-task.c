@@ -1399,7 +1399,8 @@ iris_task_init (IrisTask *task)
 	priv->receiver = iris_arbiter_receive (iris_scheduler_default (),
 	                                       priv->port,
 	                                       iris_task_handle_message,
-	                                       task);
+	                                       g_object_ref (task),
+	                                       (GDestroyNotify)g_object_unref);
 
 	/* FIXME: We should have a teardown port for dispose */
 	//iris_arbiter_coordinate (priv->receiver, NULL, NULL);
