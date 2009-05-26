@@ -1330,16 +1330,6 @@
   )
 )
 
-(define-function iris_task_n_of
-  (c-name "iris_task_n_of")
-  (return-type "IrisTask*")
-  (parameters
-    '("gint" "n")
-    '("IrisTask*" "first_task")
-  )
-  (varargs #t)
-)
-
 
 
 ;; From iris-thread.h
