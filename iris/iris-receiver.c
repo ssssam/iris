@@ -378,8 +378,11 @@ iris_receiver_resume (IrisReceiver *receiver)
 
 	g_static_rec_mutex_unlock (&priv->mutex);
 
-	if (message)
-		iris_port_post (priv->port, message);
+	if (message) {
+		/* repost message so it is at beginning of queue */
+		iris_port_repost (priv->port, message);
+		iris_message_unref (message);
+	}
 
 	iris_port_flush (priv->port);
 }

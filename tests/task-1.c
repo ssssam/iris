@@ -280,13 +280,22 @@ test19 (void)
 {
 	gboolean cb1 = FALSE;
 	gboolean cb2 = FALSE;
-	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, mock_scheduler_new ());
+	IrisTask *task = iris_task_new_full (NULL, NULL, NULL, FALSE, mock_scheduler_new (), NULL);
 	iris_task_add_callback (task, test19_cb1, &cb1, NULL);
 	iris_task_add_errback (task, test19_cb2, &cb2, NULL);
+	g_assert_cmpint (g_list_length (task->priv->handlers), ==, 2);
+
+	/* run the task */
 	iris_task_run (task);
+
+	/* make sure handlers completed */
+	g_assert (task->priv->handlers == NULL);
+
+	/* make sure both callbacks were executed */
 	g_assert (cb1 == TRUE);
 	g_assert (cb2 == TRUE);
+
+	/* make sure cb2 cleared the error */
 	g_assert (task->priv->error == NULL);
 }
 

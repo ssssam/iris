@@ -21,9 +21,9 @@
 #include <string.h>
 #include <gobject/gvaluecollector.h>
 
+#include "iris-receiver-private.h"
 #include "iris-task.h"
 #include "iris-task-private.h"
-#include "iris-receiver-private.h"
 
 #define TOGGLE_CALLBACKS(t)                                             \
 	g_atomic_int_set (&t->priv->flags,                              \
@@ -856,9 +856,7 @@ iris_task_progress_callbacks (IrisTask *task)
 	if (G_UNLIKELY ((context = task->priv->context) != NULL)) {
 		mutex = task->priv->context_mutex;
 		cond = task->priv->context_cond;
-
 		g_mutex_lock (mutex);
-
 	retry:
 		if (!g_main_context_wait (context, cond, mutex))
 			goto retry;
