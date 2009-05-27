@@ -1474,7 +1474,7 @@ iris_task_init (IrisTask *task)
 	                                       (GDestroyNotify)g_object_unref);
 
 	/* FIXME: We should have a teardown port for dispose */
-	//iris_arbiter_coordinate (priv->receiver, NULL, NULL);
+	iris_arbiter_coordinate (priv->receiver, NULL, NULL);
 
 	/* default closure so we can conform to new style constructors */
 	closure = g_cclosure_new (G_CALLBACK (iris_task_dummy), NULL, NULL);
