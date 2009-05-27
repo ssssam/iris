@@ -39,6 +39,7 @@ initiris (void)
 
 	PyEval_InitThreads ();
 	init_pygobject ();
+	pyg_enable_threads ();
 	iris_init ();
 
 	m = Py_InitModule ("iris", pyiris_functions);
@@ -49,6 +50,4 @@ initiris (void)
 
 	if (PyErr_Occurred ())
 		Py_FatalError ("Error initializing module iris");
-
-	pyg_enable_threads ();
 }
