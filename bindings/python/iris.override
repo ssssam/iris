@@ -216,39 +216,63 @@ static void
 pyiris_message_handler (IrisMessage *message,
                         gpointer     data)
 {
-	g_debug ("Python Message Handler Called");
-
+	PyGILState_STATE          state;
 	PyIrisMessageHandlerData *pydata;
-	PyObject                 *result,
-	                         *pyargs;
+	PyObject                 *pyresult = NULL,
+	                         *pyargs   = NULL,
+	                         *pyarg    = NULL;
 
 	g_return_if_fail (data != NULL);
 
+	state = pyg_gil_state_ensure ();
 	pydata = data;
-	pyargs = PyTuple_New (0);
 
-	if ((result = PyObject_Call (pydata->callable, pyargs, NULL))) {
-		Py_DECREF (result);
+	if (!(pyarg = g_value_get_boxed (iris_message_get_data (message)))) {
+		PyErr_SetString (PyExc_RuntimeError,
+		                 "Got unknown message value, expected PyObject");
+		goto cleanup;
+	}
+
+	if (pydata->data) {
+		if (!(pyargs = Py_BuildValue ("(OO)", pyarg, pydata->data))) {
+			PyErr_Print ();
+			goto cleanup;
+		}
 	}
 	else {
-		/* XXX: Should we do anything if there is an error? */
+		if (!(pyargs = Py_BuildValue ("(O)", pyarg))) {
+			PyErr_Print ();
+			goto cleanup;
+		}
 	}
 
-	Py_DECREF (pyargs);
+	if (!(pyresult = PyObject_CallObject (pydata->callable, pyargs)))
+		PyErr_Print ();
+
+cleanup:
+	Py_XDECREF (pyresult);
+	Py_XDECREF (pyargs);
+	Py_XDECREF (pyarg);
+
+	pyg_gil_state_release (state);
 }
 
 static void
 pyiris_receiver_destroy_notify (gpointer data)
 {
+	PyGILState_STATE          state;
 	PyIrisMessageHandlerData *pydata;
 
 	g_return_if_fail (data != NULL);
 
 	pydata = data;
+	state = pyg_gil_state_ensure ();
 
 	Py_XDECREF (pydata->callable);
 	Py_XDECREF (pydata->data);
 	g_slice_free (PyIrisMessageHandlerData, pydata);
+
+	pyg_gil_state_release (state);
 }
 
 static PyObject*
@@ -319,4 +343,32 @@ cleanup:
 		return pygobject_new (G_OBJECT (receiver));
 
 	return NULL;
+}
+%%
+override iris_port_post
+static PyObject*
+_wrap_iris_port_post (PyGObject *self,
+                      PyObject  *args)
+{
+	PyGILState_STATE  state;
+	IrisMessage      *message;
+	PyObject         *pydata       = NULL;
+	guint             message_type = 0;
+
+	g_return_val_if_fail (pygobject_check (self, &PyIrisPort_Type), NULL);
+
+	state = pyg_gil_state_ensure ();
+
+	if (PySequence_Length (args) > 0)
+		pydata = args;
+	else
+		pydata = PyTuple_New (0);
+
+	Py_INCREF (pydata);
+	message = iris_message_new_data (message_type, g_type_from_name ("PyObject"), pydata);
+	iris_port_post (IRIS_PORT (self->obj), message);
+	Py_INCREF (Py_None);
+	pyg_gil_state_release (state);
+
+	return Py_None;
 }
