@@ -36,6 +36,16 @@ struct _IrisPortPrivate
 	                             * current, all future post's go into
 	                             * the queue.
 	                             */
+	IrisMessage  *repost;       /* A single reposted message that should
+	                             * be flushed before current or the queue.
+	                             * This can happen when a receiver held
+	                             * onto a message but then could not
+	                             * process it.  This is different from
+	                             * current above as it was out of our
+	                             * control and then given back to us
+	                             * where as current is always in our
+	                             * control.
+	                             */
 
 	GQueue       *queue;        /* Queue for incoming messages that
 	                             * cannot yet be delivered.
