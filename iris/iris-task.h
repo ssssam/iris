@@ -63,7 +63,6 @@ G_BEGIN_DECLS
 #define IRIS_TASK_THROW(t,e)                                                \
         G_STMT_START {                                                      \
                 iris_task_take_error(t,e);                                  \
-                return;                                                     \
         } G_STMT_END
 
 #define IRIS_TASK_CATCH(t,e)                                                \
