@@ -357,6 +357,42 @@ iris_task_add_errback (IrisTask       *task,
 }
 
 /**
+ * iris_task_add_both:
+ * @task: An #IrisTask
+ * @callback: An #IrisTaskFunc
+ * @errback: An #IrisTaskFunc
+ * @user_data: user data for @callback or @errback
+ * @notify: A #GDestroyNotify
+ *
+ * Adds a new task handler to the callbacks phase of the task.  If the task
+ * is in an errored state when the handler is reached, @errback will be
+ * invoked.  Otherwise, @callback will be invoked.  One, and only one, of
+ * these functions is guaranteed to be invoked.
+ */
+void
+iris_task_add_both (IrisTask       *task,
+                    IrisTaskFunc    callback,
+                    IrisTaskFunc    errback,
+                    gpointer        user_data,
+                    GDestroyNotify  notify)
+{
+	GClosure *callback_closure,
+	         *errback_closure;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (callback != NULL);
+	g_return_if_fail (errback != NULL);
+
+	callback_closure = g_cclosure_new (G_CALLBACK (callback), user_data, (GClosureNotify)notify);
+	errback_closure = g_cclosure_new (G_CALLBACK (errback), user_data, (GClosureNotify)notify);
+	g_closure_set_marshal (callback_closure, g_cclosure_marshal_VOID__VOID);
+	g_closure_set_marshal (errback_closure, g_cclosure_marshal_VOID__VOID);
+	iris_task_add_both_closure (task, callback_closure, errback_closure);
+	g_closure_unref (callback_closure);
+	g_closure_unref (errback_closure);
+}
+
+/**
  * iris_task_add_callback_closure:
  * @task: An #IrisTask
  * @closure: A #GClosure
@@ -411,6 +447,41 @@ iris_task_add_errback_closure  (IrisTask *task,
 
 	handler = g_slice_new0 (IrisTaskHandler);
 	handler->errback = g_closure_ref (closure);
+
+	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_HANDLER,
+	                             G_TYPE_POINTER, handler);
+	iris_port_post (priv->port, msg);
+	iris_message_unref (msg);
+}
+
+/**
+ * iris_task_add_both_closure:
+ * @task: An #IrisTask
+ * @callback: A #GClosure
+ * @errback: A #GClosure
+ *
+ * Adds a task handler to the end of the callbacks chain.  If the task is
+ * in an errored state when the task handler is reached, @errback will be
+ * invoked.  Otherwise, @callback will be invoked.  One, and only one, of
+ * the closures is guaranteed to be invoked.
+ */
+void
+iris_task_add_both_closure (IrisTask *task,
+                            GClosure *callback,
+                            GClosure *errback)
+{
+	IrisTaskPrivate *priv;
+	IrisMessage     *msg;
+	IrisTaskHandler *handler;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (callback != NULL || errback != NULL);
+
+	priv = task->priv;
+
+	handler = g_slice_new0 (IrisTaskHandler);
+	handler->callback = g_closure_ref (callback);
+	handler->errback = g_closure_ref (errback);
 
 	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_HANDLER,
 	                             G_TYPE_POINTER, handler);

@@ -63,6 +63,7 @@ G_BEGIN_DECLS
 #define IRIS_TASK_THROW(t,e)                                                \
         G_STMT_START {                                                      \
                 iris_task_take_error(t,e);                                  \
+                return;                                                     \
         } G_STMT_END
 
 #define IRIS_TASK_CATCH(t,e)                                                \
@@ -153,6 +154,14 @@ void          iris_task_add_callback_closure (IrisTask            *task,
                                               GClosure            *closure);
 void          iris_task_add_errback_closure  (IrisTask            *task,
                                               GClosure            *closure);
+void          iris_task_add_both             (IrisTask            *task,
+                                              IrisTaskFunc         callback,
+                                              IrisTaskFunc         errback,
+                                              gpointer             user_data,
+                                              GDestroyNotify       notify);
+void          iris_task_add_both_closure     (IrisTask            *task,
+                                              GClosure            *callback,
+                                              GClosure            *errback);
 
 void          iris_task_add_dependency       (IrisTask            *task,
                                               IrisTask            *dependency);
