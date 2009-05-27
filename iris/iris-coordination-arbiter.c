@@ -515,6 +515,9 @@ receive_completed (IrisArbiter  *arbiter,
 				priv->flags |= IRIS_COORD_TEARDOWN;
 				resume = priv->teardown;
 			}
+			else if (!priv->concurrent->priv->active) {
+				resume = priv->concurrent;
+			}
 		}
 		else if (priv->flags & IRIS_COORD_EXCLUSIVE) {
 			if (priv->flags & IRIS_COORD_NEEDS_EXCLUSIVE) {
@@ -531,6 +534,9 @@ receive_completed (IrisArbiter  *arbiter,
 				priv->flags &= ~(IRIS_COORD_EXCLUSIVE | IRIS_COORD_NEEDS_TEARDOWN);
 				priv->flags |= IRIS_COORD_TEARDOWN;
 				resume = priv->teardown;
+			}
+			else if (!priv->exclusive->priv->active) {
+				resume = priv->exclusive;
 			}
 		}
 		else if (priv->flags & IRIS_COORD_TEARDOWN) {
