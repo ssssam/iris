@@ -446,7 +446,7 @@ can_receive (IrisArbiter  *arbiter,
 	 */
 	if ((priv->flags & IRIS_COORD_EXCLUSIVE) != 0) {
 		if (receiver == priv->teardown) {
-			if (priv->active > 0) {
+			if (priv->active <= 0) {
 				decision = IRIS_RECEIVE_LATER;
 				priv->flags |= IRIS_COORD_NEEDS_TEARDOWN;
 				goto finish;
