@@ -135,7 +135,7 @@ IrisTask*     iris_task_new_full             (IrisTaskFunc         func,
                                               GMainContext        *context);
 
 void          iris_task_run                  (IrisTask            *task);
-void          iris_task_run_full             (IrisTask            *task,
+void          iris_task_run_async            (IrisTask            *task,
                                               GAsyncReadyCallback  callback,
                                               gpointer             user_data);
 void          iris_task_cancel               (IrisTask            *task);

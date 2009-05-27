@@ -136,16 +136,6 @@ iris-task
 @task: 
 
 
-<!-- ##### FUNCTION iris_task_run_full ##### -->
-<para>
-
-</para>
-
-@task: 
-@callback: 
-@user_data: 
-
-
 <!-- ##### FUNCTION iris_task_cancel ##### -->
 <para>
 

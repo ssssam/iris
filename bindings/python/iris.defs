@@ -1119,9 +1119,9 @@
   (return-type "none")
 )
 
-(define-method run_full
+(define-method run_async
   (of-object "IrisTask")
-  (c-name "iris_task_run_full")
+  (c-name "iris_task_run_async")
   (return-type "none")
   (parameters
     '("GAsyncReadyCallback" "callback")
