@@ -659,6 +659,24 @@ iris_task_get_main_context (IrisTask *task)
 }
 
 /**
+ * iris_task_has_error:
+ * @task: An #IrisTask
+ *
+ * Return value: %TRUE if the task is currently in an errored state.
+ */
+gboolean
+iris_task_has_error (IrisTask *task)
+{
+	IrisTaskPrivate *priv;
+
+	g_return_val_if_fail (IRIS_IS_TASK (task), FALSE);
+
+	priv = task->priv;
+
+	return (priv->error != NULL);
+}
+
+/**
  * iris_task_get_error:
  * @task: An #IrisTask
  * @error: A location for a #GError
