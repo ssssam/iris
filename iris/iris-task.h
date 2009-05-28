@@ -67,10 +67,8 @@ G_BEGIN_DECLS
 
 #define IRIS_TASK_CATCH(t,e)                                                \
         G_STMT_START {                                                      \
-                if (e && *((GError**)e) == NULL && iris_task_get_error(t)) {\
-                        *((GError**)e) = g_error_copy (                     \
-                        		iris_task_get_error (t));           \
-                }                                                           \
+                if (e)                                                      \
+                	iris_task_get_error (t,e);                          \
                 iris_task_set_error (t,NULL);                               \
         } G_STMT_END
 
@@ -178,8 +176,8 @@ GMainContext* iris_task_get_main_context     (IrisTask            *task);
 void          iris_task_set_scheduler        (IrisTask            *task,
                                               IrisScheduler       *scheduler);
 
-G_CONST_RETURN
-GError*       iris_task_get_error            (IrisTask            *task);
+gboolean      iris_task_get_error            (IrisTask            *task,
+                                              GError             **error);
 void          iris_task_set_error            (IrisTask            *task,
                                               const GError        *error);
 void          iris_task_take_error           (IrisTask            *task,

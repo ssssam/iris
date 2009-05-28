@@ -661,21 +661,37 @@ iris_task_get_main_context (IrisTask *task)
 /**
  * iris_task_get_error:
  * @task: An #IrisTask
+ * @error: A location for a #GError
  *
- * Retrieves the current error for the task or %NULL if there is no error.
+ * Stores a copy of the current error for the task into the location
+ * @error.  If no error currently exists, the value stored will be %NULL.
+ * The error must be freed by the caller using g_error_free().
  *
- * Return value: The #GError instance that should not be modified or %NULL
+ * Return value: %TRUE if the task had an error and was copied.
  */
-G_CONST_RETURN GError*
-iris_task_get_error (IrisTask *task)
+gboolean
+iris_task_get_error (IrisTask *task,
+                     GError   **error)
 {
 	IrisTaskPrivate *priv;
+	gboolean         retval = FALSE;
 
-	g_return_val_if_fail (IRIS_IS_TASK (task), NULL);
+	g_return_val_if_fail (IRIS_IS_TASK (task), FALSE);
+	g_return_val_if_fail (error != NULL, FALSE);
 
 	priv = task->priv;
 
-	return g_atomic_pointer_get (&priv->error);
+	g_mutex_lock (priv->mutex);
+	if (priv->error) {
+		*error = g_error_copy (priv->error);
+		retval = TRUE;
+	}
+	else {
+		*error = NULL;
+	}
+	g_mutex_unlock (priv->mutex);
+
+	return retval;
 }
 
 /**
@@ -691,20 +707,19 @@ iris_task_set_error (IrisTask     *task,
                      const GError *error)
 {
 	IrisTaskPrivate *priv;
-	IrisMessage     *msg;
-	GError          *real_error = NULL;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 
 	priv = task->priv;
 
+	g_mutex_lock (priv->mutex);
+	if (priv->error)
+		g_error_free (priv->error);
 	if (error)
-		real_error = g_error_copy (error);
-
-	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ERROR,
-	                             G_TYPE_POINTER, real_error);
-	iris_port_post (priv->port, msg);
-	iris_message_unref (msg);
+		priv->error = g_error_copy (error);
+	else
+		priv->error = NULL;
+	g_mutex_unlock (priv->mutex);
 }
 
 /**
@@ -719,16 +734,16 @@ iris_task_take_error (IrisTask *task,
                       GError   *error)
 {
 	IrisTaskPrivate *priv;
-	IrisMessage     *msg;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 
 	priv = task->priv;
 
-	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ERROR,
-	                             G_TYPE_POINTER, error);
-	iris_port_post (priv->port, msg);
-	iris_message_unref (msg);
+	g_mutex_lock (priv->mutex);
+	if (priv->error)
+		g_error_free (priv->error);
+	priv->error = error;
+	g_mutex_unlock (priv->mutex);
 }
 
 /**
@@ -1011,24 +1026,6 @@ handle_complete (IrisTask    *task,
 
 	if (!PROGRESS_BLOCKED (task))
 		iris_task_progress_callbacks (task);
-}
-
-static void
-handle_error (IrisTask    *task,
-              IrisMessage *message)
-{
-	IrisTaskPrivate *priv;
-	GError          *error;
-
-	g_return_if_fail (IRIS_IS_TASK (task));
-	g_return_if_fail (message != NULL);
-
-	priv = task->priv;
-	error = priv->error;
-	priv->error = g_value_get_pointer (iris_message_get_data (message));
-
-	if (error)
-		g_error_free (error);
 }
 
 static void
@@ -1334,9 +1331,6 @@ iris_task_handle_message_real (IrisTask    *task,
 	priv = task->priv;
 
 	switch (message->what) {
-	case IRIS_TASK_MESSAGE_ERROR:
-		handle_error (task, message);
-		break;
 	case IRIS_TASK_MESSAGE_CANCEL:
 		handle_cancel (task, message);
 		break;

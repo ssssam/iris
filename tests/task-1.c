@@ -40,12 +40,14 @@ static void
 test4 (void)
 {
 	SETUP();
+	GError *error2 = NULL;
 	GError *error = g_error_new (1, 1, "Something %s", "blah");
 	IrisScheduler *sched = mock_scheduler_new ();
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, sched);
 	iris_task_take_error (task, error);
-	g_assert (iris_task_get_error (task) == error);
+	iris_task_get_error (task, &error2);
+	g_assert (g_error_matches (error2, error->domain, error->code));
 	iris_task_take_error (task, NULL);
 }
 
@@ -58,9 +60,11 @@ test5 (void)
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, sched);
 	iris_task_set_error (task, error);
-	const GError *new_error = iris_task_get_error (task);
-	g_assert (new_error != NULL && new_error != error);
+	GError *error2 = NULL;
+	iris_task_get_error (task, &error2);
+	g_assert (error2 != NULL && error2 != error);
 	g_error_free (error);
+	g_error_free (error2);
 }
 
 static void
@@ -69,9 +73,12 @@ test6 (void)
 	SETUP();
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
-	g_assert (iris_task_get_error (task) == NULL);
+	GError *error = NULL;
+	iris_task_get_error (task, &error);
+	g_assert (error == NULL);
 	IRIS_TASK_THROW_NEW (task, 1, 1, "Some message here");
-	g_assert (iris_task_get_error (task) != NULL);
+	iris_task_get_error (task, &error);
+	g_assert (error != NULL);
 }
 
 static void
@@ -80,11 +87,15 @@ test7 (void)
 	SETUP();
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
-	g_assert (iris_task_get_error (task) == NULL);
+	GError *error = NULL;
+	iris_task_get_error (task, &error);
+	g_assert (error == NULL);
 	IRIS_TASK_THROW_NEW (task, 1, 1, "Some message here");
-	g_assert (iris_task_get_error (task) != NULL);
+	iris_task_get_error (task, &error);
+	g_assert (error != NULL);
 	IRIS_TASK_CATCH (task, NULL);
-	g_assert (iris_task_get_error (task) == NULL);
+	g_assert_cmpint (iris_task_get_error (task, &error),==,0);
+	g_assert (error == NULL);
 }
 
 static void
@@ -96,17 +107,22 @@ test8 (void)
 
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
-	g_assert (iris_task_get_error (task) == NULL);
+	GError *error = NULL;
+	iris_task_get_error (task, &error);
+	g_assert (error == NULL);
 
 	IRIS_TASK_THROW_NEW (task, 1, 1, "Some message here");
-	g_assert (iris_task_get_error (task) != NULL);
+	iris_task_get_error (task, &error);
+	g_assert (error != NULL);
 
 	IRIS_TASK_CATCH (task, &e);
-	g_assert (iris_task_get_error (task) == NULL);
+	iris_task_get_error (task, &error);
+	g_assert (error == NULL);
 	g_assert (e != NULL);
 
 	IRIS_TASK_THROW (task, e);
-	g_assert (iris_task_get_error (task) == e);
+	iris_task_get_error (task, &error);
+	g_assert (g_error_matches (error, e->domain, e->code));
 }
 
 static void
