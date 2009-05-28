@@ -894,12 +894,6 @@ iris_task_execute (IrisTask *task)
 }
 
 static void
-iris_task_progress_callbacks_main (IrisTask *task)
-{
-	RUN_NEXT_HANDLER (task);
-}
-
-static void
 iris_task_progress_callbacks_tick (IrisTask *task)
 {
 	IrisMessage *msg;
@@ -918,6 +912,13 @@ iris_task_progress_callbacks_tick (IrisTask *task)
 }
 
 static void
+iris_task_progress_callbacks_main (IrisTask *task)
+{
+	RUN_NEXT_HANDLER (task);
+	iris_task_progress_callbacks_tick (task);
+}
+
+static void
 iris_task_progress_callbacks (IrisTask *task)
 {
 	IrisScheduler *scheduler;
@@ -929,7 +930,7 @@ iris_task_progress_callbacks (IrisTask *task)
 		iris_scheduler_queue (scheduler,
 		                      (IrisCallback)iris_task_progress_callbacks_main,
 		                      task,
-		                      (GDestroyNotify)iris_task_progress_callbacks_tick);
+		                      NULL);
 	}
 	else {
 		RUN_NEXT_HANDLER (task);
