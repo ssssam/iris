@@ -846,6 +846,8 @@ iris_task_set_result_gtype (IrisTask *task,
 	g_mutex_lock (priv->mutex);
 
 	va_start (args, type);
+	if (G_VALUE_TYPE (&priv->result) != G_TYPE_INVALID)
+		g_value_unset (&priv->result);
 	g_value_init (&priv->result, type);
 	G_VALUE_COLLECT (&priv->result, args, 0, &error);
 	va_end (args);
