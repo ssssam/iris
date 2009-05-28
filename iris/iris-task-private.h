@@ -70,6 +70,7 @@ struct _IrisTaskPrivate
 {
 	IrisPort     *port;          /* Message delivery port */
 	IrisReceiver *receiver;      /* Receiver for port */
+	GMutex       *mutex;         /* Mutex for result/error */
 	GValue        result;        /* Current task result */
 	GError       *error;         /* Current task error */
 	GClosure     *closure;       /* Our execution closure. */

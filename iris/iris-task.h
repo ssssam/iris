@@ -185,8 +185,8 @@ void          iris_task_set_error            (IrisTask            *task,
 void          iris_task_take_error           (IrisTask            *task,
                                               GError              *error);
 
-G_CONST_RETURN
-GValue*       iris_task_get_result           (IrisTask            *task);
+void          iris_task_get_result           (IrisTask            *task,
+                                              GValue              *value);
 void          iris_task_set_result           (IrisTask            *task,
                                               const GValue        *value);
 void          iris_task_set_result_gtype     (IrisTask            *task,

@@ -734,23 +734,35 @@ iris_task_take_error (IrisTask *task,
 /**
  * iris_task_get_result:
  * @task: An #IrisTask
+ * @value: A #GValue to store the current result
  *
- * Retreives the current value for the task.  This method is not thread
- * safe as the executing thread could modify the value out from under
- * you.  It is safe however from within the task's execution thread.
- *
- * Return value: The current result which should not be modified or freed.
+ * Retreives the current value for the task and stores it to the
+ * #GValue @value.
  */
-G_CONST_RETURN GValue*
-iris_task_get_result (IrisTask *task)
+void
+iris_task_get_result (IrisTask *task,
+                      GValue   *value)
 {
 	IrisTaskPrivate *priv;
 
-	g_return_val_if_fail (IRIS_IS_TASK (task), NULL);
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (value != NULL);
 
 	priv = task->priv;
 
-	return &priv->result;
+	g_mutex_lock (priv->mutex);
+
+	/* unset if there is a previous value */
+	if (G_VALUE_TYPE (value) != G_TYPE_INVALID)
+		g_value_unset (value);
+
+	/* copy the type and real value */
+	if (G_VALUE_TYPE (&priv->result) != G_TYPE_INVALID) {
+		g_value_init (value, G_VALUE_TYPE (&priv->result));
+		g_value_copy (&priv->result, value);
+	}
+
+	g_mutex_unlock (priv->mutex);
 }
 
 /**
@@ -765,18 +777,17 @@ iris_task_set_result (IrisTask     *task,
                       const GValue *value)
 {
 	IrisTaskPrivate *priv;
-	IrisMessage     *msg;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 
 	priv = task->priv;
-	msg = iris_message_new (IRIS_TASK_MESSAGE_RESULT);
 
-	g_value_init (&msg->data, G_VALUE_TYPE (value));
-	g_value_copy (value, &msg->data);
-
-	iris_port_post (priv->port, msg);
-	iris_message_unref (msg);
+	g_mutex_lock (priv->mutex);
+	if (G_VALUE_TYPE (&priv->result) != G_TYPE_INVALID)
+		g_value_unset (&priv->result);
+	g_value_init (&priv->result, G_VALUE_TYPE (value));
+	g_value_copy (value, &priv->result);
+	g_mutex_unlock (priv->mutex);
 }
 
 /**
@@ -792,31 +803,27 @@ iris_task_set_result_gtype (IrisTask *task,
                             GType     type, ...)
 {
 	IrisTaskPrivate *priv;
-	IrisMessage     *msg;
-	va_list          args;
 	gchar           *error;
+	va_list          args;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 
 	priv = task->priv;
-	msg = iris_message_new (IRIS_TASK_MESSAGE_RESULT);
+
+	g_mutex_lock (priv->mutex);
 
 	va_start (args, type);
-	g_value_init (&msg->data, type);
-	G_VALUE_COLLECT (&msg->data, args, 0, &error);
+	g_value_init (&priv->result, type);
+	G_VALUE_COLLECT (&priv->result, args, 0, &error);
 	va_end (args);
 
 	if (error) {
 		g_warning ("%s: %s", G_STRFUNC, error);
 		g_free (error);
-		g_value_unset (&msg->data);
-		goto _cleanup;
+		g_value_unset (&priv->result);
 	}
 
-	iris_port_post (priv->port, msg);
-
-_cleanup:
-	iris_message_unref (msg);
+	g_mutex_unlock (priv->mutex);
 }
 
 /**
@@ -1022,28 +1029,6 @@ handle_error (IrisTask    *task,
 
 	if (error)
 		g_error_free (error);
-}
-
-static void
-handle_result (IrisTask    *task,
-               IrisMessage *message)
-{
-	IrisTaskPrivate *priv;
-	GValue          *result;
-	const GValue    *ro_result;
-
-	g_return_if_fail (IRIS_IS_TASK (task));
-	g_return_if_fail (message != NULL);
-
-	priv = task->priv;
-	result = &priv->result;
-	ro_result = iris_message_get_data (message);
-
-	if (G_VALUE_TYPE (result) != G_TYPE_INVALID)
-		g_value_unset (result);
-
-	g_value_init (result, G_VALUE_TYPE (ro_result));
-	g_value_copy (ro_result, result);
 }
 
 static void
@@ -1352,9 +1337,6 @@ iris_task_handle_message_real (IrisTask    *task,
 	case IRIS_TASK_MESSAGE_ERROR:
 		handle_error (task, message);
 		break;
-	case IRIS_TASK_MESSAGE_RESULT:
-		handle_result (task, message);
-		break;
 	case IRIS_TASK_MESSAGE_CANCEL:
 		handle_cancel (task, message);
 		break;
@@ -1487,6 +1469,7 @@ iris_task_init (IrisTask *task)
 	                                       iris_task_handle_message,
 	                                       g_object_ref (task),
 	                                       (GDestroyNotify)g_object_unref);
+	priv->mutex = g_mutex_new ();
 
 	/* FIXME: We should have a teardown port for dispose */
 	iris_arbiter_coordinate (priv->receiver, NULL, NULL);

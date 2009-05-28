@@ -24,9 +24,12 @@ void
 callback (IrisTask *task,
           gpointer  user_data)
 {
-	GList *result, *iter;
+	GList  *result, *iter;
+	GValue  value = {0,};
 
-	result = g_value_get_pointer (iris_task_get_result (task));
+	iris_task_get_result (task, &value);
+	result = g_value_get_pointer (&value);
+	g_value_unset (&value);
 
 	for (iter = result; iter; iter = iter->next) {
 		g_print ("%s\n", (gchar*)iter->data);

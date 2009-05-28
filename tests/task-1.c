@@ -113,32 +113,41 @@ static void
 test9 (void)
 {
 	SETUP();
+	GValue value = {0,};
+
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
-	g_assert (iris_task_get_result (task) != NULL);
-	g_assert (G_VALUE_TYPE (iris_task_get_result (task)) == G_TYPE_INVALID);
+	iris_task_get_result (task, &value);
+	g_assert_cmpint (G_VALUE_TYPE (&value),==,G_TYPE_INVALID);
 
 	IRIS_TASK_RETURN_VALUE (task, G_TYPE_INT, 123);
-	g_assert_cmpint (G_VALUE_TYPE (iris_task_get_result (task)), ==, G_TYPE_INT);
-	g_assert_cmpint (g_value_get_int (iris_task_get_result (task)), ==, 123);
+	iris_task_get_result (task, &value);
+
+	g_assert_cmpint (G_VALUE_TYPE (&value), ==, G_TYPE_INT);
+	g_assert_cmpint (g_value_get_int (&value), ==, 123);
 }
 
 static void
 test10 (void)
 {
 	SETUP();
+	GValue value = {0,};
+
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_scheduler (task, mock_scheduler_new ());
-	g_assert (iris_task_get_result (task) != NULL);
-	g_assert (G_VALUE_TYPE (iris_task_get_result (task)) == G_TYPE_INVALID);
 
-	GValue value = {0,};
+	iris_task_get_result (task, &value);
+	g_assert_cmpint (G_VALUE_TYPE (&value),==,G_TYPE_INVALID);
+
 	g_value_init (&value, G_TYPE_STRING);
 	g_value_set_string (&value, "This is my string");
 
 	iris_task_set_result (task, &value);
-	g_assert_cmpint (G_VALUE_TYPE (iris_task_get_result (task)), ==, G_TYPE_STRING);
-	g_assert_cmpstr (g_value_get_string (iris_task_get_result (task)), ==, "This is my string");
+	g_value_unset (&value);
+	iris_task_get_result (task, &value);
+
+	g_assert_cmpint (G_VALUE_TYPE (&value),==,G_TYPE_STRING);
+	g_assert_cmpstr (g_value_get_string (&value), ==, "This is my string");
 }
 
 static void

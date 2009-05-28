@@ -306,7 +306,7 @@ iris-task
 </para>
 
 @task: 
-@Returns: 
+@value: 
 
 
 <!-- ##### FUNCTION iris_task_set_result ##### -->
