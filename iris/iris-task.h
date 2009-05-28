@@ -176,6 +176,7 @@ GMainContext* iris_task_get_main_context     (IrisTask            *task);
 void          iris_task_set_scheduler        (IrisTask            *task,
                                               IrisScheduler       *scheduler);
 
+gboolean      iris_task_has_error            (IrisTask            *task);
 gboolean      iris_task_get_error            (IrisTask            *task,
                                               GError             **error);
 void          iris_task_set_error            (IrisTask            *task,
