@@ -1081,15 +1081,12 @@ handle_context (IrisTask    *task,
 	context = g_value_get_pointer (iris_message_get_data (message));
 
 	if (priv->context) {
-		g_object_unref (priv->context);
 		priv->context       = NULL;
 		priv->context_sched = NULL; /* weak-ref */
 	}
 
 	if ((priv->context = context) != NULL) {
 		GList *iter;
-
-		g_object_ref (priv->context);
 
 		for (iter = main_schedulers; iter; iter = iter->next) {
 			if (iris_gmainscheduler_get_context (iter->data) == context) {
