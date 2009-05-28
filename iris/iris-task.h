@@ -82,8 +82,8 @@ G_BEGIN_DECLS
 
 #define IRIS_TASK_RETURN_TASK_NEW(t,f,p,n)                                  \
         G_STMT_START {                                                      \
-                IrisTask *t2 = iris_task_new(f,p,n);                        \
-                iris_task_add_dependency(t,tt2);                            \
+                IrisTask *t2 = iris_task_new_with_func(f,p,n);              \
+                iris_task_add_dependency(t,t2);                             \
                 g_object_unref(t2);                                         \
         } G_STMT_END
 
