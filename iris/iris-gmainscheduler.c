@@ -146,11 +146,15 @@ iris_gmainscheduler_set_context (IrisGMainScheduler *scheduler,
 	if (context == NULL)
 		context = g_main_context_default ();
 
-	priv->context = context;
+	if (priv->context)
+		g_object_unref (priv->context);
+
+	priv->context = g_object_ref (context);
 	priv->source = iris_gsource_new (priv->queue,
 	                                 context,
 	                                 iris_gmainscheduler_source_cb,
 	                                 scheduler);
+
 	if (!priv->source)
 		g_warning ("Error creating IrisGSource");
 }
@@ -175,4 +179,17 @@ iris_gmainscheduler_new (GMainContext *context)
 	iris_gmainscheduler_set_context (scheduler, context);
 
 	return IRIS_SCHEDULER (scheduler);
+}
+
+/**
+ * iris_gmainscheduler_get_context:
+ * @gmain_scheduler: An #IrisGMainScheduler
+ *
+ * Return value: The #GMainContext instance for this scheduler
+ */
+GMainContext*
+iris_gmainscheduler_get_context (IrisGMainScheduler *gmain_scheduler)
+{
+	g_return_val_if_fail (IRIS_IS_GMAINSCHEDULER (gmain_scheduler), NULL);
+	return gmain_scheduler->priv->context;
 }

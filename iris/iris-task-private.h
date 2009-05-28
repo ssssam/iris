@@ -81,8 +81,10 @@ struct _IrisTaskPrivate
 	GMainContext *context;       /* A main-context to execute our
 	                              * callbacks and async_result within.
 	                              */
-	GMutex       *context_mutex; /* A mutex for acquiring the context */
-	GCond        *context_cond;  /* A cond for acquiring the context */
+	IrisGMainScheduler
+	             *context_sched; /* An IrisGMainScheduler used to perform
+	                              * work items within a main-contenxt.
+	                              */
 	GAsyncResult *async_result;  /* GAsyncResult to execute after our
 	                              * execution/callbacks have completed.
 	                              */

@@ -21,6 +21,7 @@
 #include <string.h>
 #include <gobject/gvaluecollector.h>
 
+#include "iris-gmainscheduler.h"
 #include "iris-receiver-private.h"
 #include "iris-task.h"
 #include "iris-task-private.h"
@@ -82,6 +83,13 @@ static void             iris_task_handler_free  (IrisTaskHandler *handler);
 static IrisTaskHandler* iris_task_next_handler  (IrisTask *task);
 static IrisTaskHandler* iris_task_next_callback (IrisTask *task);
 static IrisTaskHandler* iris_task_next_errback  (IrisTask *task);
+
+/* We keep a list of main schedulers for processing work
+ * work items in a main thread.  We have one scheduler for
+ * each main-context that is used.  Of course, this is only
+ * done if a task requests a main-context.
+ */
+static GList* main_schedulers = NULL;
 
 /**************************************************************************
  *                          IrisTask Public API                           *
@@ -844,28 +852,15 @@ iris_task_execute (IrisTask *task)
 }
 
 static void
-iris_task_progress_callbacks (IrisTask *task)
+iris_task_progress_callbacks_main (IrisTask *task)
 {
-	GMutex          *mutex;
-	GCond           *cond;
-	GMainContext    *context;
-	IrisMessage     *msg;
+	RUN_NEXT_HANDLER (task);
+}
 
-	g_return_if_fail (IRIS_IS_TASK (task));
-
-	if (G_UNLIKELY ((context = task->priv->context) != NULL)) {
-		mutex = task->priv->context_mutex;
-		cond = task->priv->context_cond;
-		g_mutex_lock (mutex);
-	retry:
-		if (!g_main_context_wait (context, cond, mutex))
-			goto retry;
-		RUN_NEXT_HANDLER (task);
-		g_mutex_unlock (mutex);
-	}
-	else {
-		RUN_NEXT_HANDLER (task);
-	}
+static void
+iris_task_progress_callbacks_tick (IrisTask *task)
+{
+	IrisMessage *msg;
 
 	/* The callbacks work by sending a message to push the callbacks
 	 * progress continuely forward.  This way callbacks are able to
@@ -878,6 +873,26 @@ iris_task_progress_callbacks (IrisTask *task)
 	msg = iris_message_new (IRIS_TASK_MESSAGE_CALLBACKS);
 	iris_port_post (task->priv->port, msg);
 	iris_message_unref (msg);
+}
+
+static void
+iris_task_progress_callbacks (IrisTask *task)
+{
+	IrisScheduler *scheduler;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+
+	if (G_UNLIKELY (task->priv->context)) {
+		scheduler = IRIS_SCHEDULER (task->priv->context_sched);
+		iris_scheduler_queue (scheduler,
+		                      (IrisCallback)iris_task_progress_callbacks_main,
+		                      task,
+		                      (GDestroyNotify)iris_task_progress_callbacks_tick);
+	}
+	else {
+		RUN_NEXT_HANDLER (task);
+		iris_task_progress_callbacks_tick (task);
+	}
 }
 
 static void
@@ -909,8 +924,6 @@ static void
 iris_task_complete_async_result (IrisTask *task)
 {
 	IrisTaskPrivate *priv;
-	GMutex          *mutex;
-	GCond           *cond;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 
@@ -920,14 +933,11 @@ iris_task_complete_async_result (IrisTask *task)
 		return;
 
 	if (priv->context) {
-		mutex = task->priv->context_mutex;
-		cond = task->priv->context_cond;
-		g_mutex_lock (mutex);
-	_retry:
-		if (!g_main_context_wait (priv->context, cond, mutex))
-			goto _retry;
-		g_simple_async_result_complete ((GSimpleAsyncResult*)priv->async_result);
-		g_mutex_unlock (mutex);
+		/* Queue into the main context */
+		iris_scheduler_queue (IRIS_SCHEDULER (priv->context_sched),
+		                      (IrisCallback)g_simple_async_result_complete,
+		                      priv->async_result,
+		                      NULL);
 	}
 	else {
 		g_simple_async_result_complete ((GSimpleAsyncResult*)priv->async_result);
@@ -1071,17 +1081,27 @@ handle_context (IrisTask    *task,
 	context = g_value_get_pointer (iris_message_get_data (message));
 
 	if (priv->context) {
-		g_mutex_free (priv->context_mutex);
-		g_cond_free (priv->context_cond);
-		priv->context_mutex = NULL;
-		priv->context_cond = NULL;
+		g_object_unref (priv->context);
+		priv->context       = NULL;
+		priv->context_sched = NULL; /* weak-ref */
 	}
 
-	g_atomic_pointer_set (&priv->context, context);
+	if ((priv->context = context) != NULL) {
+		GList *iter;
 
-	if (priv->context) {
-		priv->context_mutex = g_mutex_new ();
-		priv->context_cond = g_cond_new ();
+		g_object_ref (priv->context);
+
+		for (iter = main_schedulers; iter; iter = iter->next) {
+			if (iris_gmainscheduler_get_context (iter->data) == context) {
+				priv->context_sched = iter->data;
+				break;
+			}
+		}
+
+		if (!priv->context_sched) {
+			priv->context_sched = IRIS_GMAINSCHEDULER (iris_gmainscheduler_new (context));
+			main_schedulers = g_list_prepend (main_schedulers, priv->context_sched);
+		}
 	}
 }
 
