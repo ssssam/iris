@@ -398,7 +398,7 @@ iris_message_contains (IrisMessage *message,
                        const gchar *name)
 {
 	g_return_val_if_fail (message != NULL, FALSE);
-	if (G_UNLIKELY (!message->items))
+	if (!message->items)
 		return FALSE;
 	return (NULL != g_hash_table_lookup (message->items, name));
 }
