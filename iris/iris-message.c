@@ -943,6 +943,49 @@ iris_message_set_pointer (IrisMessage *message,
 }
 
 /**
+ * iris_message_get_object:
+ * @message: An #IrisMessage
+ * @name: the key
+ *
+ * Retrieves the object value for @key.
+ *
+ * Return value: the value for @key or %NULL
+ */
+GObject*
+iris_message_get_object (IrisMessage *message,
+                         const gchar *name)
+{
+	const GValue *value;
+	value = iris_message_get_value_internal (message, name);
+	g_return_val_if_fail (value != NULL, NULL);
+	return g_value_get_object (value);
+}
+
+/**
+ * iris_message_set_object:
+ * @message: An #IrisMessage
+ * @name: the key
+ * @object: the value
+ *
+ * Updates @message to use @object as the value for @key.
+ */
+void
+iris_message_set_object (IrisMessage *message,
+                         const gchar *name,
+                         GObject     *object)
+{
+	GValue *real_value;
+
+	g_return_if_fail (message != NULL);
+
+	real_value = iris_message_value_new (NULL);
+	g_value_init (real_value, G_TYPE_OBJECT);
+	g_value_set_object (real_value, object);
+
+	iris_message_set_value_internal (message, name, real_value);
+}
+
+/**
  * iris_message_flattened_size:
  * @message: A #IrisMessage
  *
