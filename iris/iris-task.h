@@ -164,6 +164,9 @@ void          iris_task_add_dependency       (IrisTask            *task,
                                               IrisTask            *dependency);
 void          iris_task_remove_dependency    (IrisTask            *task,
                                               IrisTask            *dependency);
+void          iris_task_remove_dependency_sync
+                                             (IrisTask            *task,
+                                              IrisTask            *dependency);
 
 gboolean      iris_task_is_async             (IrisTask            *task);
 gboolean      iris_task_is_executing         (IrisTask            *task);

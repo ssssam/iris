@@ -19,7 +19,6 @@
  */
 
 #include "iris-arbiter.h"
-#include "iris-arbiter-private.h"
 #include "iris-port.h"
 #include "iris-receiver-private.h"
 
@@ -126,12 +125,4 @@ iris_arbiter_receive (IrisScheduler      *scheduler,
 	iris_port_set_receiver (port, receiver);
 
 	return receiver;
-}
-
-IrisArbiter*
-iris_arbiter_coordinate (IrisReceiver *exclusive,
-                         IrisReceiver *concurrent,
-                         IrisReceiver *teardown)
-{
-	return iris_coordination_arbiter_new (exclusive, concurrent, teardown);
 }

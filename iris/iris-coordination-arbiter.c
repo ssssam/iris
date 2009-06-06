@@ -19,7 +19,6 @@
  */
 
 #include "iris-arbiter.h"
-#include "iris-arbiter-private.h"
 #include "iris-coordination-arbiter.h"
 #include "iris-coordination-arbiter-private.h"
 #include "iris-port.h"
@@ -585,7 +584,7 @@ iris_coordination_arbiter_init (IrisCoordinationArbiter *arbiter)
 	arbiter->priv->flags = IRIS_COORD_CONCURRENT;
 }
 
-IrisArbiter*
+static IrisArbiter*
 iris_coordination_arbiter_new (IrisReceiver *exclusive,
                                IrisReceiver *concurrent,
                                IrisReceiver *teardown)
@@ -611,4 +610,12 @@ iris_coordination_arbiter_new (IrisReceiver *exclusive,
 	ATTACH_ARBITER (teardown, arbiter);
 
 	return IRIS_ARBITER (arbiter);
+}
+
+IrisArbiter*
+iris_arbiter_coordinate (IrisReceiver *exclusive,
+                         IrisReceiver *concurrent,
+                         IrisReceiver *teardown)
+{
+	return iris_coordination_arbiter_new (exclusive, concurrent, teardown);
 }

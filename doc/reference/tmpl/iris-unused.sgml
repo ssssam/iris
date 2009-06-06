@@ -112,14 +112,6 @@
 @closure: 
 @Returns: 
 
-<!-- ##### FUNCTION iris_task_remove_dependency_sync ##### -->
-<para>
-
-</para>
-
-@task: 
-@dep: 
-
 <!-- ##### FUNCTION iris_task_run_full ##### -->
 <para>
 

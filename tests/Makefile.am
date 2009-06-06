@@ -69,7 +69,7 @@ coordination_arbiter_1_sources = coordination-arbiter-1.c
 service_1_sources = service-1.c
 gmainscheduler_1_sources = gmainscheduler-1.c
 
-EXTRA_DIST =					\
+EXTRA_DIST +=					\
 	mocks/mock-callback-receiver.c		\
 	mocks/mock-callback-receiver.h		\
 	mocks/mock-scheduler.h			\

@@ -18,6 +18,7 @@ AC_INIT([iris],
         [iris])
 
 AC_CONFIG_SRCDIR([iris/iris.h])
+AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE([1.10])
 AM_CONFIG_HEADER([config.h])
