@@ -14,3 +14,16 @@ LDFLAGS += -Wl,-O1 -Wl,--as-needed
 binary-install/python-iris::
 	dh_pycentral -p$(cdbs_curpkg)
 
+VERSION=$(shell ./version.sh)
+REV=$(shell git rev-list HEAD^!)
+DATE=$(shell date --rfc-2822)
+DIST=$(shell lsb_release -c -s)
+
+update-version:
+	echo "\
+iris (${VERSION}-1~${DIST}0) ${DIST}; urgency=low\n\
+\n\
+  * Automatic package for revision ${REV}. \n\
+\n\
+ -- Christian Hergert <chris@dronelabs.com>  ${DATE}" > debian/changelog
+	echo "\n\n*** PACKAGE WILL BE BUILT FOR ${DIST} ***\n\n"

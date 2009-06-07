@@ -92,7 +92,6 @@ libiris-1.0.so.0 libiris-1.0-0 #MINVER#
  iris_receiver_has_scheduler@Base 0.1.0-1
  iris_receiver_resume@Base 0.1.0-1
  iris_receiver_set_scheduler@Base 0.1.0-1
- iris_receiver_worker@Base 0.1.0-1
  iris_rrobin_append@Base 0.1.0-1
  iris_rrobin_apply@Base 0.1.0-1
  iris_rrobin_foreach@Base 0.1.0-1
@@ -141,7 +140,6 @@ libiris-1.0.so.0 libiris-1.0-0 #MINVER#
  iris_task_any_of@Base 0.1.0-1
  iris_task_cancel@Base 0.1.0-1
  iris_task_complete@Base 0.1.0-1
- iris_task_execute@Base 0.1.0-1
  iris_task_get_error@Base 0.1.0-1
  iris_task_get_main_context@Base 0.1.0-1
  iris_task_get_result@Base 0.1.0-1
@@ -159,7 +157,6 @@ libiris-1.0.so.0 libiris-1.0-0 #MINVER#
  iris_task_remove_dependency_sync@Base 0.1.0-1
  iris_task_run@Base 0.1.0-1
  iris_task_run_async@Base 0.1.0-1
- iris_task_schedule@Base 0.1.0-1
  iris_task_set_error@Base 0.1.0-1
  iris_task_set_main_context@Base 0.1.0-1
  iris_task_set_result@Base 0.1.0-1
