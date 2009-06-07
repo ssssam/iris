@@ -1,5 +1,0 @@
-debian/tmp/usr/include/iris-1.0/*
-debian/tmp/usr/lib/libiris-1.0.la
-debian/tmp/usr/lib/libiris-1.0.so
-debian/tmp/usr/lib/pkgconfig/iris-1.0*
-debian/tmp/usr/share/vala/vapi
