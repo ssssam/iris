@@ -81,10 +81,11 @@ just like you do with Python Twisted.  However, Tasks are implemented as a
 class similar to that of Apple's NSOperation.  So if it is easier for you
 to maintain your tasks as self contained classes, go right ahead.
 
-The IrisService goal of IrisService is to help in building application
-services that need to perform concurrent operations.  The of serving HTTP
-as a concurrent service in your app.  Or data storage, or whatever really.
-IrisService is also a GObject like IrisTask and provides some simple
+The goal of IrisService is to help in building application
+services that need to perform concurrent operations.  Like the serving of
+HTTP, or data storage, or whatever really.
+
+IrisService is also a GObject, like IrisTask, and provides some simple
 methods you can override.  More detail on these will be provided in their
 respective documentation.
 
@@ -96,11 +97,15 @@ Lets create a basic example that sets up a port for delivering messages
 and a simple callback executed when messages are received.
 
 #define MSG_ID (1)
+static gboolean done = FALSE;
 
 static void
 callback (IrisMessage *message, gpointer data)
 {
+ 	// all of this is superfulous
 	g_debug ("Hello, World!");
+	gboolean *a = user_data;
+	*a = TRUE;
 }
 
 static void
