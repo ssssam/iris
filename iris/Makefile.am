@@ -72,7 +72,6 @@ sources_c = 						\
 irisincludedir = $(includedir)/iris-$(IRIS_API_VERSION)/iris
 irisinclude_DATA =					\
 	$(sources_public_h) 				\
-	$(top_srcdir)/iris/iris.h 			\
 	$(NULL)
 
 lib_LTLIBRARIES = libiris-@IRIS_API_VERSION@.la
