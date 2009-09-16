@@ -27,12 +27,57 @@
 
 #include <string.h>
 #include <pthread.h>
+#include <sys/errno.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include "iris-wsqueue.h"
 #include "iris-rrobin.h"
 #include "gstamppointer.h"
 
 #define WSQUEUE_DEFAULT_SIZE 32
+
+#if DARWIN
+static gboolean
+timeout_passed (const struct timespec *timeout)
+{
+	struct timeval tv;
+
+	gettimeofday (&tv, NULL);
+
+	if (tv.tv_sec > timeout->tv_sec)
+		return TRUE;
+	else if ((tv.tv_sec == timeout->tv_sec) && (tv.tv_usec >= (timeout->tv_nsec / 1000000)))
+		return TRUE;
+
+	return FALSE;
+}
+static gint
+pthread_mutex_timedlock (pthread_mutex_t       *mutex,
+                         const struct timespec *abs_timeout)
+{
+	gint result;
+
+	do {
+		result = pthread_mutex_trylock (mutex);
+		if (result == EBUSY) {
+			struct timespec ts;
+			ts.tv_sec = 0;
+			ts.tv_nsec = 10000000;
+
+			/* Sleep for 10,000,000 nanoseconds before trying again. */
+			int status = -1;
+			while (status == -1)
+				status = nanosleep (&ts, &ts);
+		}
+		else
+			break;
+	}
+	while (result != 0 && !timeout_passed (abs_timeout));
+
+	return result;
+}
+#endif
 
 /**
  * SECTION:iris-wsqueue

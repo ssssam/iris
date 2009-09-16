@@ -66,6 +66,22 @@ AC_SUBST(IRIS_LIBS)
 
 AM_CONDITIONAL(ENABLE_GLIB_TEST, test "x$enable_glibtest" = "xyes")
 
+dnl = Host specific features ===============================================
+AC_MSG_CHECKING([host platform characteristics])
+case "$host" in
+	*-*-mingw*|*-*-cygwin*)
+		platform_darwin=no
+		platform_win32=yes
+		;;
+	*-*-darwin*)
+		platform_darwin=yes
+		platform_win32=no
+		;;
+esac
+AC_MSG_RESULT(ok)
+AM_CONDITIONAL(PLATFORM_WIN32, test x$platform_win32 = xyes)
+AM_CONDITIONAL(PLATFORM_DARWIN, test x$platform_darwin = xyes)
+
 dnl = Enable Vala ==========================================================
 enable_vala=no
 PKG_CHECK_MODULES(VALA, vala-1.0, enable_vala=yes, enable_vala=no)
@@ -119,7 +135,7 @@ AC_ARG_ENABLE([maintainer-flags],
               enable_maintainer_flags=maintainer_flags_default)
 
 if test "x$enable_maintainer_flags" = "xyes"; then
-  IRIS_MAINTAINER_CFLAGS="-Werror -Wall -Wshadow -Wcast-align -Wno-uninitialized -Wempty-body -Wformat-security -Winit-self"
+  IRIS_MAINTAINER_CFLAGS="-Werror -Wall -Wshadow -Wcast-align -Wno-uninitialized -Wformat-security -Winit-self"
 fi
 
 AC_SUBST(IRIS_MAINTAINER_CFLAGS)

@@ -28,6 +28,7 @@ sources_public_h =					\
 	$(NULL)
 
 sources_private_h =						\
+	$(top_srcdir)/iris/iris-atomics.h			\
 	$(top_srcdir)/iris/iris-coordination-arbiter-private.h	\
 	$(top_srcdir)/iris/iris-debug.h				\
 	$(top_srcdir)/iris/iris-gsource.h			\
@@ -46,6 +47,7 @@ sources_c = 						\
 	iris-all-task.c					\
 	iris-any-task.c					\
 	iris-arbiter.c					\
+	iris-atomics.c					\
 	iris-coordination-arbiter.c			\
 	iris-debug.c					\
 	iris-free-list.c				\
@@ -98,6 +100,12 @@ libiris_@IRIS_API_VERSION@_la_CFLAGS =			\
 
 if PLATFORM_LINUX
 libiris_@IRIS_API_VERSION@_la_CFLAGS += "-DLINUX"
+endif
+if PLATFORM_DARWIN
+libiris_@IRIS_API_VERSION@_la_CFLAGS += "-DDARWIN"
+endif
+if PLATFORM_WIN32
+libiris_@IRIS_API_VERSION@_la_CFLAGS += "-DWIN32"
 endif
 
 if ENABLE_PROFILING

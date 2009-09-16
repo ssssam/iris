@@ -19,6 +19,7 @@
  */
 
 #include <glib/gprintf.h>
+#include <pthread.h>
 
 #include "iris-debug.h"
 #include "iris-message.h"
@@ -34,7 +35,12 @@
 #define POP_WAIT_TIMEOUT      (G_USEC_PER_SEC * 2)
 #define VERIFY_THREAD_WORK(t) (g_atomic_int_compare_and_exchange(&t->taken, FALSE, TRUE))
 
+#if LINUX
 __thread IrisThread* my_thread = NULL;
+#else
+static pthread_once_t my_thread_once = PTHREAD_ONCE_INIT;
+static pthread_key_t my_thread;
+#endif
 
 static gboolean
 timeout_elapsed (GTimeVal *start,
@@ -53,8 +59,8 @@ iris_thread_worker_exclusive (IrisThread  *thread,
 	GTimeVal        tv_now      = {0,0};
 	GTimeVal        tv_req      = {0,0};
 	IrisThreadWork *thread_work = NULL;
-	gint            per_quantum = 0;     /* Completed items within the
-	                                      * last quantum. */
+	gint            per_quanta = 0;      /* Completed items within the
+	                                      * last quanta. */
 	guint           queued      = 0;     /* Items left in the queue at */
 	gboolean        has_resized = FALSE;
 
@@ -81,7 +87,7 @@ get_next_item:
 
 		iris_thread_work_run (thread_work);
 		iris_thread_work_free (thread_work);
-		per_quantum++;
+		per_quanta++;
 	}
 	else {
 #if 0
@@ -104,19 +110,19 @@ get_next_item:
 			 */
 			queued = iris_queue_length (queue);
 			if (queued == 0 && !has_resized) {
-				queued = per_quantum * 2;
+				queued = per_quanta * 2;
 				has_resized = TRUE;
 			}
 
-			if (per_quantum < queued) {
+			if (per_quanta < queued) {
 				/* make sure we are not maxed before asking */
 				if (!g_atomic_int_get (&thread->scheduler->maxed))
 					iris_scheduler_manager_request (thread->scheduler,
-									per_quantum,
+									per_quanta,
 									queued);
 			}
 
-			per_quantum = 0;
+			per_quanta = 0;
 			tv_req = tv_now;
 			g_time_val_add (&tv_req, QUANTUM_USECS);
 		}
@@ -193,7 +199,11 @@ iris_thread_worker (IrisThread *thread)
 	g_return_val_if_fail (thread != NULL, NULL);
 	g_return_val_if_fail (thread->queue != NULL, NULL);
 
+#if LINUX
 	my_thread = thread;
+#else
+	pthread_setspecific (my_thread, thread);
+#endif
 
 	iris_debug_init_thread ();
 	iris_debug (IRIS_DEBUG_THREAD);
@@ -249,6 +259,15 @@ iris_thread_get_type (void)
 	return thread_type;
 }
 
+#if LINUX
+#else
+static void
+_pthread_init (void)
+{
+	pthread_key_create (&my_thread, NULL);
+}
+#endif
+
 /**
  * iris_thread_new:
  * @exclusive: the thread is exclusive
@@ -267,6 +286,11 @@ iris_thread_new (gboolean exclusive)
 	IrisThread *thread;
 
 	iris_debug (IRIS_DEBUG_THREAD);
+
+#if LINUX
+#else
+	pthread_once (&my_thread_once, _pthread_init);
+#endif
 
 	thread = g_slice_new0 (IrisThread);
 	thread->exclusive = exclusive;
@@ -294,7 +318,11 @@ iris_thread_new (gboolean exclusive)
 IrisThread*
 iris_thread_get (void)
 {
+#if LINUX
 	return my_thread;
+#else
+	return pthread_getspecific (my_thread);
+#endif
 }
 
 /**
