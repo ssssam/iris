@@ -20,6 +20,9 @@
 
 #ifdef LINUX
 #include <sys/sysinfo.h>
+#elif DARWIN
+#include <sys/param.h>
+#include <sys/sysctl.h>
 #endif
 
 #include <stdlib.h>
@@ -95,18 +98,22 @@ iris_scheduler_queue_real (IrisScheduler  *scheduler,
 static guint
 iris_scheduler_get_n_cpu (void)
 {
-#ifdef LINUX
 	static gint n_cpu = 0;
-	if (G_UNLIKELY (n_cpu == 0)) {
+	if (G_UNLIKELY (!n_cpu)) {
 		if (g_getenv ("IRIS_SCHED_MAX") != NULL)
 			n_cpu = atoi (g_getenv ("IRIS_SCHED_MAX"));
+#ifdef LINUX
 		if (n_cpu == 0)
 			n_cpu = get_nprocs ();
+#elif DARWIN
+		size_t size = sizeof (n_cpu);
+		if (sysctlbyname ("hw.ncpu", &n_cpu, &size, NULL, 0))
+			n_cpu = 1;
+#else
+		n_cpu = 1;
+#endif
 	}
 	return n_cpu;
-#else
-	return 1;
-#endif
 }
 
 static gint
