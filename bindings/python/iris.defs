@@ -1,31 +1,10 @@
 ;; -*- scheme -*-
 ; object definitions ...
-(define-object Arbiter
-  (in-module "Iris")
-  (parent "GObject")
-  (c-name "IrisArbiter")
-  (gtype-id "IRIS_TYPE_ARBITER")
-)
-
-(define-object CoordinationArbiter
-  (in-module "Iris")
-  (parent "IrisArbiter")
-  (c-name "IrisCoordinationArbiter")
-  (gtype-id "IRIS_TYPE_COORDINATION_ARBITER")
-)
-
 (define-object Port
   (in-module "Iris")
   (parent "GObject")
   (c-name "IrisPort")
   (gtype-id "IRIS_TYPE_PORT")
-)
-
-(define-object Receiver
-  (in-module "Iris")
-  (parent "GObject")
-  (c-name "IrisReceiver")
-  (gtype-id "IRIS_TYPE_RECEIVER")
 )
 
 (define-object Scheduler
@@ -72,59 +51,12 @@
 
 ;; Enumerations and flags ...
 
-(define-enum ReceiveDecision
-  (in-module "Iris")
-  (c-name "IrisReceiveDecision")
-  (gtype-id "IRIS_TYPE_RECEIVE_DECISION")
-  (values
-    '("never" "IRIS_RECEIVE_NEVER")
-    '("now" "IRIS_RECEIVE_NOW")
-    '("later" "IRIS_RECEIVE_LATER")
-  )
-)
-
-(define-enum DeliveryStatus
-  (in-module "Iris")
-  (c-name "IrisDeliveryStatus")
-  (gtype-id "IRIS_TYPE_DELIVERY_STATUS")
-  (values
-    '("accepted" "IRIS_DELIVERY_ACCEPTED")
-    '("accepted-pause" "IRIS_DELIVERY_ACCEPTED_PAUSE")
-    '("accepted-remove" "IRIS_DELIVERY_ACCEPTED_REMOVE")
-    '("pause" "IRIS_DELIVERY_PAUSE")
-    '("remove" "IRIS_DELIVERY_REMOVE")
-  )
-)
-
 
 ;; From iris-arbiter.h
-
-(define-function iris_receive_decision_get_type
-  (c-name "iris_receive_decision_get_type")
-  (return-type "GType")
-)
 
 (define-function iris_arbiter_get_type
   (c-name "iris_arbiter_get_type")
   (return-type "GType")
-)
-
-(define-method can_receive
-  (of-object "IrisArbiter")
-  (c-name "iris_arbiter_can_receive")
-  (return-type "IrisReceiveDecision")
-  (parameters
-    '("IrisReceiver*" "receiver")
-  )
-)
-
-(define-method receive_completed
-  (of-object "IrisArbiter")
-  (c-name "iris_arbiter_receive_completed")
-  (return-type "none")
-  (parameters
-    '("IrisReceiver*" "receiver")
-  )
 )
 
 (define-function iris_arbiter_receive
@@ -135,6 +67,7 @@
     '("IrisPort*" "port")
     '("IrisMessageHandler" "handler")
     '("gpointer" "user_data")
+    '("GDestroyNotify" "notify")
   )
 )
 
@@ -145,46 +78,6 @@
     '("IrisReceiver*" "exclusive")
     '("IrisReceiver*" "concurrent")
     '("IrisReceiver*" "teardown")
-  )
-)
-
-
-
-;; From iris-coordination-arbiter.h
-
-(define-function iris_coordination_arbiter_get_type
-  (c-name "iris_coordination_arbiter_get_type")
-  (return-type "GType")
-)
-
-
-
-;; From iris-free-list.h
-
-(define-function iris_free_list_new
-  (c-name "iris_free_list_new")
-  (is-constructor-of "IrisFreeList")
-  (return-type "IrisFreeList*")
-)
-
-(define-method free
-  (of-object "IrisFreeList")
-  (c-name "iris_free_list_free")
-  (return-type "none")
-)
-
-(define-method get
-  (of-object "IrisFreeList")
-  (c-name "iris_free_list_get")
-  (return-type "IrisLink*")
-)
-
-(define-method put
-  (of-object "IrisFreeList")
-  (c-name "iris_free_list_put")
-  (return-type "none")
-  (parameters
-    '("IrisLink*" "link")
   )
 )
 
@@ -206,43 +99,10 @@
   )
 )
 
-
-
-;; From iris-gsource.h
-
-(define-function iris_gsource_new
-  (c-name "iris_gsource_new")
-  (return-type "guint")
-  (parameters
-    '("IrisQueue*" "queue")
-    '("GMainContext*" "context")
-    '("GSourceFunc" "callback")
-    '("gpointer" "user_data")
-  )
-)
-
-
-
-;; From iris.h
-
-(define-function iris_init
-  (c-name "iris_init")
-  (return-type "none")
-)
-
-
-
-;; From iris-lfqueue.h
-
-(define-function iris_lfqueue_get_type
-  (c-name "iris_lfqueue_get_type")
-  (return-type "GType")
-)
-
-(define-function iris_lfqueue_new
-  (c-name "iris_lfqueue_new")
-  (is-constructor-of "IrisLfqueue")
-  (return-type "IrisQueue*")
+(define-method get_context
+  (of-object "IrisGMainScheduler")
+  (c-name "iris_gmainscheduler_get_context")
+  (return-type "GMainContext*")
 )
 
 
@@ -268,10 +128,6 @@
     '("guint" "max_threads")
   )
 )
-
-
-
-;; From iris-link.h
 
 
 
@@ -594,29 +450,22 @@
   )
 )
 
-(define-method flattened_size
+(define-method get_object
   (of-object "IrisMessage")
-  (c-name "iris_message_flattened_size")
-  (return-type "gsize")
-)
-
-(define-method flatten
-  (of-object "IrisMessage")
-  (c-name "iris_message_flatten")
-  (return-type "gboolean")
+  (c-name "iris_message_get_object")
+  (return-type "GObject*")
   (parameters
-    '("gchar**" "buffer")
-    '("gsize*" "length")
+    '("const-gchar*" "name")
   )
 )
 
-(define-method unflatten
+(define-method set_object
   (of-object "IrisMessage")
-  (c-name "iris_message_unflatten")
-  (return-type "gboolean")
+  (c-name "iris_message_set_object")
+  (return-type "none")
   (parameters
-    '("gchar*" "buffer")
-    '("gsize" "length")
+    '("const-gchar*" "name")
+    '("GObject*" "object")
   )
 )
 
@@ -638,6 +487,15 @@
 (define-method post
   (of-object "IrisPort")
   (c-name "iris_port_post")
+  (return-type "none")
+  (parameters
+    '("IrisMessage*" "message")
+  )
+)
+
+(define-method repost
+  (of-object "IrisPort")
+  (c-name "iris_port_repost")
   (return-type "none")
   (parameters
     '("IrisMessage*" "message")
@@ -685,75 +543,7 @@
 
 
 
-;; From iris-queue.h
-
-(define-function iris_queue_get_type
-  (c-name "iris_queue_get_type")
-  (return-type "GType")
-)
-
-(define-function iris_queue_new
-  (c-name "iris_queue_new")
-  (is-constructor-of "IrisQueue")
-  (return-type "IrisQueue*")
-)
-
-(define-method ref
-  (of-object "IrisQueue")
-  (c-name "iris_queue_ref")
-  (return-type "IrisQueue*")
-)
-
-(define-method unref
-  (of-object "IrisQueue")
-  (c-name "iris_queue_unref")
-  (return-type "none")
-)
-
-(define-method push
-  (of-object "IrisQueue")
-  (c-name "iris_queue_push")
-  (return-type "none")
-  (parameters
-    '("gpointer" "data")
-  )
-)
-
-(define-method pop
-  (of-object "IrisQueue")
-  (c-name "iris_queue_pop")
-  (return-type "gpointer")
-)
-
-(define-method try_pop
-  (of-object "IrisQueue")
-  (c-name "iris_queue_try_pop")
-  (return-type "gpointer")
-)
-
-(define-method timed_pop
-  (of-object "IrisQueue")
-  (c-name "iris_queue_timed_pop")
-  (return-type "gpointer")
-  (parameters
-    '("GTimeVal*" "timeout")
-  )
-)
-
-(define-method length
-  (of-object "IrisQueue")
-  (c-name "iris_queue_length")
-  (return-type "guint")
-)
-
-
-
 ;; From iris-receiver.h
-
-(define-function iris_delivery_status_get_type
-  (c-name "iris_delivery_status_get_type")
-  (return-type "GType")
-)
 
 (define-function iris_receiver_get_type
   (c-name "iris_receiver_get_type")
@@ -773,21 +563,6 @@
   (parameters
     '("IrisScheduler*" "scheduler")
   )
-)
-
-(define-method deliver
-  (of-object "IrisReceiver")
-  (c-name "iris_receiver_deliver")
-  (return-type "IrisDeliveryStatus")
-  (parameters
-    '("IrisMessage*" "message")
-  )
-)
-
-(define-method resume
-  (of-object "IrisReceiver")
-  (c-name "iris_receiver_resume")
-  (return-type "none")
 )
 
 
@@ -862,6 +637,11 @@
 
 ;; From iris-scheduler.h
 
+(define-function iris_thread_get_type
+  (c-name "iris_thread_get_type")
+  (return-type "GType")
+)
+
 (define-function iris_scheduler_get_type
   (c-name "iris_scheduler_get_type")
   (return-type "GType")
@@ -934,6 +714,64 @@
   )
 )
 
+(define-function iris_thread_new
+  (c-name "iris_thread_new")
+  (is-constructor-of "IrisThread")
+  (return-type "IrisThread*")
+  (parameters
+    '("gboolean" "exclusive")
+  )
+)
+
+(define-function iris_thread_get
+  (c-name "iris_thread_get")
+  (return-type "IrisThread*")
+)
+
+(define-method manage
+  (of-object "IrisThread")
+  (c-name "iris_thread_manage")
+  (return-type "none")
+  (parameters
+    '("IrisQueue*" "queue")
+    '("gboolean" "leader")
+  )
+)
+
+(define-method shutdown
+  (of-object "IrisThread")
+  (c-name "iris_thread_shutdown")
+  (return-type "none")
+)
+
+(define-method print_stat
+  (of-object "IrisThread")
+  (c-name "iris_thread_print_stat")
+  (return-type "none")
+)
+
+(define-function iris_thread_work_new
+  (c-name "iris_thread_work_new")
+  (is-constructor-of "IrisThreadWork")
+  (return-type "IrisThreadWork*")
+  (parameters
+    '("IrisCallback" "callback")
+    '("gpointer" "data")
+  )
+)
+
+(define-method free
+  (of-object "IrisThreadWork")
+  (c-name "iris_thread_work_free")
+  (return-type "none")
+)
+
+(define-method run
+  (of-object "IrisThreadWork")
+  (c-name "iris_thread_work_run")
+  (return-type "none")
+)
+
 
 
 ;; From iris-scheduler-manager.h
@@ -986,12 +824,6 @@
   (return-type "none")
 )
 
-(define-method stat
-  (of-object "IrisService")
-  (c-name "iris_service_stat")
-  (return-type "IrisMessage*")
-)
-
 (define-method send_exclusive
   (of-object "IrisService")
   (c-name "iris_service_send_exclusive")
@@ -1010,61 +842,10 @@
   )
 )
 
-(define-method set_scheduler
-  (of-object "IrisService")
-  (c-name "iris_service_set_scheduler")
-  (return-type "none")
-  (parameters
-    '("IrisScheduler*" "scheduler")
-  )
-)
-
 (define-method is_started
   (of-object "IrisService")
   (c-name "iris_service_is_started")
   (return-type "gboolean")
-)
-
-
-
-;; From iris-stack.h
-
-(define-function iris_stack_get_type
-  (c-name "iris_stack_get_type")
-  (return-type "GType")
-)
-
-(define-function iris_stack_new
-  (c-name "iris_stack_new")
-  (is-constructor-of "IrisStack")
-  (return-type "IrisStack*")
-)
-
-(define-method push
-  (of-object "IrisStack")
-  (c-name "iris_stack_push")
-  (return-type "none")
-  (parameters
-    '("gpointer" "data")
-  )
-)
-
-(define-method pop
-  (of-object "IrisStack")
-  (c-name "iris_stack_pop")
-  (return-type "gpointer")
-)
-
-(define-method ref
-  (of-object "IrisStack")
-  (c-name "iris_stack_ref")
-  (return-type "IrisStack*")
-)
-
-(define-method unref
-  (of-object "IrisStack")
-  (c-name "iris_stack_unref")
-  (return-type "none")
 )
 
 
@@ -1181,6 +962,28 @@
   )
 )
 
+(define-method add_both
+  (of-object "IrisTask")
+  (c-name "iris_task_add_both")
+  (return-type "none")
+  (parameters
+    '("IrisTaskFunc" "callback")
+    '("IrisTaskFunc" "errback")
+    '("gpointer" "user_data")
+    '("GDestroyNotify" "notify")
+  )
+)
+
+(define-method add_both_closure
+  (of-object "IrisTask")
+  (c-name "iris_task_add_both_closure")
+  (return-type "none")
+  (parameters
+    '("GClosure*" "callback")
+    '("GClosure*" "errback")
+  )
+)
+
 (define-method add_dependency
   (of-object "IrisTask")
   (c-name "iris_task_add_dependency")
@@ -1193,6 +996,15 @@
 (define-method remove_dependency
   (of-object "IrisTask")
   (c-name "iris_task_remove_dependency")
+  (return-type "none")
+  (parameters
+    '("IrisTask*" "dependency")
+  )
+)
+
+(define-method remove_dependency_sync
+  (of-object "IrisTask")
+  (c-name "iris_task_remove_dependency_sync")
   (return-type "none")
   (parameters
     '("IrisTask*" "dependency")
@@ -1247,10 +1059,19 @@
   )
 )
 
+(define-method has_error
+  (of-object "IrisTask")
+  (c-name "iris_task_has_error")
+  (return-type "gboolean")
+)
+
 (define-method get_error
   (of-object "IrisTask")
   (c-name "iris_task_get_error")
-  (return-type "const-GError*")
+  (return-type "gboolean")
+  (parameters
+    '("GError**" "error")
+  )
 )
 
 (define-method set_error
@@ -1274,7 +1095,10 @@
 (define-method get_result
   (of-object "IrisTask")
   (c-name "iris_task_get_result")
-  (return-type "const-GValue*")
+  (return-type "none")
+  (parameters
+    '("GValue*" "value")
+  )
 )
 
 (define-method set_result
@@ -1328,139 +1152,6 @@
   (parameters
     '("GList*" "tasks")
   )
-)
-
-
-
-;; From iris-thread.h
-
-(define-function iris_thread_get_type
-  (c-name "iris_thread_get_type")
-  (return-type "GType")
-)
-
-(define-function iris_thread_new
-  (c-name "iris_thread_new")
-  (is-constructor-of "IrisThread")
-  (return-type "IrisThread*")
-  (parameters
-    '("gboolean" "exclusive")
-  )
-)
-
-(define-function iris_thread_get
-  (c-name "iris_thread_get")
-  (return-type "IrisThread*")
-)
-
-(define-method manage
-  (of-object "IrisThread")
-  (c-name "iris_thread_manage")
-  (return-type "none")
-  (parameters
-    '("IrisQueue*" "queue")
-    '("gboolean" "leader")
-  )
-)
-
-(define-method shutdown
-  (of-object "IrisThread")
-  (c-name "iris_thread_shutdown")
-  (return-type "none")
-)
-
-(define-method print_stat
-  (of-object "IrisThread")
-  (c-name "iris_thread_print_stat")
-  (return-type "none")
-)
-
-(define-function iris_thread_work_new
-  (c-name "iris_thread_work_new")
-  (is-constructor-of "IrisThreadWork")
-  (return-type "IrisThreadWork*")
-  (parameters
-    '("IrisCallback" "callback")
-    '("gpointer" "data")
-  )
-)
-
-(define-method free
-  (of-object "IrisThreadWork")
-  (c-name "iris_thread_work_free")
-  (return-type "none")
-)
-
-(define-method run
-  (of-object "IrisThreadWork")
-  (c-name "iris_thread_work_run")
-  (return-type "none")
-)
-
-
-
-;; From iris-types.h
-
-
-
-;; From iris-util.h
-
-(define-method compare
-  (of-object "GTimeVal")
-  (c-name "g_time_val_compare")
-  (return-type "gint")
-  (parameters
-    '("GTimeVal*" "tv2")
-  )
-)
-
-(define-method usec_until
-  (of-object "GTimeVal")
-  (c-name "g_time_val_usec_until")
-  (return-type "glong")
-)
-
-
-
-;; From iris-wsqueue.h
-
-(define-function iris_wsqueue_get_type
-  (c-name "iris_wsqueue_get_type")
-  (return-type "GType")
-)
-
-(define-function iris_wsqueue_new
-  (c-name "iris_wsqueue_new")
-  (is-constructor-of "IrisWsqueue")
-  (return-type "IrisQueue*")
-  (parameters
-    '("IrisQueue*" "global")
-    '("IrisRRobin*" "peers")
-  )
-)
-
-(define-method try_steal
-  (of-object "IrisWSQueue")
-  (c-name "iris_wsqueue_try_steal")
-  (return-type "gpointer")
-  (parameters
-    '("guint" "timeout")
-  )
-)
-
-(define-method local_push
-  (of-object "IrisWSQueue")
-  (c-name "iris_wsqueue_local_push")
-  (return-type "none")
-  (parameters
-    '("gpointer" "data")
-  )
-)
-
-(define-method local_pop
-  (of-object "IrisWSQueue")
-  (c-name "iris_wsqueue_local_pop")
-  (return-type "gpointer")
 )
 
 

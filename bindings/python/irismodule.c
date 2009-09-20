@@ -27,8 +27,6 @@
 #include "iris/iris.h"
 
 void pyiris_register_classes (PyObject    *d);
-void pyiris_add_constants    (PyObject    *module,
-                              const gchar *strip_prefix);
 
 extern PyMethodDef pyiris_functions[];
 
@@ -46,7 +44,6 @@ initiris (void)
 	d = PyModule_GetDict (m);
 
 	pyiris_register_classes (d);
-	pyiris_add_constants (m, "IRIS_");
 
 	if (PyErr_Occurred ())
 		Py_FatalError ("Error initializing module iris");
