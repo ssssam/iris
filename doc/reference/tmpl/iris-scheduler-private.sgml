@@ -31,11 +31,3 @@ iris-scheduler-private
 @Returns: 
 
 
-<!-- ##### FUNCTION iris_scheduler_set_default ##### -->
-<para>
-
-</para>
-
-@scheduler: 
-
-

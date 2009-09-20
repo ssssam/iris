@@ -1,0 +1,130 @@
+<chapter>
+  <title>Introduction to Tasks</title>
+  <sect1>
+    <title>Introduction</title>
+    <para>Whether you are writing a small script to manage your mp3's or a distributed map-reduce to parse your log files, chances are you will run into similar problems in software design.  Computing is not instantaneous.  Sometimes we are CPU bound while waiting for batch-processing to complete.  Sometimes we are waiting for data to arrive from an external resource.  Regardless, the problem can be generalized the same.  We make a request and at some point in the future the request will be finished or unsuccessful.</para>
+    <para>Iris works to simplify this problem by abstracting this concept into <emphasis>Tasks</emphasis>.  A task has a specific set of processing to perform or data to receive. Any of the steps may take an unknown period of time, so a series of callbacks and errbacks may be applied to modify the result after the task has completed. We will explain those later in this document.</para>
+    <para>This style of programming is not new.  You may know it as <emphasis>event-driven</emphasis> or <emphasis>callback-based</emphasis> programming.  If you take nothing else from this document, please learn and try to master asynchronous programming.  Once mastered, it is difficult to give up.</para>
+  </sect1>
+
+  <sect1>
+    <title>What is a Task?</title>
+
+    <para>IrisTask is a <emphasis>single-shot</emphasis> work-item that performs an atomic piece of work.
+An example of this could be retrieving the contents of a web-page, removing a
+file from disk, or even generating a thumbnail of an image.  Iris will do
+the work of compositing your work items onto the resources of the target
+system in such a way that will be efficient.</para>
+  </sect1>
+
+  <sect1>
+    <title>A Simple Example</title>
+
+<para>Lets start by creating a simple example that reads the contents of a directory
+  in a task and writes the result to the terminal's standard output.</para>
+</sect1>
+
+<sect1><title>Post Processing</title>
+
+<para>The real power of IrisTask comes from its <emphasis>post-processing</emphasis> phase.  After the
+task has completed its work the task is left in either one of two states.
+The task may have completed successfuly or failed with an error.  Using the
+post-processing phase we can apply a series of transformations upon the work
+item's result.  This is done with the methods <link linkend="iris-task-add-callback">iris_task_add_callback</link>() and/or
+<link linkend="iris-task-add-errback">iris_task_add_errback</link>().</para>
+
+<para>Callbacks and errbacks are similar in nature.  They can be called as part of
+the post-processing phase and have the ability to transform both the state and
+the result of the task.  A callback can handle a task that is in a successful
+state while an errback can handle a task that is a failed state.  Both
+callbacks and errbacks can change the current result and alternatively either
+clear or change the current failure of the task.</para>
+
+<para>Lets take a look at how we can add a callback to the result of our directory
+listing task to only list directories that have the letter 'a' in their name.</para>
+
+<para>IrisTask can go beyond a single callback or errback.  You can create complex
+chains of post-processing handlers to handle a variety of successful and error
+scenarios.  To better understand the process we can look at the following
+image that exmplifies the post-processing logic IrisTask employes.</para>
+
+<para>What we can see here is that at each step in the post-processing phase is a
+logic step of either success or failure.  Like an if/else statement.  If the
+task is in a successful state it will proceed to the next callback.  If the
+task is in an unsuccessful state it will proceed to the next errback.  There
+is no requirement that each step have both a callback and an errback.  If the
+required handler is NULL it will be skipped and the next handler will be used
+in its place.</para>
+
+<para>In addition to modifying the task the handler may want to prevent further
+execution of handlers until another work item has been completed.  This is
+called task composition because it allows Iris to suspend the current
+execution of the tasks post-processing phase until the yielded task has
+completed.  This is an excellent way to manage the life-cycle of longer
+running logic that depends on various non-deterministic or blocking calls.</para>
+
+<para>Lets take a look at how we can only include files that contain the word
+"linux" in them by looking at the contents of each file in the directory.</para>
+
+</sect1>
+
+<sect1><title>Task Dependencies</title>
+
+<para>At various times you may need to create a series of tasks to perform but have
+strict requirements about when they can run.  For example, you may have a task
+that gets information from a database and another task that generates a report.
+If the report requires that the data is available then you will not want it
+executed until after the data acquisition task has completed.  To do this, you
+can use Task Dependencies.</para>
+
+<para>To add a dependency to a task you can use iris_task_add_dependency().  Lets
+take a look at an example that does this.</para>
+
+<para>If a task that other tasks are dependent on fails the other tasks will fail
+as well and therefore not be executed.  However, the handlers of those external
+tasks can choose to handle the failure if desired.  See iris_task_add_errback()
+for information on how to add an errback handler.</para>
+
+<para>Special tasks exist to make parallel tasks easier to manage. iris_task_any_of()
+is a composite task that will complete when one of a series of dependent tasks
+complete.  See iris_task_any_of() for information on how to use this.</para>
+
+<para>iris_task_all_of() is a composite task that will completely only when all of
+its dependent tasks have completed.  This is a great way to perform work when a
+series of dependent data has been acquired.  For example, you man need to
+perform a number of queries against a database before you can generate some
+HTML.  iris_task_all_of() is an ideal task since you can perform all of the
+database queries in parallel.</para>
+</sect1>
+
+<sect1>
+  <title>Interacting with Gui Threads</title>
+
+<para>Many times you will want to report status back to the user interface such as
+notifying the user that the task has completed or moving forward the position
+of a progress bar.  In the following example we will update a simple user
+interface with the results of our directory listing inside of a GtkTreeView.</para>
+</sect1>
+
+<sect1>
+<title>Scaling with Tasks</title>
+
+<para>In some situations you may have a problem that organically grows into a
+massively sized problem.  You may have so much work to do that simply creating
+a task for each work item results in a memory requirement that is unnecessary
+and inefficient use of the target system.  For example, if you have 100,000 MP3
+files you wanted to index for music meta-data, you probably do not want to keep
+all of the filenames in memory at once.  It is inefficient use of memory and
+causes increased pressure on the memory allocator.  Let us take a look at the
+following example for how we might use an Iterator to work around this and keep
+our memory usage bounded.</para>
+</sect1>
+
+<sect1>
+  <title>Additional Information</title>
+
+<para>Iris task can also work with GClosure's so that various languages can be used
+such as Python and JavaScript.  See iris_task_add_callback_closure() and
+iris_task_add_errback_closure() for more information.</para>
+</sect1>
+</chapter>

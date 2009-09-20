@@ -21,6 +21,18 @@
 #include "iris-debug.h"
 #include "iris-port.h"
 #include "iris-port-private.h"
+#include "iris-receiver.h"
+#include "iris-receiver-private.h"
+
+/**
+ * SECTION:iris-port
+ * @title: IrisPort
+ * @short_description: Message delivery structure
+ *
+ * #IrisPort is a structure used for delivering messages.  When a port is
+ * connected to a receiver they can be used to perform actions when a message
+ * is delivered.  See iris_arbiter_receive() for more information.
+ */
 
 #define IRIS_PORT_STATE_PAUSED 1 << 0
 #define PORT_PAUSED(port)                                         \
@@ -38,7 +50,7 @@
 		}                                                 \
 	} G_STMT_END
 
-G_DEFINE_TYPE (IrisPort, iris_port, G_TYPE_OBJECT);
+G_DEFINE_TYPE (IrisPort, iris_port, G_TYPE_OBJECT)
 
 static void
 iris_port_set_receiver_real (IrisPort     *port,
@@ -56,14 +68,14 @@ iris_port_set_receiver_real (IrisPort     *port,
 
 	if (receiver != priv->receiver) {
 		if (priv->receiver) {
-			// FIXME: Unhook current receiver
+			/* FIXME: Unhook current receiver */
 			g_object_unref (priv->receiver);
 		}
 
 		if (receiver) {
 			priv->receiver = g_object_ref (receiver);
 			flush = TRUE;
-			// FIXME: Hook current receiver
+			/* FIXME: Hook current receiver? */
 		}
 		else {
 			priv->receiver = NULL;
@@ -85,8 +97,9 @@ iris_port_finalize (GObject *object)
 static void
 iris_port_class_init (IrisPortClass *klass)
 {
-	GObjectClass *object_class = G_OBJECT_CLASS (klass);
+	GObjectClass *object_class;
 
+	object_class = G_OBJECT_CLASS (klass);
 	klass->set_receiver = iris_port_set_receiver_real;
 	object_class->finalize = iris_port_finalize;
 
@@ -184,7 +197,7 @@ iris_port_post (IrisPort    *port,
 			g_mutex_unlock (priv->mutex);
 			break;
 		default:
-			g_assert_not_reached ();
+			g_warn_if_reached ();
 		}
 	}
 }
@@ -284,6 +297,13 @@ iris_port_get_queue_count (IrisPort *port)
 	return queue_count;
 }
 
+/**
+ * iris_port_flush:
+ * @port: An #IrisPort
+ *
+ * Flushes the port by trying to redeliver messages to a listening
+ * #IrisReceiver.
+ */
 void
 iris_port_flush (IrisPort *port)
 {
@@ -311,7 +331,6 @@ iris_port_flush (IrisPort *port)
 
 	/* Unpause if we are currently paused. */
 	priv->state = priv->state & ~IRIS_PORT_STATE_PAUSED;
-	g_assert ((priv->state & IRIS_PORT_STATE_PAUSED) == 0);
 
 	/* Copy a potential repost for queue */
 	repost = priv->repost;

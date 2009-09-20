@@ -1,11 +1,8 @@
-NULL =
-
 BUILT_SOURCES = iris-version.h
 
 sources_public_h =					\
 	$(top_srcdir)/iris/iris.h			\
 	$(top_srcdir)/iris/iris-arbiter.h		\
-	$(top_srcdir)/iris/iris-coordination-arbiter.h	\
 	$(top_srcdir)/iris/iris-free-list.h		\
 	$(top_srcdir)/iris/iris-gmainscheduler.h	\
 	$(top_srcdir)/iris/iris-link.h			\
@@ -21,14 +18,13 @@ sources_public_h =					\
 	$(top_srcdir)/iris/iris-service.h		\
 	$(top_srcdir)/iris/iris-stack.h			\
 	$(top_srcdir)/iris/iris-task.h			\
-	$(top_srcdir)/iris/iris-thread.h		\
-	$(top_srcdir)/iris/iris-types.h			\
 	$(top_srcdir)/iris/iris-wsqueue.h		\
 	$(top_srcdir)/iris/iris-wsscheduler.h		\
 	$(NULL)
 
 sources_private_h =						\
 	$(top_srcdir)/iris/iris-atomics.h			\
+	$(top_srcdir)/iris/iris-coordination-arbiter.h		\
 	$(top_srcdir)/iris/iris-coordination-arbiter-private.h	\
 	$(top_srcdir)/iris/iris-debug.h				\
 	$(top_srcdir)/iris/iris-gsource.h			\

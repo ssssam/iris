@@ -17,26 +17,6 @@ iris-types
 <!-- ##### SECTION Stability_Level ##### -->
 
 
-<!-- ##### ENUM IrisReceiveDecision ##### -->
-<para>
-
-</para>
-
-@IRIS_RECEIVE_NEVER: 
-@IRIS_RECEIVE_NOW: 
-@IRIS_RECEIVE_LATER: 
-
-<!-- ##### ENUM IrisDeliveryStatus ##### -->
-<para>
-
-</para>
-
-@IRIS_DELIVERY_ACCEPTED: 
-@IRIS_DELIVERY_ACCEPTED_PAUSE: 
-@IRIS_DELIVERY_ACCEPTED_REMOVE: 
-@IRIS_DELIVERY_PAUSE: 
-@IRIS_DELIVERY_REMOVE: 
-
 <!-- ##### STRUCT IrisReceiver ##### -->
 <para>
 
@@ -48,8 +28,6 @@ iris-types
 
 </para>
 
-@parent_class: 
-@deliver: 
 
 <!-- ##### STRUCT IrisReceiverPrivate ##### -->
 <para>
@@ -81,21 +59,6 @@ iris-types
 
 
 <!-- ##### STRUCT IrisArbiter ##### -->
-<para>
-
-</para>
-
-
-<!-- ##### STRUCT IrisArbiterClass ##### -->
-<para>
-
-</para>
-
-@parent_class: 
-@can_receive: 
-@receive_completed: 
-
-<!-- ##### STRUCT IrisArbiterPrivate ##### -->
 <para>
 
 </para>
@@ -214,7 +177,6 @@ iris-types
 
 </para>
 
-@vtable: 
 
 <!-- ##### STRUCT IrisQueueVTable ##### -->
 <para>

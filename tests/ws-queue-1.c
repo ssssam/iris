@@ -1,4 +1,5 @@
 #include <iris/iris.h>
+#include <iris/iris-queue-private.h>
 
 static void
 test1 (void)
@@ -27,7 +28,7 @@ test2 (void)
 
 	global = iris_queue_new ();
 	queue = iris_wsqueue_new (global, NULL);
-	queue->vtable->dispose = test2_cb;
+	VTABLE (queue)->dispose = test2_cb;
 	g_assert (queue);
 	iris_queue_unref (queue);
 	g_assert (test2_data);
@@ -41,7 +42,7 @@ test3 (void)
 
 	global = iris_queue_new ();
 	queue = iris_wsqueue_new (global, NULL);
-	queue->vtable->dispose = test2_cb;
+	VTABLE (queue)->dispose = test2_cb;
 	g_assert (queue);
 	iris_queue_ref (queue);
 	iris_queue_unref (queue);

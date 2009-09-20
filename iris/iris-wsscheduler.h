@@ -23,7 +23,6 @@
 
 #include <glib-object.h>
 
-#include "iris-types.h"
 #include "iris-scheduler.h"
 
 G_BEGIN_DECLS
@@ -53,6 +52,10 @@ G_BEGIN_DECLS
 #define IRIS_WSSCHEDULER_GET_CLASS(obj)            \
     (G_TYPE_INSTANCE_GET_CLASS ((obj),             \
      IRIS_TYPE_WSSCHEDULER, IrisWSSchedulerClass))
+
+typedef struct _IrisWSScheduler           IrisWSScheduler;
+typedef struct _IrisWSSchedulerClass      IrisWSSchedulerClass;
+typedef struct _IrisWSSchedulerPrivate    IrisWSSchedulerPrivate;
 
 struct _IrisWSScheduler
 {

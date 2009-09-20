@@ -1,4 +1,5 @@
 #include <iris/iris.h>
+#include <iris/iris-queue-private.h>
 
 static void
 test1 (void)
@@ -76,7 +77,7 @@ static void
 test7 (void)
 {
 	IrisQueue *queue = iris_lfqueue_new ();
-	queue->vtable->dispose = test7_cb;
+	VTABLE (queue)->dispose = test7_cb;
 	iris_queue_unref (queue);
 	g_assert (test7_data == TRUE);
 }
@@ -85,7 +86,7 @@ static void
 test8 (void)
 {
 	IrisQueue *queue = iris_lfqueue_new ();
-	queue->vtable->dispose = test7_cb;
+	VTABLE (queue)->dispose = test7_cb;
 	iris_queue_ref (queue);
 	iris_queue_unref (queue);
 	iris_queue_unref (queue);

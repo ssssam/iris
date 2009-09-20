@@ -26,6 +26,23 @@
 #include "iris-task.h"
 #include "iris-task-private.h"
 
+/**
+ * SECTION:iris-task
+ * @title: IrisTask
+ * @short_description: Writing concurrent and asynchronous tasks
+ *
+ * #IrisTask is a single-shot work-item that performs an atomic piece of work.
+ * An example of this could be retrieving the contents of a web-page, removing
+ * a file from disk, or even generating a thumbnail of an image.  Iris will do
+ * the work of compositing your work items onto the resources of the target
+ * system in such a way that will be efficient.
+ *
+ * Upon completion of tasks, a series of callbacks or errbacks can be executed.
+ * This is called the post-processing phase.  Callbacks and errbacks can
+ * alter the current result of the task or even yield new tasks that must
+ * be completed before further callbacks or errbacks can be executed.
+ */
+
 #define TOGGLE_CALLBACKS(t)                                             \
 	g_atomic_int_set (&t->priv->flags,                              \
 		((t->priv->flags & ~IRIS_TASK_FLAG_EXECUTING)           \
@@ -1293,6 +1310,14 @@ handle_remove_dependency (IrisTask    *task,
 	iris_task_remove_dependency_sync (task, dep);
 }
 
+/**
+ * iris_task_remove_dependency_sync:
+ * @task: An #IrisTask
+ * @dep: An #IrisTask
+ *
+ * Synchronously removes @dep from @task<!-- -->'s list of dependencies.
+ * See iris_task_remove_dependency().
+ */
 void
 iris_task_remove_dependency_sync (IrisTask *task,
                                   IrisTask *dep)
@@ -1389,7 +1414,7 @@ iris_task_handle_message_real (IrisTask    *task,
 		handle_add_observer (task, message);
 		break;
 	default:
-		g_assert_not_reached ();
+		g_warn_if_reached ();
 		break;
 	}
 }

@@ -25,17 +25,18 @@
 
 /**
  * SECTION:iris-message
- * @short_description: a generic message representation
+ * @title: IrisMessage
+ * @short_description: A generic message representation
  *
- * #IrisMessage is the representation of a generic message that can be passed
- * around within a process.  It is typically delivered to a port which can
+ * #IrisMessage is the representation of a message that can be passed
+ * within a process.  It is typically delivered to a port which can
  * help provide actions based on the message.  IrisMessage<!-- -->'s contain
  * a set of key/value pairs that describe the message.  The message itself
  * also has a type, which is defined by the public "what" member of the
  * #IrisMessage struct.
  *
  * Since messages can be expensive, they are reference counted. You can
- * control the lifetime of a #IrisMessage using iris_message_ref() and
+ * control the lifetime of an #IrisMessage using iris_message_ref() and
  * iris_message_unref().
  *
  * You can add key/values to the message using methods such as
@@ -43,7 +44,13 @@
  * for most base types within GLib.  For complex types, use
  * iris_message_set_value() containing a #GValue with the complex type.
  *
- * Setting values *IS NOT* thread safe.
+ * Named keys uses a hashtable internally which may be more of an
+ * expensive operation than is desired.  #IrisMessage provides a way to
+ * pack the data into the message using iris_message_set_data().  For
+ * light-weight messages containing a single value this is preferred.
+ *
+ * Updating the structure is not thread-safe.  Generally it is not
+ * recommended to modify a message after passing it.
  */
 
 static GValue*
@@ -101,8 +108,6 @@ iris_message_set_value_internal (IrisMessage *message,
 
 	if (!message->items)
 		iris_message_init_items (message);
-	g_assert (message->items != NULL);
-
 	g_hash_table_insert (message->items, g_strdup (name), value);
 }
 
@@ -116,9 +121,8 @@ iris_message_destroy (IrisMessage *message)
 		message->items = NULL;
 	}
 
-	if (G_VALUE_TYPE (&message->data) != G_TYPE_INVALID) {
+	if (G_VALUE_TYPE (&message->data) != G_TYPE_INVALID)
 		g_value_unset (&message->data);
-	}
 }
 
 static void
@@ -439,9 +443,8 @@ iris_message_get_value (IrisMessage *message,
                         GValue      *value)
 {
 	const GValue *real_value;
+
 	real_value = iris_message_get_value_internal (message, name);
-	if (!real_value)
-		g_assert_not_reached ();
 	g_value_init (value, G_VALUE_TYPE (real_value));
 	g_value_copy (real_value, value);
 }
@@ -983,85 +986,4 @@ iris_message_set_object (IrisMessage *message,
 	g_value_set_object (real_value, object);
 
 	iris_message_set_value_internal (message, name, real_value);
-}
-
-/**
- * iris_message_flattened_size:
- * @message: A #IrisMessage
- *
- * Determines the size in bytes that would be required to flatten the
- * message.
- *
- * Return value: the size in bytes
- */
-gsize
-iris_message_flattened_size (IrisMessage *message)
-{
-	GHashTableIter  iter;
-	gsize           length = 4;
-	gpointer        keyptr, valueptr;
-	const gchar    *key;
-	const GValue   *value;
-	gboolean        can_flatten;
-
-	g_return_val_if_fail (message != NULL, 0);
-
-	if (G_UNLIKELY (!message->items))
-		return length;
-
-	g_hash_table_iter_init (&iter, message->items);
-	while (g_hash_table_iter_next (&iter, &keyptr, &valueptr)) {
-		key = (const gchar*) keyptr;
-		value = (const GValue*) valueptr;
-
-		if (G_UNLIKELY (!key || !value))
-			continue;
-
-		/* We are hard coding our protocol sizes here since
-		 * something like sizeof (int) would not be safe over
-		 * machine boundries.
-		 */
-
-		can_flatten = FALSE;
-
-		switch (G_VALUE_TYPE (value)) {
-		case G_TYPE_FLOAT:
-		case G_TYPE_INT:
-		case G_TYPE_UINT:
-		case G_TYPE_LONG:
-		case G_TYPE_ULONG:
-			length += 2; // TYPE ID
-			length += 4;
-			can_flatten = TRUE;
-			break;
-		case G_TYPE_DOUBLE:
-		case G_TYPE_INT64:
-		case G_TYPE_UINT64:
-			length += 2; // TYPE ID
-			length += 8;
-			can_flatten = TRUE;
-			break;
-		case G_TYPE_STRING:
-			length += 2; // TYPE ID
-			length += 4; // String Length
-			if (g_value_get_string (value) != NULL)
-				length += strlen (g_value_get_string (value));
-			can_flatten = TRUE;
-			break;
-		case G_TYPE_CHAR:
-		case G_TYPE_UCHAR:
-		case G_TYPE_BOOLEAN:
-			length += 2; // TYPE ID
-			length += 1;
-			can_flatten = TRUE;
-			break;
-		}
-
-		if (G_LIKELY (can_flatten)) {
-			length += 4; // Key size
-			length += strlen (key);
-		}
-	}
-
-	return length;
 }

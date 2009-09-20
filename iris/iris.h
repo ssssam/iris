@@ -21,9 +21,7 @@
 #ifndef __IRIS_H__
 #define __IRIS_H__
 
-#include "iris-types.h"
 #include "iris-arbiter.h"
-#include "iris-coordination-arbiter.h"
 #include "iris-free-list.h"
 #include "iris-gmainscheduler.h"
 #include "iris-link.h"

@@ -311,25 +311,6 @@ IRIS_CHECK_VERSION
 </SECTION>
 
 <SECTION>
-<FILE>iris-debug</FILE>
-IrisDebugSection
-IRIS_DEBUG_MESSAGE
-IRIS_DEBUG_PORT
-IRIS_DEBUG_RECEIVER
-IRIS_DEBUG_ARBITER
-IRIS_DEBUG_SCHEDULER
-IRIS_DEBUG_THREAD
-IRIS_DEBUG_TASK
-IRIS_DEBUG_QUEUE
-IRIS_DEBUG_STACK
-IRIS_DEBUG_RROBIN
-iris_debug_init
-iris_debug_init_thread
-iris_debug
-iris_debug_message
-</SECTION>
-
-<SECTION>
 <FILE>iris-arbiter-private</FILE>
 iris_coordination_arbiter_new
 </SECTION>
@@ -431,12 +412,6 @@ iris_receiver_has_arbiter
 </SECTION>
 
 <SECTION>
-<FILE>iris-util</FILE>
-g_time_val_compare
-g_time_val_usec_until
-</SECTION>
-
-<SECTION>
 <FILE>iris-lfqueue</FILE>
 IRIS_TYPE_LFQUEUE
 IrisLFQueue
@@ -474,6 +449,5 @@ IrisLink
 <FILE>iris-scheduler-private</FILE>
 IrisSchedulerPrivate
 iris_scheduler_new
-iris_scheduler_set_default
 </SECTION>
 

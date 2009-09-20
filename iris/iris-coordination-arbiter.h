@@ -23,7 +23,7 @@
 
 #include <glib-object.h>
 
-#include "iris-types.h"
+#include "iris-arbiter-private.h"
 #include "iris-arbiter.h"
 
 G_BEGIN_DECLS
@@ -65,7 +65,8 @@ typedef struct _IrisCoordinationArbiterPrivate IrisCoordinationArbiterPrivate;
 struct _IrisCoordinationArbiter
 {
 	IrisArbiter parent;
-	
+
+	/*< private >*/
 	IrisCoordinationArbiterPrivate *priv;
 };
 

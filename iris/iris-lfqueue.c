@@ -19,6 +19,7 @@
  */
 
 #include "iris-lfqueue.h"
+#include "iris-queue-private.h"
 #include "iris-util.h"
 #include "gstamppointer.h"
 

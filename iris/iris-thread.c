@@ -26,8 +26,16 @@
 #include "iris-queue.h"
 #include "iris-scheduler-manager.h"
 #include "iris-scheduler-manager-private.h"
-#include "iris-thread.h"
 #include "iris-util.h"
+
+/**
+ * SECTION:iris-thread
+ * @title: IrisThread
+ * @short_description: thread abstraction for schedulers
+ *
+ * #IrisThread provides an abstraction upon the underlying threading
+ * system for use by #IrisScheduler implementations.
+ */
 
 #define MSG_MANAGE            (1)
 #define MSG_SHUTDOWN          (2)
@@ -244,7 +252,8 @@ next_message:
 		iris_thread_handle_shutdown (thread);
 		break;
 	default:
-		g_assert_not_reached ();
+		g_warn_if_reached ();
+		break;
 	}
 
 	goto next_message;

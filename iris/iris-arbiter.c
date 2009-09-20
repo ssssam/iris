@@ -19,15 +19,26 @@
  */
 
 #include "iris-arbiter.h"
+#include "iris-arbiter-private.h"
 #include "iris-port.h"
 #include "iris-receiver-private.h"
 
-struct _IrisArbiterPrivate
-{
-	gpointer dummy;
-};
+/**
+ * SECTION:iris-arbiter
+ * @title: IrisArbiter
+ * @short_description: Message passing arbiters
+ *
+ * #IrisArbiter provides a way to control how messages can be
+ * received.  The simple arbiter, created using iris_arbiter_receive()
+ * does nothing to control when messages can be received.  Messages
+ * will be processed as fast as the scheduler can handle them.
+ *
+ * Alternatively, the coordination-arbiter can be used with
+ * iris_arbiter_coordinate().  The coordination-arbiter is similar to
+ * a reader-writer lock implemented asynchronously.
+ */
 
-G_DEFINE_ABSTRACT_TYPE (IrisArbiter, iris_arbiter, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (IrisArbiter, iris_arbiter, G_TYPE_OBJECT)
 
 GType
 iris_receive_decision_get_type (void)
@@ -55,21 +66,27 @@ iris_arbiter_finalize (GObject *object)
 static void
 iris_arbiter_class_init (IrisArbiterClass *klass)
 {
-	GObjectClass *object_class = G_OBJECT_CLASS (klass);
+	GObjectClass *object_class;
 
+	object_class = G_OBJECT_CLASS (klass);
 	object_class->finalize = iris_arbiter_finalize;
-
-	g_type_class_add_private (object_class, sizeof (IrisArbiterPrivate));
 }
 
 static void
 iris_arbiter_init (IrisArbiter *arbiter)
 {
-	arbiter->priv = G_TYPE_INSTANCE_GET_PRIVATE (arbiter,
-	                                          IRIS_TYPE_ARBITER,
-	                                          IrisArbiterPrivate);
+	arbiter->priv = NULL;
 }
 
+/**
+ * iris_arbiter_can_receive:
+ * @arbiter: An #IrisArbiter
+ * @receiver: An #IrisReceiver
+ *
+ * Checks to see if a receiver is allowed to receive.
+ *
+ * Return value: An #IrisReceiveDecision.
+ */
 IrisReceiveDecision
 iris_arbiter_can_receive (IrisArbiter  *arbiter,
                           IrisReceiver *receiver)
@@ -80,6 +97,13 @@ iris_arbiter_can_receive (IrisArbiter  *arbiter,
 	return IRIS_RECEIVE_NOW;
 }
 
+/**
+ * iris_arbiter_receive_completed:
+ * @arbiter: An #IrisArbiter
+ * @receiver: An #IrisReceiver
+ *
+ * Notifies @arbiter that a receive has been completed on @receiver.
+ */
 void
 iris_arbiter_receive_completed (IrisArbiter  *arbiter,
                                 IrisReceiver *receiver)
@@ -88,7 +112,7 @@ iris_arbiter_receive_completed (IrisArbiter  *arbiter,
 }
 
 /**
- * iris_receiver_receive:
+ * iris_arbiter_receive:
  * @scheduler: An #IrisScheduler or %NULL
  * @port: An #IrisPort
  * @callback: An #IrisMessageHandler to execute when a message is received

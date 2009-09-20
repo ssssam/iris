@@ -19,8 +19,9 @@
  */
 
 #include <stdio.h>
+
 #include "iris-debug.h"
-#include "iris-thread.h"
+#include "iris-scheduler.h"
 
 #ifdef ENABLE_PROFILING
 __thread GTimer  *timer = NULL;

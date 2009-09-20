@@ -23,11 +23,13 @@
 
 #include <glib-object.h>
 
-#include "iris-types.h"
-
 G_BEGIN_DECLS
 
 #define IRIS_TYPE_RROBIN (iris_rrobin_get_type())
+
+typedef struct _IrisRRobin IrisRRobin;
+typedef void     (*IrisRRobinFunc)        (gpointer data, gpointer user_data);
+typedef gboolean (*IrisRRobinForeachFunc) (IrisRRobin *rrobin, gpointer data, gpointer user_data);
 
 struct _IrisRRobin
 {

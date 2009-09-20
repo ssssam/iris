@@ -31,6 +31,8 @@
 #include <sys/time.h>
 #include <time.h>
 
+#include "iris-queue.h"
+#include "iris-queue-private.h"
 #include "iris-wsqueue.h"
 #include "iris-rrobin.h"
 #include "gstamppointer.h"
@@ -101,7 +103,7 @@ iris_wsqueue_push_real (IrisQueue *queue,
 {
 	/* we only allow pushes from the local thread via local push, so
 	 * this should never be hit. */
-	g_assert_not_reached ();
+	g_warn_if_reached ();
 }
 
 static gboolean

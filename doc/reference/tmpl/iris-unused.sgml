@@ -1,9 +1,155 @@
+<!-- ##### SECTION ./tmpl/iris-debug.sgml:Long_Description ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/iris-debug.sgml:See_Also ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/iris-debug.sgml:Short_Description ##### -->
+
+
+
+<!-- ##### SECTION ./tmpl/iris-debug.sgml:Stability_Level ##### -->
+
+
+
+<!-- ##### SECTION ./tmpl/iris-debug.sgml:Title ##### -->
+iris-debug
+
+
+<!-- ##### SECTION ./tmpl/iris-util.sgml:Long_Description ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/iris-util.sgml:See_Also ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/iris-util.sgml:Short_Description ##### -->
+
+
+
+<!-- ##### SECTION ./tmpl/iris-util.sgml:Stability_Level ##### -->
+
+
+
+<!-- ##### SECTION ./tmpl/iris-util.sgml:Title ##### -->
+iris-util
+
+
+<!-- ##### MACRO IRIS_ARBITER_CONST ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+<!-- ##### MACRO IRIS_COORDINATION_ARBITER_CONST ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+<!-- ##### MACRO IRIS_DEBUG_ARBITER ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### MACRO IRIS_DEBUG_MESSAGE ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### MACRO IRIS_DEBUG_PORT ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### MACRO IRIS_DEBUG_QUEUE ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### MACRO IRIS_DEBUG_RECEIVER ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### MACRO IRIS_DEBUG_RROBIN ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### MACRO IRIS_DEBUG_SCHEDULER ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### MACRO IRIS_DEBUG_STACK ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### MACRO IRIS_DEBUG_TASK ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### MACRO IRIS_DEBUG_THREAD ##### -->
+<para>
+
+</para>
+
+
 <!-- ##### MACRO IRIS_TASK_GET_PRIVATE ##### -->
 <para>
 
 </para>
 
 @object: 
+
+<!-- ##### STRUCT IrisArbiterClass ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### STRUCT IrisArbiterPrivate ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### STRUCT IrisCoordinationArbiter ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### STRUCT IrisCoordinationArbiterPrivate ##### -->
+<para>
+
+</para>
+
 
 <!-- ##### ENUM IrisCoordinationFlags ##### -->
 <para>
@@ -13,6 +159,43 @@
 @IRIS_COORD_EXCLUSIVE: 
 @IRIS_COORD_NEEDS_ANY: 
 @IRIS_COORD_ALL: 
+
+<!-- ##### ENUM IrisDebugSection ##### -->
+<para>
+
+</para>
+
+@IRIS_DEBUG_SECTION_NONE: 
+@IRIS_DEBUG_SECTION_MESSAGE: 
+@IRIS_DEBUG_SECTION_PORT: 
+@IRIS_DEBUG_SECTION_RECEIVER: 
+@IRIS_DEBUG_SECTION_ARBITER: 
+@IRIS_DEBUG_SECTION_SCHEDULER: 
+@IRIS_DEBUG_SECTION_THREAD: 
+@IRIS_DEBUG_SECTION_TASK: 
+@IRIS_DEBUG_SECTION_QUEUE: 
+@IRIS_DEBUG_SECTION_STACK: 
+@IRIS_DEBUG_SECTION_RROBIN: 
+
+<!-- ##### ENUM IrisDeliveryStatus ##### -->
+<para>
+
+</para>
+
+@IRIS_DELIVERY_ACCEPTED: 
+@IRIS_DELIVERY_ACCEPTED_PAUSE: 
+@IRIS_DELIVERY_ACCEPTED_REMOVE: 
+@IRIS_DELIVERY_PAUSE: 
+@IRIS_DELIVERY_REMOVE: 
+
+<!-- ##### ENUM IrisReceiveDecision ##### -->
+<para>
+
+</para>
+
+@IRIS_RECEIVE_NEVER: 
+@IRIS_RECEIVE_NOW: 
+@IRIS_RECEIVE_LATER: 
 
 <!-- ##### ENUM IrisTaskFlags ##### -->
 <para>
@@ -46,6 +229,40 @@
 @IRIS_TASK_MESSAGE_DEP_CANCELED: 
 @IRIS_TASK_MESSAGE_ADD_OBSERVER: 
 
+<!-- ##### FUNCTION g_time_val_compare ##### -->
+<para>
+
+</para>
+
+@tv1: 
+@tv2: 
+@Returns: 
+
+<!-- ##### FUNCTION g_time_val_usec_until ##### -->
+<para>
+
+</para>
+
+@tv: 
+@Returns: 
+
+<!-- ##### FUNCTION iris_arbiter_can_receive ##### -->
+<para>
+
+</para>
+
+@arbiter: 
+@receiver: 
+@Returns: 
+
+<!-- ##### FUNCTION iris_arbiter_receive_completed ##### -->
+<para>
+
+</para>
+
+@arbiter: 
+@receiver: 
+
 <!-- ##### FUNCTION iris_coordination_arbiter_new ##### -->
 <para>
 
@@ -56,6 +273,68 @@
 @teardown: 
 @Returns: 
 
+<!-- ##### FUNCTION iris_debug ##### -->
+<para>
+
+</para>
+
+@section: 
+@file: 
+@line: 
+@function: 
+
+<!-- ##### FUNCTION iris_debug_init ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### FUNCTION iris_debug_init_thread ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### FUNCTION iris_debug_message ##### -->
+<para>
+
+</para>
+
+@section: 
+@file: 
+@line: 
+@function: 
+@format: 
+@Varargs: 
+
+<!-- ##### FUNCTION iris_message_flatten ##### -->
+<para>
+
+</para>
+
+@message: 
+@buffer: 
+@length: 
+@Returns: 
+
+<!-- ##### FUNCTION iris_message_flattened_size ##### -->
+<para>
+
+</para>
+
+@message: 
+@Returns: 
+
+<!-- ##### FUNCTION iris_message_unflatten ##### -->
+<para>
+
+</para>
+
+@message: 
+@buffer: 
+@length: 
+@Returns: 
+
 <!-- ##### FUNCTION iris_port_repost ##### -->
 <para>
 
@@ -63,6 +342,15 @@
 
 @port: 
 @message: 
+
+<!-- ##### FUNCTION iris_receiver_deliver ##### -->
+<para>
+
+</para>
+
+@receiver: 
+@message: 
+@Returns: 
 
 <!-- ##### FUNCTION iris_receiver_has_arbiter ##### -->
 <para>
@@ -80,6 +368,13 @@
 @receiver: 
 @Returns: 
 
+<!-- ##### FUNCTION iris_receiver_resume ##### -->
+<para>
+
+</para>
+
+@receiver: 
+
 <!-- ##### FUNCTION iris_scheduler_manager_destroy ##### -->
 <para>
 
@@ -93,6 +388,29 @@
 </para>
 
 @thread: 
+
+<!-- ##### FUNCTION iris_scheduler_set_default ##### -->
+<para>
+
+</para>
+
+@scheduler: 
+
+<!-- ##### FUNCTION iris_service_set_scheduler ##### -->
+<para>
+
+</para>
+
+@service: 
+@scheduler: 
+
+<!-- ##### FUNCTION iris_service_stat ##### -->
+<para>
+
+</para>
+
+@service: 
+@Returns: 
 
 <!-- ##### FUNCTION iris_task_n_of ##### -->
 <para>

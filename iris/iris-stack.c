@@ -38,6 +38,8 @@
  * us to fail and retry the operation.  As you might have guessed, if the
  * ABA problem happens 4 times within the pre-emption time of the first
  * thread, the problem can still exist.
+ *
+ * You can typically solve this with an indirection node.
  */
 
 static void iris_stack_free (IrisStack *stack);

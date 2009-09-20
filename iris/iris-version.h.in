@@ -3,6 +3,7 @@
 
 /**
  * SECTION:iris-version
+ * @title: Versioning
  * @short_description: Versioning API
  *
  * Iris provides some API and definitions for compile-time

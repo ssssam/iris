@@ -1,6 +1,7 @@
 #include <iris/iris.h>
 #include <string.h>
 
+#include <iris/iris-arbiter-private.h>
 #include <iris/iris-receiver-private.h>
 #include <iris/iris-scheduler-private.h>
 

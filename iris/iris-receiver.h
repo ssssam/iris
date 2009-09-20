@@ -23,7 +23,6 @@
 
 #include <glib-object.h>
 
-#include "iris-message.h"
 #include "iris-scheduler.h"
 
 G_BEGIN_DECLS
@@ -38,49 +37,26 @@ G_BEGIN_DECLS
     (G_TYPE_CHECK_INSTANCE_CAST ((obj),     \
      IRIS_TYPE_RECEIVER, IrisReceiver const))
 
-#define IRIS_RECEIVER_CLASS(klass)          \
-    (G_TYPE_CHECK_CLASS_CAST ((klass),      \
-     IRIS_TYPE_RECEIVER, IrisReceiverClass))
-
 #define IRIS_IS_RECEIVER(obj)               \
     (G_TYPE_CHECK_INSTANCE_TYPE ((obj),     \
      IRIS_TYPE_RECEIVER))
 
-#define IRIS_IS_RECEIVER_CLASS(klass)       \
-    (G_TYPE_CHECK_CLASS_TYPE ((klass),      \
-     IRIS_TYPE_RECEIVER))
-
-#define IRIS_RECEIVER_GET_CLASS(obj)        \
-    (G_TYPE_INSTANCE_GET_CLASS ((obj),      \
-     IRIS_TYPE_RECEIVER, IrisReceiverClass))
-
-#define IRIS_TYPE_DELIVERY_STATUS (iris_delivery_status_get_type())
+typedef struct _IrisReceiver              IrisReceiver;
+typedef struct _IrisReceiverClass         IrisReceiverClass;
+typedef struct _IrisReceiverPrivate       IrisReceiverPrivate;
 
 struct _IrisReceiver
 {
 	GObject parent;
 
+	/*< private >*/
 	IrisReceiverPrivate *priv;
 };
 
-struct _IrisReceiverClass
-{
-	GObjectClass parent_class;
-
-	IrisDeliveryStatus (*deliver) (IrisReceiver *receiver,
-	                               IrisMessage  *message);
-};
-
-GType              iris_delivery_status_get_type (void) G_GNUC_CONST;
 GType              iris_receiver_get_type        (void) G_GNUC_CONST;
-
-IrisScheduler*     iris_receiver_get_scheduler (IrisReceiver  *receiver);
-void               iris_receiver_set_scheduler (IrisReceiver  *receiver,
-                                                IrisScheduler *scheduler);
-
-IrisDeliveryStatus iris_receiver_deliver       (IrisReceiver  *receiver,
-                                                IrisMessage   *message);
-void               iris_receiver_resume        (IrisReceiver  *receiver);
+IrisScheduler*     iris_receiver_get_scheduler   (IrisReceiver  *receiver);
+void               iris_receiver_set_scheduler   (IrisReceiver  *receiver,
+                                                  IrisScheduler *scheduler);
 
 G_END_DECLS
 

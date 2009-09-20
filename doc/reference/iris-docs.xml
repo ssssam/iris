@@ -6,17 +6,25 @@
 ]>
 <book id="index">
   <bookinfo>
-    <title>Iris Reference Manual</title>
+    <title>Iris Manual</title>
     <releaseinfo>
       The latest version of this documentation can be found on-line at
       <ulink role="online-location"
-	      url="http://docs.dronelabs.com/iris/api/index.html">http://docs.dronelabs.com/iris/api/</ulink>.
+	      url="http://docs.dronelabs.com/iris/api/index.html">http://docs.dronelabs.com/iris/</ulink>.
     </releaseinfo>
   </bookinfo>
 
+  <xi:include href="xml/intro-to-tasks.xml"/>
+
   <chapter>
-    <title>Iris API Reference</title>
+    <title>Iris Simple API Reference</title>
     <xi:include href="xml/iris-message.xml"/>
+    <xi:include href="xml/iris-service.xml"/>
+    <xi:include href="xml/iris-task.xml"/>
+  </chapter>
+
+  <chapter>
+    <title>Iris Advanced API Reference</title>
     <xi:include href="xml/iris-port.xml"/>
     <xi:include href="xml/iris-receiver.xml"/>
     <xi:include href="xml/iris-scheduler.xml"/>
@@ -31,9 +39,6 @@
     <xi:include href="xml/iris-queue.xml"/>
     <xi:include href="xml/iris-lfqueue.xml"/>
     <xi:include href="xml/iris-wsqueue.xml"/>
-    <xi:include href="xml/iris-task.xml"/>
-    <xi:include href="xml/iris-service.xml"/>
-    <xi:include href="xml/iris-types.xml"/>
     <xi:include href="xml/iris-version.xml"/>
   </chapter>
   <chapter id="object-tree">

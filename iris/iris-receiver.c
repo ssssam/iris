@@ -18,12 +18,30 @@
  * 02110-1301 USA
  */
 
+#include "iris-arbiter.h"
+#include "iris-arbiter-private.h"
 #include "iris-debug.h"
 #include "iris-receiver.h"
 #include "iris-receiver-private.h"
 #include "iris-port.h"
 
-G_DEFINE_TYPE (IrisReceiver, iris_receiver, G_TYPE_OBJECT);
+/**
+ * SECTION:iris-receiver
+ * @title: IrisReceiver
+ * @short_description: Perform actions on message delivery
+ *
+ * #IrisReceiver is used to perform actions when a message is received
+ * from an #IrisPort.  See iris_arbiter_receive() for how to create
+ * a new receiver for an #IrisPort to perform a given action.
+ *
+ * #IrisReceiver<!-- -->'s can be attached to an arbiter to provide
+ * additional control over when actions can be performed.  See
+ * iris_arbiter_coordinate() for how to use the Coordination Arbiter.
+ * It provides a feature similar to a ReaderWriter lock using an
+ * asynchronous model.
+ */
+
+G_DEFINE_TYPE (IrisReceiver, iris_receiver, G_TYPE_OBJECT)
 
 typedef struct
 {
@@ -150,10 +168,10 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 			status = IRIS_DELIVERY_REMOVE;
 			break;
 		default:
-			g_assert_not_reached ();
+			g_warn_if_reached ();
+			break;
 		}
 	}
-	else g_assert_not_reached ();
 
 	g_static_rec_mutex_unlock (&priv->mutex);
 

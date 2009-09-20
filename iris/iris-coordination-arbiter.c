@@ -19,6 +19,7 @@
  */
 
 #include "iris-arbiter.h"
+#include "iris-arbiter-private.h"
 #include "iris-coordination-arbiter.h"
 #include "iris-coordination-arbiter-private.h"
 #include "iris-port.h"
@@ -545,7 +546,7 @@ receive_completed (IrisArbiter  *arbiter,
 			}
 		}
 		else {
-			g_assert_not_reached ();
+			g_warn_if_reached ();
 		}
 	}
 
@@ -571,7 +572,7 @@ iris_coordination_arbiter_class_init (IrisCoordinationArbiterClass *klass)
 	arbiter_class->receive_completed = receive_completed;
 	object_class->finalize = iris_coordination_arbiter_finalize;
 
-	g_type_class_add_private (object_class, sizeof(IrisCoordinationArbiterPrivate));
+	g_type_class_add_private (object_class, sizeof (IrisCoordinationArbiterPrivate));
 }
 
 static void
@@ -612,6 +613,29 @@ iris_coordination_arbiter_new (IrisReceiver *exclusive,
 	return IRIS_ARBITER (arbiter);
 }
 
+/**
+ * iris_arbiter_coordinate:
+ * @exclusive: An #IrisReceiver
+ * @concurrent: An #IrisReceiver
+ * @teardown: An #IrisReceiver
+ *
+ * Coordinates messages incoming to the receivers.  This is used to guarantee
+ * semantics for the receivers.
+ *
+ * Any message received on the @exclusive receiver is guaranteed to be the
+ * only message received at a time.  No other exclusive, concurrent, or
+ * teardown messages will be running.
+ *
+ * Messages received on the @concurrent receiver can be received concurrently
+ * meaning more than one message is allowed to be received at a time.
+ *
+ * Only one message can be recieved on @teardown ever.  After a message has
+ * been received on @teardown, no further messages will ever be received
+ * on any receivers.
+ *
+ * Return value: An new #IrisArbiter that will arbitrate messages incoming
+ *   to the passed receivers.
+ */
 IrisArbiter*
 iris_arbiter_coordinate (IrisReceiver *exclusive,
                          IrisReceiver *concurrent,

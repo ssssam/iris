@@ -23,6 +23,7 @@
 
 #include <glib-object.h>
 
+#include "iris-gmainscheduler.h"
 #include "iris-task.h"
 #include "iris-port.h"
 #include "iris-receiver.h"

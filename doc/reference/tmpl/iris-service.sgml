@@ -53,15 +53,6 @@ IrisService
 @service: 
 
 
-<!-- ##### FUNCTION iris_service_stat ##### -->
-<para>
-
-</para>
-
-@service: 
-@Returns: 
-
-
 <!-- ##### FUNCTION iris_service_send_exclusive ##### -->
 <para>
 
@@ -78,15 +69,6 @@ IrisService
 
 @service: 
 @message: 
-
-
-<!-- ##### FUNCTION iris_service_set_scheduler ##### -->
-<para>
-
-</para>
-
-@service: 
-@scheduler: 
 
 
 <!-- ##### FUNCTION iris_service_is_started ##### -->

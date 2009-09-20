@@ -32,11 +32,18 @@
  *
  * #IrisWSScheduler is a work-stealing scheduler implementation for iris.  It
  * uses an #IrisWSQueue per thread for storing work items yielded from the
- * the worker thread itself.  Since this can be done lock-less in most
- * situations, it should help when workloads create many recursive tasks.
+ * the worker thread itself.  Since this can be done lock-less in some
+ * situations, it helps when workloads create many recursive tasks.
  *
  * A global queue is used for work items generated from outside the schedulers
- * set of threads.
+ * set of threads.  If a new work-item is created from the schedulers thread,
+ * it will be put into a private queue for the running thread.
+ *
+ * To prevent thread-starvation, if a thread runs out of work items it will
+ * try to steal work from other threads.
+ *
+ * The #IrisWSScheduler has not yet been proven for correctness.  Until
+ * that happens you should test your work-loads appropriately.
  */
 
 struct _IrisWSSchedulerPrivate
@@ -58,7 +65,7 @@ struct _IrisWSSchedulerPrivate
 	gboolean     has_leader;   /* Is there a leader thread */
 };
 
-G_DEFINE_TYPE (IrisWSScheduler, iris_wsscheduler, IRIS_TYPE_SCHEDULER);
+G_DEFINE_TYPE (IrisWSScheduler, iris_wsscheduler, IRIS_TYPE_SCHEDULER)
 
 static void
 iris_wsscheduler_queue_real (IrisScheduler  *scheduler,
@@ -190,12 +197,29 @@ iris_wsscheduler_init (IrisWSScheduler *scheduler)
 	scheduler->priv->rrobin = iris_rrobin_new (max_threads);
 }
 
+/**
+ * iris_wsscheduler_new:
+ *
+ * Creates a new instance of the work-stealing scheduler.
+ *
+ * Return value: the newly created #IrisWSScheduler.
+ */
 IrisScheduler*
 iris_wsscheduler_new (void)
 {
 	return g_object_new (IRIS_TYPE_WSSCHEDULER, NULL);
 }
 
+/**
+ * iris_wsscheduler_new_full:
+ * @min_threads: a #guint containing the minimum number of threads
+ * @max_threads: a #guint containing the maximum number of threads
+ *
+ * Creates a new instance of the work-stealing scheduler with a specified
+ * range of active threads.
+ *
+ * Return value: the newly created #IrisWSScheduler.
+ */
 IrisScheduler*
 iris_wsscheduler_new_full (guint min_threads,
                            guint max_threads)

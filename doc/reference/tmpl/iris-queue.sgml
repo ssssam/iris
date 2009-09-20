@@ -41,7 +41,6 @@ IrisQueue
 
 </para>
 
-@vtable: 
 
 <!-- ##### FUNCTION iris_queue_get_type ##### -->
 <para>

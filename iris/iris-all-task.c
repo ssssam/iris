@@ -21,6 +21,15 @@
 #include "iris-task.h"
 #include "iris-task-private.h"
 
+/**
+ * iris_task_vall_of:
+ * @first_task: An #IrisTask
+ *
+ * Creates a new task that will complete when each of the passed
+ * #IrisTask<!-- -->'s complete.
+ *
+ * Return value: the newly created #IrisTask instance.
+ */
 IrisTask*
 iris_task_vall_of (IrisTask *first_task, ...)
 {
@@ -46,6 +55,15 @@ iris_task_vall_of (IrisTask *first_task, ...)
 	return task;
 }
 
+/**
+ * iris_task_all_of:
+ * @first_task: An #IrisTask
+ *
+ * Creates a new task that will complete when each of the passed
+ * #IrisTask<!-- -->'s complete.
+ *
+ * Return value: the newly created #IrisTask instance.
+ */
 IrisTask*
 iris_task_all_of (GList *tasks)
 {

@@ -23,11 +23,12 @@
 
 #include <glib-object.h>
 
-#include "iris-types.h"
-
 G_BEGIN_DECLS
 
 #define IRIS_TYPE_MESSAGE (iris_message_get_type())
+
+typedef struct _IrisMessage IrisMessage;
+typedef void (*IrisMessageHandler) (IrisMessage *message, gpointer data);
 
 struct _IrisMessage
 {
@@ -94,10 +95,6 @@ void                   iris_message_set_pointer    (IrisMessage *message, const 
 
 GObject*               iris_message_get_object     (IrisMessage *message, const gchar *name);
 void                   iris_message_set_object     (IrisMessage *message, const gchar *name, GObject *object);
-
-gsize                  iris_message_flattened_size (IrisMessage *message);
-gboolean               iris_message_flatten        (IrisMessage *message, gchar **buffer, gsize *length);
-gboolean               iris_message_unflatten      (IrisMessage *message, gchar  *buffer, gsize  length);
 
 G_END_DECLS
 

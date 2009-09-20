@@ -21,8 +21,6 @@
 #ifndef __IRIS_SCHEDULER_MANAGER_PRIVATE_H__
 #define __IRIS_SCHEDULER_MANAGER_PRIVATE_H__
 
-#include "iris-types.h"
-
 G_BEGIN_DECLS
 
 void iris_scheduler_manager_yield   (IrisThread *thread);

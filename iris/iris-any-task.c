@@ -102,6 +102,15 @@ iris_any_task_init (IrisAnyTask *task)
 {
 }
 
+/**
+ * iris_task_any_of:
+ * @tasks: A #GList of #IrisTask<!-- -->'s
+ *
+ * Creates a new task that will not complete until any one of the
+ * #IrisTask<!-- -->'s completes.
+ *
+ * Return value: the newly created #IrisTask instance.
+ */
 IrisTask*
 iris_task_any_of (GList *tasks)
 {
@@ -115,6 +124,15 @@ iris_task_any_of (GList *tasks)
 	return task;
 }
 
+/**
+ * iris_task_vany_of:
+ * @first_task: An #IrisTask
+ *
+ * Creates a new task that will complete when one of the passed #IrisTask
+ * instances completes.
+ *
+ * Return value: An #IrisTask
+ */
 IrisTask*
 iris_task_vany_of (IrisTask *first_task, ...)
 {

@@ -25,6 +25,7 @@
 #include <gio/gio.h>
 
 #include "iris-message.h"
+#include "iris-scheduler.h"
 
 G_BEGIN_DECLS
 
@@ -54,17 +55,43 @@ G_BEGIN_DECLS
         (G_TYPE_INSTANCE_GET_CLASS ((obj), \
          IRIS_TYPE_TASK, IrisTaskClass))
 
+/**
+ * IRIS_TASK_THROW_NEW:
+ * @t: An #IrisTask
+ * @q: A #GQuark
+ * @c: a #gint containing the error code
+ * @f: the error format string
+ * @...: parameters for format
+ *
+ * Creates a new #GError and attaches it to the task.
+ */
 #define IRIS_TASK_THROW_NEW(t,q,c,f,...)                                    \
         G_STMT_START {                                                      \
                 GError *_iris_task_error = g_error_new(q,c,f,##__VA_ARGS__);\
                 iris_task_take_error (t,_iris_task_error);                  \
         } G_STMT_END
 
+/**
+ * IRIS_TASK_THROW:
+ * @t: An #IrisTask
+ * @e: A #GError
+ *
+ * Steals ownership of @e and attaches the #GError to the task.
+ */
 #define IRIS_TASK_THROW(t,e)                                                \
         G_STMT_START {                                                      \
                 iris_task_take_error(t,e);                                  \
         } G_STMT_END
 
+/**
+ * IRIS_TASK_CATCH:
+ * @t: An #IrisTask
+ * @e: a location for a #GError or %NULL
+ *
+ * Catches the currently set error on the task and stores it into @e.
+ * The ownership of @e is that of the caller so it should be freed
+ * with g_error_free() if non-%NULL.
+ */
 #define IRIS_TASK_CATCH(t,e)                                                \
         G_STMT_START {                                                      \
                 if (e)                                                      \
@@ -72,14 +99,48 @@ G_BEGIN_DECLS
                 iris_task_set_error (t,NULL);                               \
         } G_STMT_END
 
+/**
+ * IRIS_TASK_RETURN_VALUE:
+ * @t: An #IrisTask
+ * @gt: A #GType
+ * @v: the value to store
+ *
+ * This macro simplifies how you can store the current result for the task.
+ * It can transparently store the value of @v no matter the type as long as
+ * your GType is accurate.
+ *
+ * For example, to store an int you could
+ *
+ * |[
+ * gint myint = 0;
+ * IRIS_TASK_RETURN_VALUE (t, G_TYPE_INT, myint);
+ * ]|
+ */
 #define IRIS_TASK_RETURN_VALUE(t,gt,v)                                      \
         iris_task_set_result_gtype(t,gt,v)
 
+/**
+ * IRIS_TASK_RETURN_TASK:
+ * @t: An #IrisTask
+ * @t2: An #IrisTask
+ *
+ * Sets the result of a task to another task.  This will prevent the task from
+ * any further work in the callback/errback phase until @t2 has completed.
+ */
 #define IRIS_TASK_RETURN_TASK(t,t2)                                         \
         G_STMT_START {                                                      \
                 iris_task_add_dependency(t,t2);                             \
         } G_STMT_END
 
+/**
+ * IRIS_TASK_RETURN_TASK_NEW:
+ * @t: An #IrisTask
+ * @f: An #IrisTaskFunc
+ * @p: user data for the newly created #IrisTask
+ * @n: A #GDestroyNotify to be called when the new task is destroyed
+ *
+ * Helper macro to create and return a new task as the result in one step.
+ */
 #define IRIS_TASK_RETURN_TASK_NEW(t,f,p,n)                                  \
         G_STMT_START {                                                      \
                 IrisTask *t2 = iris_task_new_with_func(f,p,n);              \
@@ -91,6 +152,14 @@ typedef struct _IrisTask        IrisTask;
 typedef struct _IrisTaskClass   IrisTaskClass;
 typedef struct _IrisTaskPrivate IrisTaskPrivate;
 
+/**
+ * IrisTaskFunc:
+ * @task: An #IrisTask
+ * @user_data: user specified data
+ *
+ * Callback for tasks, callbacks, and errbacks.
+ * See iris_task_add_callback(), iris_task_add_errback().
+ */
 typedef void (*IrisTaskFunc) (IrisTask *task, gpointer user_data);
 
 struct _IrisTask

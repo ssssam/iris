@@ -22,7 +22,16 @@
 
 #include "iris-debug.h"
 #include "iris-scheduler-manager.h"
-#include "iris-thread.h"
+
+/**
+ * SECTION:iris-scheduler-manager
+ * @title: IrisSchedulerManager
+ * @short_description: scheduler management
+ *
+ * The scheduler manager helps provide dynamic thread-management for
+ * schedulers.  It also has some helpers for debugging complex threading
+ * scenarios.
+ */
 
 #define THREAD_KEY ("__iris_threads")
 
@@ -81,16 +90,8 @@ get_or_create_thread_unlocked (gboolean exclusive)
 	}
 
 	if (!thread) {
-		thread = iris_thread_new (exclusive);
-
-		/* FIXME: Add proper error handling. It's probably possible
-		 *        that the system could deny creating us a new thread
-		 *        at some point. I don't know what the limit is
-		 *        currently on some architectures and os versions.
-		 */
-		g_assert (thread != NULL);
-		g_assert (thread->thread != NULL);
-
+		if (!(thread = iris_thread_new (exclusive)))
+			return NULL;
 		singleton->all_list = g_list_prepend (singleton->all_list, thread);
 	}
 
@@ -131,17 +132,22 @@ iris_scheduler_manager_prepare (IrisScheduler *scheduler)
 	if (G_UNLIKELY (!singleton))
 		iris_scheduler_manager_init ();
 
-	min_threads = iris_scheduler_get_min_threads (scheduler);
-	g_assert (min_threads > 0);
+	if ((min_threads = iris_scheduler_get_min_threads (scheduler)) <= 0) {
+		g_warn_if_reached ();
+		return;
+	}
 
 	max_threads = iris_scheduler_get_max_threads (scheduler);
-	g_assert ((max_threads >= min_threads) || max_threads == 0);
+
+	if (max_threads < min_threads && max_threads != 0) {
+		g_warn_if_reached ();
+		return;
+	}
 
 	G_LOCK (singleton);
 
 	for (i = 0; i < min_threads; i++) {
 		thread = get_or_create_thread_unlocked (TRUE);
-		g_assert (thread != NULL);
 
 		/* Add proper error handling */
 		g_return_if_fail (thread != NULL);

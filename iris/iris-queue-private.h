@@ -1,4 +1,4 @@
-/* iris-lfqueue.h
+/* iris-queue-private.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -18,35 +18,25 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_LFQUEUE_H__
-#define __IRIS_LFQUEUE_H__
-
-#include <glib-object.h>
-
-#include "iris-free-list.h"
-#include "iris-link.h"
-#include "iris-queue.h"
+#ifndef __IRIS_QUEUE_PRIVATE_H__
+#define __IRIS_QUEUE_PRIVATE_H__
 
 G_BEGIN_DECLS
 
-#define IRIS_TYPE_LFQUEUE (iris_lfqueue_get_type())
+#define VTABLE(q) ((IrisQueueVTable*)(q->vtable))
 
-typedef struct _IrisLFQueue IrisLFQueue;
+typedef struct _IrisQueueVTable IrisQueueVTable;
 
-struct _IrisLFQueue
+struct _IrisQueueVTable
 {
-	IrisQueue     parent;
-
-	/*< private >*/
-	IrisLink     *head;
-	IrisLink     *tail;
-	IrisFreeList *free_list;
-	guint         length;
+	void     (*push)      (IrisQueue *queue, gpointer data);
+	gpointer (*pop)       (IrisQueue *queue);
+	gpointer (*try_pop)   (IrisQueue *queue);
+	gpointer (*timed_pop) (IrisQueue *queue, GTimeVal *timeout);
+	guint    (*length)    (IrisQueue *queue);
+	void     (*dispose)   (IrisQueue *queue);
 };
-
-GType      iris_lfqueue_get_type (void) G_GNUC_CONST;
-IrisQueue* iris_lfqueue_new      (void);
 
 G_END_DECLS
 
-#endif /* __IRIS_LFQUEUE_H__ */
+#endif /* __IRIS_QUEUE_PRIVATE_H__ */

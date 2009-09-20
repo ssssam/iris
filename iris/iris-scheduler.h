@@ -23,12 +23,12 @@
 
 #include <glib-object.h>
 
-#include "iris-types.h"
-#include "iris-thread.h"
+#include "iris-queue.h"
 
 G_BEGIN_DECLS
 
 #define IRIS_TYPE_SCHEDULER (iris_scheduler_get_type ())
+#define IRIS_TYPE_THREAD    (iris_thread_get_type())
 
 #define IRIS_SCHEDULER(obj)                  \
     (G_TYPE_CHECK_INSTANCE_CAST ((obj),      \
@@ -53,6 +53,13 @@ G_BEGIN_DECLS
 #define IRIS_SCHEDULER_GET_CLASS(obj)        \
     (G_TYPE_INSTANCE_GET_CLASS ((obj),       \
      IRIS_TYPE_SCHEDULER, IrisSchedulerClass))
+
+typedef struct _IrisScheduler        IrisScheduler;
+typedef struct _IrisSchedulerClass   IrisSchedulerClass;
+typedef struct _IrisSchedulerPrivate IrisSchedulerPrivate;
+typedef struct _IrisThread           IrisThread;
+typedef struct _IrisThreadWork       IrisThreadWork;
+typedef void   (*IrisCallback)       (gpointer data);
 
 struct _IrisScheduler
 {
@@ -81,25 +88,59 @@ struct _IrisSchedulerClass
 	                          IrisThread     *thread);
 };
 
-GType          iris_scheduler_get_type        (void) G_GNUC_CONST;
+struct _IrisThread
+{
+	gpointer       user_data;
+	gpointer       user_data2;
+	gpointer       user_data3;
 
-IrisScheduler* iris_scheduler_new             (void);
-IrisScheduler* iris_scheduler_new_full        (guint           min_threads,
+	/*< private >*/
+	IrisScheduler *scheduler;  /* Pointer to scheduler       */
+	GThread       *thread;     /* Handle to the thread       */
+	GAsyncQueue   *queue;      /* Command queue              */
+	gboolean       exclusive;  /* Can the thread be removed  *
+	                            * from an active scheduler   */
+	GMutex        *mutex;      /* Mutex for changing thread  *
+	                            * state. e.g. active queue.  */
+	IrisQueue     *active;     /* Active processing queue    */
+};
+
+struct _IrisThreadWork
+{
+	IrisCallback callback;
+	gpointer     data;
+	gboolean     taken;
+};
+
+GType           iris_thread_get_type           (void) G_GNUC_CONST;
+GType           iris_scheduler_get_type        (void) G_GNUC_CONST;
+
+IrisScheduler*  iris_scheduler_new             (void);
+IrisScheduler*  iris_scheduler_new_full        (guint           min_threads,
                                                guint           max_threads);
-IrisScheduler* iris_scheduler_default         (void);
-void           iris_scheduler_set_default     (IrisScheduler *scheduler);
+IrisScheduler*  iris_scheduler_default         (void);
+void            iris_scheduler_set_default     (IrisScheduler *scheduler);
 
-gint           iris_scheduler_get_min_threads (IrisScheduler  *scheduler);
-gint           iris_scheduler_get_max_threads (IrisScheduler  *scheduler);
-void           iris_scheduler_queue           (IrisScheduler  *scheduler,
-                                               IrisCallback    func,
-                                               gpointer        data,
-                                               GDestroyNotify  notify);
+gint            iris_scheduler_get_min_threads (IrisScheduler  *scheduler);
+gint            iris_scheduler_get_max_threads (IrisScheduler  *scheduler);
+void            iris_scheduler_queue           (IrisScheduler  *scheduler,
+                                                IrisCallback    func,
+                                                gpointer        data,
+                                                GDestroyNotify  notify);
 
-void           iris_scheduler_add_thread      (IrisScheduler  *scheduler,
-                                               IrisThread     *thread);
-void           iris_scheduler_remove_thread   (IrisScheduler  *scheduler,
-                                               IrisThread     *thread);
+void            iris_scheduler_add_thread      (IrisScheduler  *scheduler,
+                                                IrisThread     *thread);
+void            iris_scheduler_remove_thread   (IrisScheduler  *scheduler,
+                                                IrisThread     *thread);
+
+IrisThread*     iris_thread_new                (gboolean exclusive);
+IrisThread*     iris_thread_get                (void);
+void            iris_thread_manage             (IrisThread *thread, IrisQueue *queue, gboolean leader);
+void            iris_thread_shutdown           (IrisThread *thread);
+void            iris_thread_print_stat         (IrisThread *thread);
+IrisThreadWork* iris_thread_work_new           (IrisCallback callback, gpointer data);
+void            iris_thread_work_free          (IrisThreadWork *thread_work);
+void            iris_thread_work_run           (IrisThreadWork *thread_work);
 
 G_END_DECLS
 

@@ -23,7 +23,6 @@
 
 #include <glib-object.h>
 
-#include "iris-types.h"
 #include "iris-free-list.h"
 #include "iris-link.h"
 
@@ -31,21 +30,12 @@ G_BEGIN_DECLS
 
 #define IRIS_TYPE_QUEUE (iris_queue_get_type())
 
-struct _IrisQueueVTable
-{
-	void     (*push)      (IrisQueue *queue, gpointer data);
-	gpointer (*pop)       (IrisQueue *queue);
-	gpointer (*try_pop)   (IrisQueue *queue);
-	gpointer (*timed_pop) (IrisQueue *queue, GTimeVal *timeout);
-	guint    (*length)    (IrisQueue *queue);
-	void     (*dispose)   (IrisQueue *queue);
-};
+typedef struct _IrisQueue IrisQueue;
 
 struct _IrisQueue
 {
-	IrisQueueVTable *vtable;
-
 	/*< private >*/
+	gpointer         vtable;
 	volatile gint    ref_count;
 	GAsyncQueue     *impl_queue;
 };

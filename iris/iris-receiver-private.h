@@ -23,9 +23,31 @@
 
 #include "iris-arbiter.h"
 #include "iris-receiver.h"
-#include "iris-types.h"
 
 G_BEGIN_DECLS
+
+#define IRIS_RECEIVER_CLASS(klass)          \
+    (G_TYPE_CHECK_CLASS_CAST ((klass),      \
+     IRIS_TYPE_RECEIVER, IrisReceiverClass))
+
+#define IRIS_IS_RECEIVER_CLASS(klass)       \
+    (G_TYPE_CHECK_CLASS_TYPE ((klass),      \
+     IRIS_TYPE_RECEIVER))
+
+#define IRIS_RECEIVER_GET_CLASS(obj)        \
+    (G_TYPE_INSTANCE_GET_CLASS ((obj),      \
+     IRIS_TYPE_RECEIVER, IrisReceiverClass))
+
+#define IRIS_TYPE_DELIVERY_STATUS (iris_delivery_status_get_type())
+
+typedef enum
+{
+	IRIS_DELIVERY_ACCEPTED          = 1,
+	IRIS_DELIVERY_ACCEPTED_PAUSE    = 2,
+	IRIS_DELIVERY_ACCEPTED_REMOVE   = 3,
+	IRIS_DELIVERY_PAUSE             = 4,
+	IRIS_DELIVERY_REMOVE            = 5
+} IrisDeliveryStatus;
 
 struct _IrisReceiverPrivate
 {
@@ -84,9 +106,20 @@ struct _IrisReceiverPrivate
 	                            */
 };
 
+struct _IrisReceiverClass
+{
+	GObjectClass parent_class;
 
-gboolean iris_receiver_has_scheduler (IrisReceiver *receiver);
-gboolean iris_receiver_has_arbiter   (IrisReceiver *receiver);
+	IrisDeliveryStatus (*deliver) (IrisReceiver *receiver,
+	                               IrisMessage  *message);
+};
+
+GType              iris_delivery_status_get_type (void) G_GNUC_CONST;
+gboolean           iris_receiver_has_scheduler   (IrisReceiver *receiver);
+gboolean           iris_receiver_has_arbiter     (IrisReceiver *receiver);
+IrisDeliveryStatus iris_receiver_deliver         (IrisReceiver  *receiver,
+                                                  IrisMessage   *message);
+void               iris_receiver_resume          (IrisReceiver  *receiver);
 
 G_END_DECLS
 

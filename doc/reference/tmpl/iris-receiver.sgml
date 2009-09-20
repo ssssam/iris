@@ -49,21 +49,3 @@ IrisReceiver
 @scheduler: 
 
 
-<!-- ##### FUNCTION iris_receiver_deliver ##### -->
-<para>
-
-</para>
-
-@receiver: 
-@message: 
-@Returns: 
-
-
-<!-- ##### FUNCTION iris_receiver_resume ##### -->
-<para>
-
-</para>
-
-@receiver: 
-
-

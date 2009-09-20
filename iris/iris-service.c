@@ -24,7 +24,24 @@
 #include "iris-service.h"
 #include "iris-service-private.h"
 
-G_DEFINE_ABSTRACT_TYPE (IrisService, iris_service, G_TYPE_OBJECT);
+/**
+ * SECTION:iris-service
+ * @title: IrisService
+ * @short_description: Writing concurrent services
+ *
+ * #IrisService is a class to help design concurrent services.  Most
+ * services tend to be in one of a couple of states.  Either it can
+ * work on requests concurrently, or a state change meaning no concurrency,
+ * or the service is no-longer valid.  Because of this, #IrisService
+ * reflects this concept and provides a starting point for writing a
+ * new service.
+ *
+ * By creating a new class with the proper overrides for handling
+ * messages, you can let IrisService handle the scaling up and down
+ * of message handling.
+ */
+
+G_DEFINE_ABSTRACT_TYPE (IrisService, iris_service, G_TYPE_OBJECT)
 
 static void
 iris_service_exclusive_message_handler (IrisMessage *message,
@@ -85,10 +102,12 @@ iris_service_handle_start_real (IrisService *service)
 			service,
 			NULL));
 
+#if 0
 	g_assert (priv->arbiter);
 	g_assert (priv->exclusive_receiver);
 	g_assert (priv->concurrent_receiver);
 	g_assert (priv->teardown_receiver);
+#endif
 
 	priv->started = TRUE;
 }
@@ -187,13 +206,9 @@ iris_service_is_started (IrisService *service)
 void
 iris_service_start (IrisService *service)
 {
-	IrisServicePrivate *priv;
-
 	g_return_if_fail (IRIS_IS_SERVICE (service));
 
-	priv = service->priv;
-
-	if (priv->started)
+	if (service->priv->started)
 		return;
 
 	IRIS_SERVICE_GET_CLASS (service)->handle_start (service);
@@ -265,12 +280,4 @@ iris_service_send_concurrent (IrisService *service,
 	priv = service->priv;
 
 	iris_port_post (priv->concurrent_port, message);
-}
-
-void
-iris_service_set_scheduler (IrisService   *service,
-                            IrisScheduler *scheduler)
-{
-	/* Not implemented yet */
-	g_assert_not_reached ();
 }

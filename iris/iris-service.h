@@ -62,10 +62,8 @@ struct _IrisServiceClass
 GType        iris_service_get_type        (void) G_GNUC_CONST;
 void         iris_service_start           (IrisService *service);
 void         iris_service_stop            (IrisService *service);
-IrisMessage* iris_service_stat            (IrisService *service);
 void         iris_service_send_exclusive  (IrisService *service, IrisMessage *message);
 void         iris_service_send_concurrent (IrisService *service, IrisMessage *message);
-void         iris_service_set_scheduler   (IrisService *service, IrisScheduler *scheduler);
 gboolean     iris_service_is_started      (IrisService *service);
 
 G_END_DECLS

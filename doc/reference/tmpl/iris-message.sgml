@@ -382,34 +382,3 @@ IrisMessage
 @value: 
 
 
-<!-- ##### FUNCTION iris_message_flattened_size ##### -->
-<para>
-
-</para>
-
-@message: 
-@Returns: 
-
-
-<!-- ##### FUNCTION iris_message_flatten ##### -->
-<para>
-
-</para>
-
-@message: 
-@buffer: 
-@length: 
-@Returns: 
-
-
-<!-- ##### FUNCTION iris_message_unflatten ##### -->
-<para>
-
-</para>
-
-@message: 
-@buffer: 
-@length: 
-@Returns: 
-
-

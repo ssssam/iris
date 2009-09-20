@@ -21,6 +21,8 @@
 #ifndef __IRIS_SCHEDULER_PRIVATE_H__
 #define __IRIS_SCHEDULER_PRIVATE_H__
 
+#include "iris-rrobin.h"
+
 G_BEGIN_DECLS
 
 struct _IrisSchedulerPrivate

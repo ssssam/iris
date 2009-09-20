@@ -17,23 +17,3 @@ IrisCoordinationArbiter
 <!-- ##### SECTION Stability_Level ##### -->
 
 
-<!-- ##### MACRO IRIS_COORDINATION_ARBITER_CONST ##### -->
-<para>
-
-</para>
-
-@obj: 
-
-
-<!-- ##### STRUCT IrisCoordinationArbiterPrivate ##### -->
-<para>
-
-</para>
-
-
-<!-- ##### STRUCT IrisCoordinationArbiter ##### -->
-<para>
-
-</para>
-
-

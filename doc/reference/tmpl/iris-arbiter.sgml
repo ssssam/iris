@@ -17,37 +17,10 @@ IrisArbiter
 <!-- ##### SECTION Stability_Level ##### -->
 
 
-<!-- ##### MACRO IRIS_ARBITER_CONST ##### -->
-<para>
-
-</para>
-
-@obj: 
-
-
 <!-- ##### STRUCT IrisArbiter ##### -->
 <para>
 
 </para>
-
-
-<!-- ##### FUNCTION iris_arbiter_can_receive ##### -->
-<para>
-
-</para>
-
-@arbiter: 
-@receiver: 
-@Returns: 
-
-
-<!-- ##### FUNCTION iris_arbiter_receive_completed ##### -->
-<para>
-
-</para>
-
-@arbiter: 
-@receiver: 
 
 
 <!-- ##### FUNCTION iris_arbiter_receive ##### -->

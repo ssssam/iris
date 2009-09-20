@@ -31,17 +31,8 @@
  * @short_description: A lock-free scheduler
  *
  * #IrisLFScheduler is a lock-free scheduler implementation.  Don't be fooled,
- * lock-free is not always better for all work-loads.  For very generic work
- * loads that have work-items of various lifetimes, you probably want
- * #IrisLFScheduler.  However, if you know your work items are typically very
- * short lived, #IrisLFScheduler might be what you want.  It's very fast at
- * handling work items created from within scheduler threads.
- *
- * The downside, is that each thread has its own queue and incoming work
- * items are round-robined into those queues.  Meaning if one queue gets
- * much more work than the others that thread is responsible for completing
- * those work items itself.  So your trade-off is less-contention vs
- * thread responsibility for itself.  Some work-loads prefer this.
+ * lock-free is rarely the right choice.  This scheduler will cause your system
+ * to spin cpu's while trying to perform a work-load as fast as possible.
  */
 
 struct _IrisLFSchedulerPrivate
@@ -53,7 +44,7 @@ struct _IrisLFSchedulerPrivate
 	gboolean     has_leader;   /* Is there a leader thread */
 };
 
-G_DEFINE_TYPE (IrisLFScheduler, iris_lfscheduler, IRIS_TYPE_SCHEDULER);
+G_DEFINE_TYPE (IrisLFScheduler, iris_lfscheduler, IRIS_TYPE_SCHEDULER)
 
 static void
 iris_lfscheduler_queue_real_cb (gpointer data,
@@ -198,12 +189,28 @@ iris_lfscheduler_init (IrisLFScheduler *scheduler)
 	scheduler->priv->rrobin = iris_rrobin_new (max_threads);
 }
 
+/**
+ * iris_lfscheduler_new:
+ *
+ * Creates a new instance of #IrisLFScheduler.
+ *
+ * Return value: the newly created #IrisLFScheduler instance.
+ */
 IrisScheduler*
 iris_lfscheduler_new (void)
 {
 	return g_object_new (IRIS_TYPE_LFSCHEDULER, NULL);
 }
 
+/**
+ * iris_lfscheduler_new_full:
+ * @min_threads: A #guint containing the minimum number of threads
+ * @max_threads: A #guint containing the maximum number of threads
+ *
+ * Creates a new instance of #IrisLFScheduler.
+ *
+ * Return value: the newly created #IrisLFScheduler instance.
+ */
 IrisScheduler*
 iris_lfscheduler_new_full (guint min_threads,
                            guint max_threads)

@@ -23,7 +23,13 @@
 
 /**
  * SECTION:iris-rrobin
+ * @title: IrisRRobin
  * @short_description: A lock-free round-robin data structure
+ *
+ * #IrisRRobin is a structure used for implementing round-robin semantics.
+ * To use it, call iris_rrobin_append() including the data for each slot
+ * in your round-robin.  After that, you may use iris_rrobin_apply() to
+ * perform a callback using the next data-slot.
  */
 
 static void iris_rrobin_free (IrisRRobin *rrobin);

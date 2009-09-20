@@ -34,10 +34,6 @@
 #include "iris-scheduler-private.h"
 #include "iris-scheduler-manager.h"
 
-G_LOCK_DEFINE (default_scheduler);
-
-static IrisScheduler *default_scheduler = NULL;
-
 /**
  * SECTION:iris-scheduler
  * @short_description: A generic, extendable scheduler for work items
@@ -46,6 +42,9 @@ static IrisScheduler *default_scheduler = NULL;
  * work items onto active threads.  The default scheduler is sufficient
  * for most purposes.  However, if you need custom scheduling with
  * different queuing decisions you can create your own.
+ *
+ * The default scheduler will have a thread per-core with a minimum
+ * of 2 threads.
  *
  * By default, a scheduler will be given "min-threads" threads during
  * startup.  If a "leader" thread, (typically the first thread added)
@@ -56,7 +55,11 @@ static IrisScheduler *default_scheduler = NULL;
  * the manager will try to appropriate a sufficient number of threads.
  */
 
-G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT);
+G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT)
+
+G_LOCK_DEFINE (default_scheduler);
+
+static IrisScheduler *default_scheduler = NULL;
 
 static void
 iris_scheduler_queue_rrobin_cb (gpointer data,
@@ -219,9 +222,7 @@ iris_scheduler_init (IrisScheduler *scheduler)
 	scheduler->priv->min_threads = 0;
 	scheduler->priv->max_threads = 0;
 	scheduler->priv->mutex = g_mutex_new ();
-
 	scheduler->priv->queue = g_async_queue_new ();
-	g_assert (scheduler->priv->queue);
 }
 
 /**
@@ -259,15 +260,24 @@ iris_scheduler_new_full (guint min_threads,
 	return scheduler;
 }
 
+/**
+ * iris_scheduler_set_default:
+ * @scheduler: An #IrisScheduler
+ *
+ * Allows the caller to set the default scheduler for the process.
+ */
 void
 iris_scheduler_set_default (IrisScheduler *scheduler)
 {
 	iris_debug (IRIS_DEBUG_SCHEDULER);
 
+	g_return_if_fail (scheduler != NULL);
+
 	G_LOCK (default_scheduler);
+	scheduler = g_object_ref (scheduler);
 	if (default_scheduler)
 		g_object_unref (default_scheduler);
-	g_atomic_pointer_set (&default_scheduler, g_object_ref (scheduler));
+	g_atomic_pointer_set (&default_scheduler, scheduler);
 	G_UNLOCK (default_scheduler);
 }
 

@@ -19,11 +19,13 @@
  */
 
 #include "iris-queue.h"
+#include "iris-queue-private.h"
 #include "gstamppointer.h"
 
 /**
  * SECTION:iris-queue
- * @short_description: A concurrent queue.
+ * @title: IrisQueue
+ * @short_description: A concurrent queue
  *
  * #IrisQueue is a queue abstraction for concurrent queues.  The default
  * implementation wraps #GAsyncQueue which is a lock-based queue.
@@ -83,8 +85,8 @@ static IrisQueueVTable queue_vtable = {
 static void
 iris_queue_dispose (IrisQueue *queue)
 {
-	if (G_LIKELY (queue->vtable->dispose))
-		queue->vtable->dispose (queue);
+	if (G_LIKELY (VTABLE (queue)->dispose))
+		VTABLE (queue)->dispose (queue);
 }
 
 /**
@@ -160,7 +162,7 @@ iris_queue_push (IrisQueue *queue,
                  gpointer   data)
 {
 	g_return_if_fail (queue != NULL);
-	queue->vtable->push (queue, data);
+	VTABLE (queue)->push (queue, data);
 }
 
 /**
@@ -176,7 +178,7 @@ gpointer
 iris_queue_pop (IrisQueue *queue)
 {
 	g_return_val_if_fail (queue != NULL, NULL);
-	return queue->vtable->pop (queue);
+	return VTABLE (queue)->pop (queue);
 }
 
 /**
@@ -192,7 +194,7 @@ gpointer
 iris_queue_try_pop (IrisQueue *queue)
 {
 	g_return_val_if_fail (queue != NULL, NULL);
-	return queue->vtable->try_pop (queue);
+	return VTABLE (queue)->try_pop (queue);
 }
 
 /**
@@ -210,7 +212,7 @@ iris_queue_timed_pop (IrisQueue *queue,
                       GTimeVal  *timeout)
 {
 	g_return_val_if_fail (queue != NULL, NULL);
-	return queue->vtable->timed_pop (queue, timeout);
+	return VTABLE (queue)->timed_pop (queue, timeout);
 }
 
 /**
@@ -231,7 +233,7 @@ guint
 iris_queue_length (IrisQueue *queue)
 {
 	g_return_val_if_fail (queue != NULL, 0);
-	return queue->vtable->length (queue);
+	return VTABLE (queue)->length (queue);
 }
 
 GType

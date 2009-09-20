@@ -3,6 +3,7 @@
 
 #include <glib-object.h>
 #include <iris/iris-receiver.h>
+#include <iris/iris-receiver-private.h>
 
 G_BEGIN_DECLS
 
