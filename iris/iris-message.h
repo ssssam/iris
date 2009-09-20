@@ -39,65 +39,65 @@ struct _IrisMessage
 	GHashTable     *items;
 };
 
-GType        iris_message_get_type       (void);
+GType                  iris_message_get_type       (void);
 
-IrisMessage* iris_message_new            (gint what);
-IrisMessage* iris_message_new_data       (gint what, GType type, ...);
-IrisMessage* iris_message_new_full       (gint what, const gchar *first_name, ...);
+IrisMessage*           iris_message_new            (gint what);
+IrisMessage*           iris_message_new_data       (gint what, GType type, ...);
+IrisMessage*           iris_message_new_full       (gint what, const gchar *first_name, ...);
  
-IrisMessage* iris_message_ref            (IrisMessage *message);
-void         iris_message_unref          (IrisMessage *message);
-IrisMessage* iris_message_copy           (IrisMessage *message);
+IrisMessage*           iris_message_ref            (IrisMessage *message);
+void                   iris_message_unref          (IrisMessage *message);
+IrisMessage*           iris_message_copy           (IrisMessage *message);
 
-G_CONST_RETURN GValue* iris_message_get_data (IrisMessage *message);
-void                   iris_message_set_data (IrisMessage *message, const GValue *value);
+G_CONST_RETURN GValue* iris_message_get_data       (IrisMessage *message);
+void                   iris_message_set_data       (IrisMessage *message, const GValue *value);
 
-guint        iris_message_count_names    (IrisMessage *message);
-gboolean     iris_message_is_empty       (IrisMessage *message);
-gboolean     iris_message_contains       (IrisMessage *message, const gchar *name);
+guint                  iris_message_count_names    (IrisMessage *message);
+gboolean               iris_message_is_empty       (IrisMessage *message);
+gboolean               iris_message_contains       (IrisMessage *message, const gchar *name);
 
-void         iris_message_get_value      (IrisMessage *message, const gchar *name, GValue *value);
-void         iris_message_set_value      (IrisMessage *message, const gchar *name, const GValue *value);
+void                   iris_message_get_value      (IrisMessage *message, const gchar *name, GValue *value);
+void                   iris_message_set_value      (IrisMessage *message, const gchar *name, const GValue *value);
 
-const gchar* iris_message_get_string     (IrisMessage *message, const gchar *name);
-void         iris_message_set_string     (IrisMessage *message, const gchar *name, const gchar *value);
+const gchar*           iris_message_get_string     (IrisMessage *message, const gchar *name);
+void                   iris_message_set_string     (IrisMessage *message, const gchar *name, const gchar *value);
 
-gint         iris_message_get_int        (IrisMessage *message, const gchar *name);
-void         iris_message_set_int        (IrisMessage *message, const gchar *name, gint value);
+gint                   iris_message_get_int        (IrisMessage *message, const gchar *name);
+void                   iris_message_set_int        (IrisMessage *message, const gchar *name, gint value);
 
-gint64       iris_message_get_int64      (IrisMessage *message, const gchar *name);
-void         iris_message_set_int64      (IrisMessage *message, const gchar *name, gint64 value);
+gint64                 iris_message_get_int64      (IrisMessage *message, const gchar *name);
+void                   iris_message_set_int64      (IrisMessage *message, const gchar *name, gint64 value);
 
-gfloat       iris_message_get_float      (IrisMessage *message, const gchar *name);
-void         iris_message_set_float      (IrisMessage *message, const gchar *name, gfloat value);
+gfloat                 iris_message_get_float      (IrisMessage *message, const gchar *name);
+void                   iris_message_set_float      (IrisMessage *message, const gchar *name, gfloat value);
 
-gdouble      iris_message_get_double     (IrisMessage *message, const gchar *name);
-void         iris_message_set_double     (IrisMessage *message, const gchar *name, gdouble value);
+gdouble                iris_message_get_double     (IrisMessage *message, const gchar *name);
+void                   iris_message_set_double     (IrisMessage *message, const gchar *name, gdouble value);
 
-glong        iris_message_get_long       (IrisMessage *message, const gchar *name);
-void         iris_message_set_long       (IrisMessage *message, const gchar *name, glong value);
+glong                  iris_message_get_long       (IrisMessage *message, const gchar *name);
+void                   iris_message_set_long       (IrisMessage *message, const gchar *name, glong value);
 
-gulong       iris_message_get_ulong      (IrisMessage *message, const gchar *name);
-void         iris_message_set_ulong      (IrisMessage *message, const gchar *name, gulong value);
+gulong                 iris_message_get_ulong      (IrisMessage *message, const gchar *name);
+void                   iris_message_set_ulong      (IrisMessage *message, const gchar *name, gulong value);
 
-gchar        iris_message_get_char       (IrisMessage *message, const gchar *name);
-void         iris_message_set_char       (IrisMessage *message, const gchar *name, gchar value);
+gchar                  iris_message_get_char       (IrisMessage *message, const gchar *name);
+void                   iris_message_set_char       (IrisMessage *message, const gchar *name, gchar value);
 
-guchar       iris_message_get_uchar      (IrisMessage *message, const gchar *name);
-void         iris_message_set_uchar      (IrisMessage *message, const gchar *name, guchar value);
+guchar                 iris_message_get_uchar      (IrisMessage *message, const gchar *name);
+void                   iris_message_set_uchar      (IrisMessage *message, const gchar *name, guchar value);
 
-gboolean     iris_message_get_boolean    (IrisMessage *message, const gchar *name);
-void         iris_message_set_boolean    (IrisMessage *message, const gchar *name, gboolean value);
+gboolean               iris_message_get_boolean    (IrisMessage *message, const gchar *name);
+void                   iris_message_set_boolean    (IrisMessage *message, const gchar *name, gboolean value);
 
-gpointer     iris_message_get_pointer    (IrisMessage *message, const gchar *name);
-void         iris_message_set_pointer    (IrisMessage *message, const gchar *name, gpointer value);
+gpointer               iris_message_get_pointer    (IrisMessage *message, const gchar *name);
+void                   iris_message_set_pointer    (IrisMessage *message, const gchar *name, gpointer value);
 
-GObject*     iris_message_get_object     (IrisMessage *message, const gchar *name);
-void         iris_message_set_object     (IrisMessage *message, const gchar *name, GObject *object);
+GObject*               iris_message_get_object     (IrisMessage *message, const gchar *name);
+void                   iris_message_set_object     (IrisMessage *message, const gchar *name, GObject *object);
 
-gsize        iris_message_flattened_size (IrisMessage *message);
-gboolean     iris_message_flatten        (IrisMessage *message, gchar **buffer, gsize *length);
-gboolean     iris_message_unflatten      (IrisMessage *message, gchar  *buffer, gsize  length);
+gsize                  iris_message_flattened_size (IrisMessage *message);
+gboolean               iris_message_flatten        (IrisMessage *message, gchar **buffer, gsize *length);
+gboolean               iris_message_unflatten      (IrisMessage *message, gchar  *buffer, gsize  length);
 
 G_END_DECLS
 
