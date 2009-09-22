@@ -23,7 +23,6 @@
 
 #include <glib-object.h>
 
-#include "iris-free-list.h"
 #include "iris-link.h"
 #include "iris-queue.h"
 
@@ -32,17 +31,6 @@ G_BEGIN_DECLS
 #define IRIS_TYPE_LFQUEUE (iris_lfqueue_get_type())
 
 typedef struct _IrisLFQueue IrisLFQueue;
-
-struct _IrisLFQueue
-{
-	IrisQueue     parent;
-
-	/*< private >*/
-	IrisLink     *head;
-	IrisLink     *tail;
-	IrisFreeList *free_list;
-	guint         length;
-};
 
 GType      iris_lfqueue_get_type (void) G_GNUC_CONST;
 IrisQueue* iris_lfqueue_new      (void);

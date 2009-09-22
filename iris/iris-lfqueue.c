@@ -18,6 +18,7 @@
  * 02110-1301 USA
  */
 
+#include "iris-free-list.h"
 #include "iris-lfqueue.h"
 #include "iris-queue-private.h"
 #include "iris-util.h"
@@ -31,6 +32,17 @@
  * provide blocking calls for iris_lfqueue_pop() or iris_lfqueue_timed_pop().
  * Both of these methods act like iris_lfqueue_try_pop().
  */
+
+struct _IrisLFQueue
+{
+	IrisQueue     parent;
+
+	/*< private >*/
+	IrisLink     *head;
+	IrisLink     *tail;
+	IrisFreeList *free_list;
+	guint         length;
+};
 
 static void
 iris_lfqueue_push_real (IrisQueue *queue,

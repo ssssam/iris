@@ -23,7 +23,6 @@
 
 #include <glib-object.h>
 
-#include "iris-free-list.h"
 #include "iris-link.h"
 
 G_BEGIN_DECLS

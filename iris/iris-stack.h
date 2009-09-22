@@ -23,7 +23,6 @@
 
 #include <glib-object.h>
 
-#include "iris-free-list.h"
 #include "iris-link.h"
 
 G_BEGIN_DECLS
@@ -31,14 +30,6 @@ G_BEGIN_DECLS
 #define IRIS_TYPE_STACK (iris_stack_get_type())
 
 typedef struct _IrisStack IrisStack;
-
-struct _IrisStack
-{
-	/*< private >*/
-	IrisLink      *head;
-	IrisFreeList  *free_list;
-	volatile gint  ref_count;
-};
 
 GType      iris_stack_get_type (void) G_GNUC_CONST;
 IrisStack* iris_stack_new      (void);

@@ -18,6 +18,7 @@
  * 02110-1301 USA
  */
 
+#include "iris-free-list.h"
 #include "iris-stack.h"
 #include "gstamppointer.h"
 
@@ -43,6 +44,14 @@
  */
 
 static void iris_stack_free (IrisStack *stack);
+
+struct _IrisStack
+{
+	/*< private >*/
+	IrisLink      *head;
+	IrisFreeList  *free_list;
+	volatile gint  ref_count;
+};
 
 GType
 iris_stack_get_type (void)

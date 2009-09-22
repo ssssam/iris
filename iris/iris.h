@@ -22,7 +22,6 @@
 #define __IRIS_H__
 
 #include "iris-arbiter.h"
-#include "iris-free-list.h"
 #include "iris-gmainscheduler.h"
 #include "iris-link.h"
 #include "iris-lfqueue.h"
@@ -38,7 +37,6 @@
 #include "iris-service.h"
 #include "iris-stack.h"
 #include "iris-task.h"
-#include "iris-wsqueue.h"
 
 void iris_init (void);
 
