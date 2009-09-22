@@ -300,13 +300,11 @@ echo "   Maintainer Compiler flags:  ${enable_maintainer_flags}"
 echo "   Profiling................:  ${enable_profiling}"
 echo "   Build API reference......:  ${enable_gtk_doc}"
 echo "   Enable test suite........:  ${enable_glibtest}"
+echo ""
+echo " Preview Bindings"
+echo ""
 echo "   GObject Introspection....:  ${enable_introspection}"
 echo "   Vala Bindings............:  ${enable_vala}"
 echo "   Python Bindings..........:  ${enable_python}"
 echo ""
 
-if test "x$enable_introspection" = "xyes"; then
-echo "   GObject introspection may be broke for older GObject Introspection "
-echo "   versions.  Ubuntu Jaunty Jackalope 9.10 is known to be broken!"
-echo ""
-fi
