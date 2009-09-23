@@ -24,7 +24,7 @@
 /**
  * SECTION:iris-rrobin
  * @title: IrisRRobin
- * @short_description: A lock-free round-robin data structure
+ * @short_description: A lock-free round-robin
  *
  * #IrisRRobin is a structure used for implementing round-robin semantics.
  * To use it, call iris_rrobin_append() including the data for each slot

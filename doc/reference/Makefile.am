@@ -56,6 +56,7 @@ IGNORE_HFILES=						\
 	iris-coordination-arbiter.h			\
 	iris-coordination-arbiter-private.h		\
 	iris-debug.h					\
+	iris-lfscheduler.h				\
 	iris-port-private.h				\
 	iris-receiver-private.h				\
 	iris-scheduler-manager-private.h		\

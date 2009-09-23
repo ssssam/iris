@@ -14,41 +14,73 @@
     </releaseinfo>
   </bookinfo>
 
-  <xi:include href="xml/intro-to-tasks.xml"/>
+  <part>
+    <title>Iris Fundamentals</title>
+    <xi:include href="xml/intro-to-tasks.xml"/>
+    <chapter>
+      <title>Message Passing</title>
+    </chapter>
+    <chapter>
+      <title>Concurrent Services</title>
+    </chapter>
+  </part>
 
-  <chapter>
-    <title>Iris Simple API Reference</title>
-    <xi:include href="xml/iris-message.xml"/>
-    <xi:include href="xml/iris-service.xml"/>
-    <xi:include href="xml/iris-task.xml"/>
-  </chapter>
+  <part>
+    <title>Advanced Features</title>
+    <chapter>
+      <title>Implementing a custom scheduler</title>
+    </chapter>
+    <chapter>
+      <title>Arbitration of Message Passing</title>
+    </chapter>
+    <chapter>
+      <title></title>
+    </chapter>
+  </part>
 
-  <chapter>
-    <title>Iris Advanced API Reference</title>
-    <xi:include href="xml/iris-port.xml"/>
-    <xi:include href="xml/iris-receiver.xml"/>
-    <xi:include href="xml/iris-scheduler.xml"/>
-    <xi:include href="xml/iris-wsscheduler.xml"/>
-    <xi:include href="xml/iris-lfscheduler.xml"/>
-    <xi:include href="xml/iris-scheduler-manager.xml"/>
-    <xi:include href="xml/iris-arbiter.xml"/>
-    <xi:include href="xml/iris-thread.xml"/>
-    <xi:include href="xml/iris-rrobin.xml"/>
-    <xi:include href="xml/iris-stack.xml"/>
-    <xi:include href="xml/iris-free-list.xml"/>
-    <xi:include href="xml/iris-queue.xml"/>
-    <xi:include href="xml/iris-lfqueue.xml"/>
-    <xi:include href="xml/iris-wsqueue.xml"/>
-    <xi:include href="xml/iris-version.xml"/>
-  </chapter>
-  <chapter id="object-tree">
-    <title>Object Hierarchy</title>
-     <xi:include href="xml/tree_index.sgml"/>
-  </chapter>
-  <index id="api-index-full">
-    <title>API Index</title>
-    <xi:include href="xml/api-index-full.xml"><xi:fallback /></xi:include>
-  </index>
+  <part>
+    <title>API Reference</title>
+    <chapter>
+      <title>Data Structures</title>
+      <xi:include href="xml/iris-queue.xml"/>
+      <xi:include href="xml/iris-lfqueue.xml"/>
+      <xi:include href="xml/iris-wsqueue.xml"/>
+      <xi:include href="xml/iris-stack.xml"/>
+      <xi:include href="xml/iris-rrobin.xml"/>
+    </chapter>
 
-  <xi:include href="xml/annotation-glossary.xml"><xi:fallback /></xi:include>
+    <chapter>
+      <title>Message Passing</title>
+      <xi:include href="xml/iris-message.xml"/>
+      <xi:include href="xml/iris-port.xml"/>
+      <xi:include href="xml/iris-receiver.xml"/>
+      <xi:include href="xml/iris-arbiter.xml"/>
+    </chapter>
+
+    <chapter>
+      <title>Schedulers</title>
+      <xi:include href="xml/iris-scheduler.xml"/>
+      <xi:include href="xml/iris-wsscheduler.xml"/>
+      <xi:include href="xml/iris-scheduler-manager.xml"/>
+      <xi:include href="xml/iris-thread.xml"/>
+    </chapter>
+
+    <chapter>
+      <title>High-Level Abstractions</title>
+      <xi:include href="xml/iris-service.xml"/>
+      <xi:include href="xml/iris-task.xml"/>
+    </chapter>
+
+    <chapter id="object-tree">
+      <title>Object Hierarchy</title>
+       <xi:include href="xml/tree_index.sgml"/>
+    </chapter>
+
+    <index id="api-index-full">
+      <title>API Index</title>
+      <xi:include href="xml/api-index-full.xml"><xi:fallback /></xi:include>
+    </index>
+
+    <xi:include href="xml/annotation-glossary.xml"><xi:fallback /></xi:include>
+  </part>
 </book>

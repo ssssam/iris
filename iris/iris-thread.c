@@ -459,3 +459,20 @@ iris_thread_work_free (IrisThreadWork *thread_work)
 	thread_work->callback = NULL;
 	g_slice_free (IrisThreadWork, thread_work);
 }
+
+/**
+ * iris_thread_is_working:
+ * @thread: An #IrisThread
+ *
+ * Checks to see if a thread is currently processing work items from a queue.
+ * Keep in mind this is always a race condition.  It is primarily useful for
+ * schedulers to know if a thread they are running in is active.
+ *
+ * Return value: %TRUE if the thread is currently working on a queue.
+ */
+gboolean
+iris_thread_is_working (IrisThread *thread)
+{
+	g_return_val_if_fail (thread != NULL, FALSE);
+	return (thread->active != NULL);
+}

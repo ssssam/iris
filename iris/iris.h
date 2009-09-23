@@ -21,23 +21,29 @@
 #ifndef __IRIS_H__
 #define __IRIS_H__
 
-#include "iris-arbiter.h"
-#include "iris-gmainscheduler.h"
-#include "iris-link.h"
-#include "iris-lfqueue.h"
-#include "iris-lfscheduler.h"
-#include "iris-message.h"
+/* basic data structures */
 #include "iris-queue.h"
-#include "iris-port.h"
-#include "iris-receiver.h"
+#include "iris-lfqueue.h"
+#include "iris-wsqueue.h"
 #include "iris-rrobin.h"
+
+/* scheduler subsystem */
 #include "iris-scheduler.h"
+#include "iris-gmainscheduler.h"
 #include "iris-wsscheduler.h"
 #include "iris-scheduler-manager.h"
+
+/* message passing and arbitration */
+#include "iris-message.h"
+#include "iris-receiver.h"
+#include "iris-port.h"
+#include "iris-arbiter.h"
+
+/* high level abstractions */
 #include "iris-service.h"
-#include "iris-stack.h"
 #include "iris-task.h"
 
+/* global API methods */
 void iris_init (void);
 
 #endif /* __IRIS_H__ */

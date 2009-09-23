@@ -26,13 +26,15 @@
 
 /**
  * SECTION:iris-lfqueue
- * @short_description: A lock-free queue data structure
+ * @title: IrisLFQueue
+ * @short_description: A lock-free queue
  *
  * #IrisLFQueue is a lock-free version of #IrisQueue.  As such, it does not
  * provide blocking calls for iris_lfqueue_pop() or iris_lfqueue_timed_pop().
  * Both of these methods act like iris_lfqueue_try_pop().
  */
 
+/* TODO: How do we make this public cleanly? */
 struct _IrisLFQueue
 {
 	IrisQueue     parent;

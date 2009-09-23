@@ -37,6 +37,17 @@
 #include "iris-rrobin.h"
 #include "gstamppointer.h"
 
+/**
+ * SECTION:iris-wsqueue
+ * @title: IrisWSQueue
+ * @short_description: A work-stealing queue
+ *
+ * #IrisWSQueue is a work-stealing version of #IrisQueue.  It requires access
+ * to a global queue for a fallback when out of items.  If no item can be
+ * retreived from the global queue, it will try to steal from its peers using
+ * the #IrisRRobin of peer queues, which should also be #IrisQueue based.
+ */
+
 #define WSQUEUE_DEFAULT_SIZE 32
 
 #if DARWIN
@@ -80,16 +91,6 @@ pthread_mutex_timedlock (pthread_mutex_t       *mutex,
 	return result;
 }
 #endif
-
-/**
- * SECTION:iris-wsqueue
- * @short_description: A work-stealing queue
- *
- * #IrisWSQueue is a work-stealing version of #IrisQueue.  It requires access
- * to a global queue for a fallback when out of items.  If no item can be
- * retreived from the global queue, it will try to steal from its peers using
- * the #IrisRRobin of peer queues, which should also be #IrisQueue based.
- */
 
 struct StealInfo
 {

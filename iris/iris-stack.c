@@ -24,7 +24,8 @@
 
 /**
  * SECTION:iris-stack
- * @short_description: A lock-free stack data structure
+ * @title: IrisStack
+ * @short_description: A lock-free stack
  *
  * #IrisStack is a lock-free stack implementation.  It is not currently
  * guaranteed to be fully correct.  This is due to the classical ABA

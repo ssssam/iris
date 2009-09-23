@@ -26,7 +26,7 @@
 /**
  * SECTION:iris-arbiter
  * @title: IrisArbiter
- * @short_description: Message passing arbiters
+ * @short_description: Arbitrate when and how messages can be received
  *
  * #IrisArbiter provides a way to control how messages can be
  * received.  The simple arbiter, created using iris_arbiter_receive()

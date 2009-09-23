@@ -135,6 +135,7 @@ void            iris_scheduler_remove_thread   (IrisScheduler  *scheduler,
 
 IrisThread*     iris_thread_new                (gboolean exclusive);
 IrisThread*     iris_thread_get                (void);
+gboolean        iris_thread_is_working         (IrisThread *thread);
 void            iris_thread_manage             (IrisThread *thread, IrisQueue *queue, gboolean leader);
 void            iris_thread_shutdown           (IrisThread *thread);
 void            iris_thread_print_stat         (IrisThread *thread);

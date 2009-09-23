@@ -29,7 +29,7 @@
 /**
  * SECTION:iris-task
  * @title: IrisTask
- * @short_description: Writing concurrent and asynchronous tasks
+ * @short_description: A concurrent and asynchronous task abstraction
  *
  * #IrisTask is a single-shot work-item that performs an atomic piece of work.
  * An example of this could be retrieving the contents of a web-page, removing

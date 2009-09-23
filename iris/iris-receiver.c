@@ -28,7 +28,7 @@
 /**
  * SECTION:iris-receiver
  * @title: IrisReceiver
- * @short_description: Perform actions on message delivery
+ * @short_description: Perform actions upon message delivery
  *
  * #IrisReceiver is used to perform actions when a message is received
  * from an #IrisPort.  See iris_arbiter_receive() for how to create

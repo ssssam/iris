@@ -28,7 +28,7 @@
 
 /**
  * SECTION:iris-wsscheduler
- * @short_description: A work-stealing scheduler
+ * @short_description: A work-stealing scheduler optimized for multi-core
  *
  * #IrisWSScheduler is a work-stealing scheduler implementation for iris.  It
  * uses an #IrisWSQueue per thread for storing work items yielded from the
@@ -92,7 +92,10 @@ iris_wsscheduler_queue_real (IrisScheduler  *scheduler,
 	 * will take this item sooner so its own work doesn't invalidate cache.
 	 */
 
-	if (thread && thread->scheduler == scheduler && thread->active) {
+	if (thread &&
+	    thread->scheduler == scheduler &&
+	    iris_thread_is_working (thread))
+	{
 		iris_wsqueue_local_push (IRIS_WSQUEUE (thread->active), thread_work);
 		return;
 	}

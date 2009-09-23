@@ -27,7 +27,7 @@
 /**
  * SECTION:iris-port
  * @title: IrisPort
- * @short_description: Message delivery structure
+ * @short_description: Light-weight message delivery
  *
  * #IrisPort is a structure used for delivering messages.  When a port is
  * connected to a receiver they can be used to perform actions when a message

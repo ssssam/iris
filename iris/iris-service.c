@@ -27,7 +27,7 @@
 /**
  * SECTION:iris-service
  * @title: IrisService
- * @short_description: Writing concurrent services
+ * @short_description: A concurrent minded service abstraction
  *
  * #IrisService is a class to help design concurrent services.  Most
  * services tend to be in one of a couple of states.  Either it can

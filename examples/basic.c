@@ -33,19 +33,8 @@ basic (void)
 	IrisMessage   *msg;
 	gint           i;
 
-
-	/* You can use various schedulers based on the type of work you
-	 * are doing.  In this very simple test, we are creating a million
-	 * work items from outside of worker threads. This particular setup
-	 * works the fastest with the lock-free scheduler.  Keep in mind this
-	 * is a bad choice for non-server type setups since it spins a lot
-	 * while waiting for work items.
-	 *
-	 * But on a quad core, its rougly 2x faster than the others.
-	 */
 	//scheduler = iris_scheduler_new ();
-	//scheduler = iris_wsscheduler_new ();
-	scheduler = iris_lfscheduler_new ();
+	scheduler = iris_wsscheduler_new ();
 
 	/* Create a port to deliver messages to */
 	port = iris_port_new ();

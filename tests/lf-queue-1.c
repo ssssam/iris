@@ -1,4 +1,5 @@
 #include <iris/iris.h>
+#include <iris/iris-free-list.h>
 #include <iris/iris-queue-private.h>
 
 static void
