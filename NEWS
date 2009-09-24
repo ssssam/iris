@@ -4,13 +4,12 @@ Overview of changes for 0.2.0
  * Add IrisGMainScheduler for applications that only use Asynchronous tasks
    and do not need real threads.
  * Allow setting the default scheduler for the process.
- * Register GType's for enums.
  * Additional documentation.
- * Cleanup public API.
+ * Cleanup of public API.
  * Add iris_task_all_of() and iris_task_any_of() to create tasks with
    specific task depenedencies.
  * Add basic support for OS X.
  * Add macros to make working with IrisTask simpler.
- * You can specify branch control in task handlers using iris_task_add_both().
+ * Allow specifying branch control in task handlers using iris_task_add_both().
  * iris_arbiter_coordinate() for a message-passing based reader-writer lock.
 
