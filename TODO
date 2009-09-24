@@ -17,6 +17,9 @@ IrisMessage
 	so that you don't need to unref your messages if you hit the usual
 	use-case of create->post.
 
+Alex added warnings for GSimpleAsyncResult when not used from main thread.
+We need to implement our own now since this isn't reusable.
+
 ---------------------------------------------------------------------------
 Optimization TODO's
 ---------------------------------------------------------------------------
