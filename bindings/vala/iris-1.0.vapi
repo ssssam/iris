@@ -80,8 +80,7 @@ namespace Iris {
 		public void set_result (Value value);
 		public void set_result_gtype (GLib.Type type, ...);
 	}
-	[CCode (ref_function = "iris_queue_ref", unref_function = "iris_queue_unref")]
-	public class Queue: GLib.Boxed {
+	public class Queue: GLib.Object {
 		public Queue ();
 		public void push (void* data);
 		public void* pop ();
