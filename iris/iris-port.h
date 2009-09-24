@@ -28,31 +28,13 @@
 
 G_BEGIN_DECLS
 
-#define IRIS_TYPE_PORT (iris_port_get_type ())
-
-#define IRIS_PORT(obj)                  \
-    (G_TYPE_CHECK_INSTANCE_CAST ((obj), \
-     IRIS_TYPE_PORT, IrisPort))
-
-#define IRIS_PORT_CONST(obj)            \
-    (G_TYPE_CHECK_INSTANCE_CAST ((obj), \
-     IRIS_TYPE_PORT, IrisPort const))
-
-#define IRIS_PORT_CLASS(klass)          \
-    (G_TYPE_CHECK_CLASS_CAST ((klass),  \
-     IRIS_TYPE_PORT, IrisPortClass))
-
-#define IRIS_IS_PORT(obj)               \
-    (G_TYPE_CHECK_INSTANCE_TYPE ((obj), \
-     IRIS_TYPE_PORT))
-
-#define IRIS_IS_PORT_CLASS(klass)       \
-    (G_TYPE_CHECK_CLASS_TYPE ((klass),  \
-     IRIS_TYPE_PORT))
-
-#define IRIS_PORT_GET_CLASS(obj)        \
-    (G_TYPE_INSTANCE_GET_CLASS ((obj),  \
-     IRIS_TYPE_PORT, IrisPortClass))
+#define IRIS_TYPE_PORT            (iris_port_get_type ())
+#define IRIS_PORT(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_PORT, IrisPort))
+#define IRIS_PORT_CONST(obj)      (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_PORT, IrisPort const))
+#define IRIS_PORT_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass),  IRIS_TYPE_PORT, IrisPortClass))
+#define IRIS_IS_PORT(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), IRIS_TYPE_PORT))
+#define IRIS_IS_PORT_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass),  IRIS_TYPE_PORT))
+#define IRIS_PORT_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj),  IRIS_TYPE_PORT, IrisPortClass))
 
 typedef struct _IrisPort        IrisPort;
 typedef struct _IrisPortClass   IrisPortClass;

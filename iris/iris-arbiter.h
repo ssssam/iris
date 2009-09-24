@@ -29,25 +29,20 @@
 
 G_BEGIN_DECLS
 
-#define IRIS_ARBITER(obj)                  \
-    (G_TYPE_CHECK_INSTANCE_CAST ((obj),    \
-     IRIS_TYPE_ARBITER, IrisArbiter))
-
-#define IRIS_IS_ARBITER(obj)               \
-    (G_TYPE_CHECK_INSTANCE_TYPE ((obj),    \
-     IRIS_TYPE_ARBITER))
+#define IRIS_ARBITER(obj)    (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_ARBITER, IrisArbiter))
+#define IRIS_IS_ARBITER(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), IRIS_TYPE_ARBITER))
 
 typedef struct _IrisArbiter IrisArbiter;
 
-GType               iris_arbiter_get_type          (void) G_GNUC_CONST;
-IrisReceiver*       iris_arbiter_receive           (IrisScheduler      *scheduler,
-                                                    IrisPort           *port,
-                                                    IrisMessageHandler  handler,
-                                                    gpointer            user_data,
-                                                    GDestroyNotify      notify);
-IrisArbiter*        iris_arbiter_coordinate        (IrisReceiver *exclusive,
-                                                    IrisReceiver *concurrent,
-                                                    IrisReceiver *teardown);
+GType         iris_arbiter_get_type   (void) G_GNUC_CONST;
+IrisReceiver* iris_arbiter_receive    (IrisScheduler      *scheduler,
+                                       IrisPort           *port,
+                                       IrisMessageHandler  handler,
+                                       gpointer            user_data,
+                                       GDestroyNotify      notify);
+IrisArbiter*  iris_arbiter_coordinate (IrisReceiver       *exclusive,
+                                       IrisReceiver       *concurrent,
+                                       IrisReceiver       *teardown);
 
 G_END_DECLS
 

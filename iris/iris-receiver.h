@@ -27,23 +27,14 @@
 
 G_BEGIN_DECLS
 
-#define IRIS_TYPE_RECEIVER (iris_receiver_get_type ())
+#define IRIS_TYPE_RECEIVER       (iris_receiver_get_type ())
+#define IRIS_RECEIVER(obj)       (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_RECEIVER, IrisReceiver))
+#define IRIS_RECEIVER_CONST(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_RECEIVER, IrisReceiver const))
+#define IRIS_IS_RECEIVER(obj)    (G_TYPE_CHECK_INSTANCE_TYPE ((obj), IRIS_TYPE_RECEIVER))
 
-#define IRIS_RECEIVER(obj)                  \
-    (G_TYPE_CHECK_INSTANCE_CAST ((obj),     \
-     IRIS_TYPE_RECEIVER, IrisReceiver))
-
-#define IRIS_RECEIVER_CONST(obj)            \
-    (G_TYPE_CHECK_INSTANCE_CAST ((obj),     \
-     IRIS_TYPE_RECEIVER, IrisReceiver const))
-
-#define IRIS_IS_RECEIVER(obj)               \
-    (G_TYPE_CHECK_INSTANCE_TYPE ((obj),     \
-     IRIS_TYPE_RECEIVER))
-
-typedef struct _IrisReceiver              IrisReceiver;
-typedef struct _IrisReceiverClass         IrisReceiverClass;
-typedef struct _IrisReceiverPrivate       IrisReceiverPrivate;
+typedef struct _IrisReceiver        IrisReceiver;
+typedef struct _IrisReceiverClass   IrisReceiverClass;
+typedef struct _IrisReceiverPrivate IrisReceiverPrivate;
 
 struct _IrisReceiver
 {
@@ -53,10 +44,10 @@ struct _IrisReceiver
 	IrisReceiverPrivate *priv;
 };
 
-GType              iris_receiver_get_type        (void) G_GNUC_CONST;
-IrisScheduler*     iris_receiver_get_scheduler   (IrisReceiver  *receiver);
-void               iris_receiver_set_scheduler   (IrisReceiver  *receiver,
-                                                  IrisScheduler *scheduler);
+GType          iris_receiver_get_type      (void) G_GNUC_CONST;
+IrisScheduler* iris_receiver_get_scheduler (IrisReceiver  *receiver);
+void           iris_receiver_set_scheduler (IrisReceiver  *receiver,
+                                            IrisScheduler *scheduler);
 
 G_END_DECLS
 

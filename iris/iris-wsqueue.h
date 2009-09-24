@@ -29,14 +29,14 @@ G_BEGIN_DECLS
 #define IRIS_TYPE_WSQUEUE		(iris_wsqueue_get_type ())
 #define IRIS_WSQUEUE(obj)		(G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_WSQUEUE, IrisWSQueue))
 #define IRIS_WSQUEUE_CONST(obj)		(G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_WSQUEUE, IrisWSQueue const))
-#define IRIS_WSQUEUE_CLASS(klass)	(G_TYPE_CHECK_CLASS_CAST ((klass), IRIS_TYPE_WSQUEUE, IrisWSQueueClass))
+#define IRIS_WSQUEUE_CLASS(klass)	(G_TYPE_CHECK_CLASS_CAST ((klass),  IRIS_TYPE_WSQUEUE, IrisWSQueueClass))
 #define IRIS_IS_WSQUEUE(obj)		(G_TYPE_CHECK_INSTANCE_TYPE ((obj), IRIS_TYPE_WSQUEUE))
-#define IRIS_IS_WSQUEUE_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE ((klass), IRIS_TYPE_WSQUEUE))
-#define IRIS_WSQUEUE_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS ((obj), IRIS_TYPE_WSQUEUE, IrisWSQueueClass))
+#define IRIS_IS_WSQUEUE_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE ((klass),  IRIS_TYPE_WSQUEUE))
+#define IRIS_WSQUEUE_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS ((obj),  IRIS_TYPE_WSQUEUE, IrisWSQueueClass))
 
-typedef struct _IrisWSQueue		IrisWSQueue;
-typedef struct _IrisWSQueueClass	IrisWSQueueClass;
-typedef struct _IrisWSQueuePrivate	IrisWSQueuePrivate;
+typedef struct _IrisWSQueue        IrisWSQueue;
+typedef struct _IrisWSQueueClass   IrisWSQueueClass;
+typedef struct _IrisWSQueuePrivate IrisWSQueuePrivate;
 
 struct _IrisWSQueue
 {

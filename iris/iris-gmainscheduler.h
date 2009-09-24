@@ -27,31 +27,13 @@
 
 G_BEGIN_DECLS
 
-#define IRIS_TYPE_GMAINSCHEDULER (iris_gmainscheduler_get_type ())
-
-#define IRIS_GMAINSCHEDULER(obj)                      \
-    (G_TYPE_CHECK_INSTANCE_CAST ((obj),               \
-     IRIS_TYPE_GMAINSCHEDULER, IrisGMainScheduler))
-
-#define IRIS_GMAINSCHEDULER_CONST(obj)                \
-    (G_TYPE_CHECK_INSTANCE_CAST ((obj),               \
-     IRIS_TYPE_GMAINSCHEDULER, IrisGMainScheduler const))
-
-#define IRIS_GMAINSCHEDULER_CLASS(klass)              \
-    (G_TYPE_CHECK_CLASS_CAST ((klass),                \
-     IRIS_TYPE_GMAINSCHEDULER, IrisGMainSchedulerClass))
-
-#define IRIS_IS_GMAINSCHEDULER(obj)                   \
-    (G_TYPE_CHECK_INSTANCE_TYPE ((obj),               \
-     IRIS_TYPE_GMAINSCHEDULER))
-
-#define IRIS_IS_GMAINSCHEDULER_CLASS(klass)           \
-    (G_TYPE_CHECK_CLASS_TYPE ((klass),                \
-     IRIS_TYPE_GMAINSCHEDULER))
-
-#define IRIS_GMAINSCHEDULER_GET_CLASS(obj)            \
-    (G_TYPE_INSTANCE_GET_CLASS ((obj),                \
-     IRIS_TYPE_GMAINSCHEDULER, IrisGMainSchedulerClass))
+#define IRIS_TYPE_GMAINSCHEDULER            (iris_gmainscheduler_get_type ())
+#define IRIS_GMAINSCHEDULER(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_GMAINSCHEDULER, IrisGMainScheduler))
+#define IRIS_GMAINSCHEDULER_CONST(obj)      (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_GMAINSCHEDULER, IrisGMainScheduler const))
+#define IRIS_GMAINSCHEDULER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass),  IRIS_TYPE_GMAINSCHEDULER, IrisGMainSchedulerClass))
+#define IRIS_IS_GMAINSCHEDULER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), IRIS_TYPE_GMAINSCHEDULER))
+#define IRIS_IS_GMAINSCHEDULER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass),  IRIS_TYPE_GMAINSCHEDULER))
+#define IRIS_GMAINSCHEDULER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj),  IRIS_TYPE_GMAINSCHEDULER, IrisGMainSchedulerClass))
 
 typedef struct _IrisGMainScheduler        IrisGMainScheduler;
 typedef struct _IrisGMainSchedulerClass   IrisGMainSchedulerClass;
@@ -70,9 +52,9 @@ struct _IrisGMainSchedulerClass
 	IrisSchedulerClass parent_class;
 };
 
-GType          iris_gmainscheduler_get_type        (void) G_GNUC_CONST;
-IrisScheduler* iris_gmainscheduler_new             (GMainContext       *context);;
-GMainContext*  iris_gmainscheduler_get_context     (IrisGMainScheduler *gmain_scheduler);
+GType          iris_gmainscheduler_get_type    (void) G_GNUC_CONST;
+IrisScheduler* iris_gmainscheduler_new         (GMainContext       *context);;
+GMainContext*  iris_gmainscheduler_get_context (IrisGMainScheduler *gmain_scheduler);
 
 G_END_DECLS
 

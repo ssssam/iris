@@ -28,10 +28,10 @@ G_BEGIN_DECLS
 #define IRIS_TYPE_QUEUE            (iris_queue_get_type ())
 #define IRIS_QUEUE(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_QUEUE, IrisQueue))
 #define IRIS_QUEUE_CONST(obj)      (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_QUEUE, IrisQueue const))
-#define IRIS_QUEUE_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), IRIS_TYPE_QUEUE, IrisQueueClass))
+#define IRIS_QUEUE_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass),  IRIS_TYPE_QUEUE, IrisQueueClass))
 #define IRIS_IS_QUEUE(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), IRIS_TYPE_QUEUE))
-#define IRIS_IS_QUEUE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), IRIS_TYPE_QUEUE))
-#define IRIS_QUEUE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), IRIS_TYPE_QUEUE, IrisQueueClass))
+#define IRIS_IS_QUEUE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass),  IRIS_TYPE_QUEUE))
+#define IRIS_QUEUE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj),  IRIS_TYPE_QUEUE, IrisQueueClass))
 
 typedef struct _IrisQueue        IrisQueue;
 typedef struct _IrisQueueClass   IrisQueueClass;

@@ -29,31 +29,13 @@
 
 G_BEGIN_DECLS
 
-#define IRIS_TYPE_TASK (iris_task_get_type ())
-
-#define IRIS_TASK(obj)                      \
-        (G_TYPE_CHECK_INSTANCE_CAST ((obj), \
-         IRIS_TYPE_TASK, IrisTask))
-
-#define IRIS_TASK_CONST(obj)                \
-        (G_TYPE_CHECK_INSTANCE_CAST ((obj), \
-         IRIS_TYPE_TASK, IrisTask const))
-
-#define IRIS_TASK_CLASS(klass)              \
-        (G_TYPE_CHECK_CLASS_CAST ((klass),  \
-         IRIS_TYPE_TASK, IrisTaskClass))
-
-#define IRIS_IS_TASK(obj)                   \
-        (G_TYPE_CHECK_INSTANCE_TYPE ((obj), \
-         IRIS_TYPE_TASK))
-
-#define IRIS_IS_TASK_CLASS(klass)           \
-        (G_TYPE_CHECK_CLASS_TYPE ((klass),  \
-         IRIS_TYPE_TASK))
-
-#define IRIS_TASK_GET_CLASS(obj)           \
-        (G_TYPE_INSTANCE_GET_CLASS ((obj), \
-         IRIS_TYPE_TASK, IrisTaskClass))
+#define IRIS_TYPE_TASK            (iris_task_get_type ())
+#define IRIS_TASK(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_TASK, IrisTask))
+#define IRIS_TASK_CONST(obj)      (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_TASK, IrisTask const))
+#define IRIS_TASK_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass),  IRIS_TYPE_TASK, IrisTaskClass))
+#define IRIS_IS_TASK(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), IRIS_TYPE_TASK))
+#define IRIS_IS_TASK_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass),  IRIS_TYPE_TASK))
+#define IRIS_TASK_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj),  IRIS_TYPE_TASK, IrisTaskClass))
 
 /**
  * IRIS_TASK_THROW_NEW:

@@ -28,6 +28,7 @@ G_BEGIN_DECLS
 #define IRIS_TYPE_MESSAGE (iris_message_get_type())
 
 typedef struct _IrisMessage IrisMessage;
+
 typedef void (*IrisMessageHandler) (IrisMessage *message, gpointer data);
 
 struct _IrisMessage
