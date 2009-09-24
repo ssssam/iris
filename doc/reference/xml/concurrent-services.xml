@@ -1,0 +1,13 @@
+<chapter>
+  <title>Concurrent Services</title>
+  <para>
+    Iris contains a <link linkend="GObject">GObject</link> named <link
+      linkend="IrisService">IrisService</link> to aide in writing concurrent services. A concurrent
+    service is a service that can handle many requests simultaneously.  There are some common
+    practices that are done when designing such services and <link
+      linkend="IrisService">IrisService</link> tries to manage most of this for you.
+  </para>
+  <para>
+    TODO...
+  </para>
+</chapter>

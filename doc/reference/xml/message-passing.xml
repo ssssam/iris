@@ -1,0 +1,14 @@
+<chapter>
+  <title>Message Passing</title>
+  <sect1>
+    <para>
+      At the core of Iris is a re-usable message passing system.  #IrisMessage is the core data type
+      used for passing information.  #IrisMessage instances are passed through an #IrisPort.
+      #IrisPort is a light-weight mailbox for sending messages.  They can either queue the messages
+      locally or deliver the messages to a recipient.  Think of them as your local post-office.
+    </para>
+    <para>
+      TODO...
+    </para>
+  </sect1>
+</chapter>

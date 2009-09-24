@@ -17,12 +17,8 @@
   <part>
     <title>Iris Fundamentals</title>
     <xi:include href="xml/intro-to-tasks.xml"/>
-    <chapter>
-      <title>Message Passing</title>
-    </chapter>
-    <chapter>
-      <title>Concurrent Services</title>
-    </chapter>
+    <xi:include href="xml/message-passing.xml"/>
+    <xi:include href="xml/concurrent-services.xml"/>
   </part>
 
   <part>
