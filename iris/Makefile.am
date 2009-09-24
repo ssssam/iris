@@ -5,6 +5,7 @@ sources_public_h =						\
 	$(top_srcdir)/iris/iris-arbiter.h			\
 	$(top_srcdir)/iris/iris-gmainscheduler.h		\
 	$(top_srcdir)/iris/iris-lfqueue.h			\
+	$(top_srcdir)/iris/iris-lfscheduler.h			\
 	$(top_srcdir)/iris/iris-message.h			\
 	$(top_srcdir)/iris/iris-port.h				\
 	$(top_srcdir)/iris/iris-queue.h				\
@@ -29,6 +30,7 @@ sources_private_h =						\
 	$(top_srcdir)/iris/iris-gsource.h			\
 	$(top_srcdir)/iris/iris-link.h				\
 	$(top_srcdir)/iris/iris-lfqueue-private.h		\
+	$(top_srcdir)/iris/iris-lfscheduler-private.h		\
 	$(top_srcdir)/iris/iris-port-private.h			\
 	$(top_srcdir)/iris/iris-queue-private.h			\
 	$(top_srcdir)/iris/iris-receiver-private.h		\
@@ -54,6 +56,7 @@ sources_c = 							\
 	iris-gmainscheduler.c					\
 	iris-gsource.c						\
 	iris-lfqueue.c						\
+	iris-lfscheduler.c					\
 	iris-message.c						\
 	iris-port.c						\
 	iris-queue.c						\

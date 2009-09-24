@@ -31,6 +31,7 @@
 /* scheduler subsystem */
 #include "iris-scheduler.h"
 #include "iris-gmainscheduler.h"
+#include "iris-lfscheduler.h"
 #include "iris-wsscheduler.h"
 #include "iris-scheduler-manager.h"
 

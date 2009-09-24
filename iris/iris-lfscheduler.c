@@ -113,7 +113,7 @@ iris_lfscheduler_add_thread_real (IrisScheduler  *scheduler,
 
 error:
 	g_warning ("Scheduler at thread-maximum, cannot add another thread");
-	iris_queue_unref (queue);
+	g_object_unref (queue);
 	thread->user_data = NULL;
 }
 
@@ -143,7 +143,7 @@ iris_lfscheduler_remove_thread_real (IrisScheduler *scheduler,
 		                   thread_work);
 	}
 
-	iris_queue_unref (queue);
+	g_object_unref (queue);
 }
 
 static void
