@@ -1,4 +1,4 @@
-/* iris-queue-private.h
+/* iris-wsqueue-private.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -18,18 +18,28 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_QUEUE_PRIVATE_H__
-#define __IRIS_QUEUE_PRIVATE_H__
+#ifndef __IRIS_WSQUEUE_PRIVATE_H__
+#define __IRIS_WSQUEUE_PRIVATE_H__
 
 #include <glib.h>
 
+#include "iris-queue.h"
+#include "iris-rrobin.h"
+
 G_BEGIN_DECLS
 
-struct _IrisQueuePrivate
+struct _IrisWSQueuePrivate
 {
-	GAsyncQueue *q;
+	IrisQueue     *global;
+	IrisRRobin    *rrobin;
+	gint           mask;
+	GMutex        *mutex;
+	volatile gint  head_idx;
+	volatile gint  tail_idx;
+	gpointer      *items;
+	gulong         length;
 };
 
 G_END_DECLS
 
-#endif /* __IRIS_QUEUE_PRIVATE_H__ */
+#endif /* __IRIS_WSQUEUE_PRIVATE_H__ */

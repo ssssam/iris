@@ -174,7 +174,7 @@ iris_scheduler_add_thread_real (IrisScheduler  *scheduler,
 	return;
 
 error:
-	iris_queue_unref (queue);
+	g_object_unref (queue);
 	thread->user_data = NULL;
 }
 

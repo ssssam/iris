@@ -1,5 +1,5 @@
 #include <iris/iris.h>
-#include <iris/iris-queue-private.h>
+#include <iris/iris-wsqueue-private.h>
 
 static void
 test1 (void)
@@ -8,46 +8,8 @@ test1 (void)
 	IrisQueue  *global;
 
 	global = iris_queue_new ();
-	queue = iris_wsqueue_new (global, NULL);
+	queue = iris_wsqueue_new (global, iris_rrobin_new (1));
 	g_assert (queue);
-}
-
-static gboolean test2_data = FALSE;
-
-static void
-test2_cb (IrisQueue *queue)
-{
-	test2_data = TRUE;
-}
-
-static void
-test2 (void)
-{
-	IrisQueue  *queue;
-	IrisQueue  *global;
-
-	global = iris_queue_new ();
-	queue = iris_wsqueue_new (global, NULL);
-	VTABLE (queue)->dispose = test2_cb;
-	g_assert (queue);
-	iris_queue_unref (queue);
-	g_assert (test2_data);
-}
-
-static void
-test3 (void)
-{
-	IrisQueue  *queue;
-	IrisQueue  *global;
-
-	global = iris_queue_new ();
-	queue = iris_wsqueue_new (global, NULL);
-	VTABLE (queue)->dispose = test2_cb;
-	g_assert (queue);
-	iris_queue_ref (queue);
-	iris_queue_unref (queue);
-	iris_queue_unref (queue);
-	g_assert (test2_data);
 }
 
 static void
@@ -56,7 +18,7 @@ test4 (void)
 	IrisQueue *queue;
 	gint i = 0;
 
-	queue = iris_wsqueue_new (NULL, NULL);
+	queue = iris_wsqueue_new (iris_queue_new (), iris_rrobin_new (1));
 	iris_wsqueue_local_push (IRIS_WSQUEUE (queue), &i);
 	g_assert (iris_wsqueue_local_pop (IRIS_WSQUEUE (queue)) == &i);
 }
@@ -67,7 +29,7 @@ test5 (void)
 	IrisQueue *queue;
 	gint i = 0;
 
-	queue = iris_wsqueue_new (NULL, NULL);
+	queue = iris_wsqueue_new (iris_queue_new (), iris_rrobin_new (1));
 	iris_wsqueue_local_push (IRIS_WSQUEUE (queue), &i);
 	g_assert (iris_wsqueue_try_steal (IRIS_WSQUEUE (queue), 0) == &i);
 }
@@ -102,7 +64,7 @@ test7 (void)
 {
 	IrisQueue *queue;
 
-	queue = iris_wsqueue_new (NULL, NULL);
+	queue = iris_wsqueue_new (iris_queue_new (), iris_rrobin_new (1));
 	g_assert (queue);
 
 	iris_wsqueue_local_push (IRIS_WSQUEUE (queue), GINT_TO_POINTER (1));
@@ -116,7 +78,7 @@ test8 (void)
 	IrisQueue *queue;
 	GTimeVal   tv = {0,0};
 
-	queue = iris_wsqueue_new (NULL, NULL);
+	queue = iris_wsqueue_new (iris_queue_new (), iris_rrobin_new (1));
 	g_assert (queue);
 
 	iris_wsqueue_local_push (IRIS_WSQUEUE (queue), GINT_TO_POINTER (1));
@@ -131,7 +93,7 @@ test9 (void)
 	IrisQueue *queue;
 	gint i;
 
-	queue = iris_wsqueue_new (NULL, NULL);
+	queue = iris_wsqueue_new (iris_queue_new (), iris_rrobin_new (1));
 	g_assert (queue);
 
 	for (i = 0; i < 1025; i++) {
@@ -154,8 +116,6 @@ main (int   argc,
 	g_thread_init (NULL);
 
 	g_test_add_func ("/wsqueue/new", test1);
-	g_test_add_func ("/wsqueue/free", test2);
-	g_test_add_func ("/wsqueue/free2", test3);
 	g_test_add_func ("/wsqueue/local1", test4);
 	g_test_add_func ("/wsqueue/try_steal1", test5);
 	g_test_add_func ("/wsqueue/pop_order1", test6);

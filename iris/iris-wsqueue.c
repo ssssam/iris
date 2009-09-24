@@ -18,23 +18,20 @@
  * 02110-1301 USA
  */
 
-/* This code is based upon the totally awesome-sauce Joe Duffy.  But
- * of course, its all really based upon Nir Shavit's dynamic sized
- * work-stealing queue paper.
+/* This queue was implemented using information I learned from reading Joe Duffy's blog
+ * entry on Work Stealing Queues as well as Nir Shavit's research on the subject.
  *
  * http://www.bluebytesoftware.com/blog/PermaLink,guid,1665653b-b5f3-49b4-8144-cfbc5e8c632b.aspx
  */
 
-#include <string.h>
 #include <pthread.h>
+#include <string.h>
 #include <sys/errno.h>
 #include <sys/time.h>
 #include <time.h>
 
-#include "iris-queue.h"
-#include "iris-queue-private.h"
 #include "iris-wsqueue.h"
-#include "iris-rrobin.h"
+#include "iris-wsqueue-private.h"
 #include "gstamppointer.h"
 
 /**
@@ -48,7 +45,23 @@
  * the #IrisRRobin of peer queues, which should also be #IrisQueue based.
  */
 
+static void     iris_wsqueue_real_push      (IrisQueue *queue,
+                                             gpointer   data);
+static gpointer iris_wsqueue_real_pop       (IrisQueue *queue);
+static gpointer iris_wsqueue_real_try_pop   (IrisQueue *queue);
+static gpointer iris_wsqueue_real_timed_pop (IrisQueue *queue,
+                                             GTimeVal  *timeout);
+static guint    iris_wsqueue_real_length    (IrisQueue *queue);
+
 #define WSQUEUE_DEFAULT_SIZE 32
+
+struct StealInfo
+{
+	IrisQueue *queue;
+	gpointer   result;
+};
+
+G_DEFINE_TYPE (IrisWSQueue, iris_wsqueue, IRIS_TYPE_QUEUE)
 
 #if DARWIN
 static gboolean
@@ -65,6 +78,7 @@ timeout_passed (const struct timespec *timeout)
 
 	return FALSE;
 }
+
 static gint
 pthread_mutex_timedlock (pthread_mutex_t       *mutex,
                          const struct timespec *abs_timeout)
@@ -92,25 +106,81 @@ pthread_mutex_timedlock (pthread_mutex_t       *mutex,
 }
 #endif
 
-struct StealInfo
-{
-	IrisQueue *queue;
-	gpointer   result;
-};
-
 static void
-iris_wsqueue_push_real (IrisQueue *queue,
-                        gpointer   data)
+iris_wsqueue_finalize (GObject *object)
 {
-	/* we only allow pushes from the local thread via local push, so
-	 * this should never be hit. */
-	g_warn_if_reached ();
+	IrisWSQueuePrivate *priv;
+
+	priv = IRIS_WSQUEUE (object)->priv;
+
+	g_object_unref (priv->global);
+	iris_rrobin_unref (priv->rrobin);
+	g_free (priv->items);
+
+	G_OBJECT_CLASS (iris_wsqueue_parent_class)->finalize (object);
 }
 
+static void
+iris_wsqueue_class_init (IrisWSQueueClass *klass)
+{
+	GObjectClass   *object_class;
+	IrisQueueClass *queue_class;
+
+	object_class = G_OBJECT_CLASS (klass);
+	object_class->finalize = iris_wsqueue_finalize;
+	g_type_class_add_private (object_class, sizeof (IrisWSQueuePrivate));
+
+	queue_class = IRIS_QUEUE_CLASS (klass);
+	queue_class->push = iris_wsqueue_real_push;
+	queue_class->pop = iris_wsqueue_real_pop;
+	queue_class->try_pop = iris_wsqueue_real_try_pop;
+	queue_class->timed_pop = iris_wsqueue_real_timed_pop;
+	queue_class->length = iris_wsqueue_real_length;
+}
+
+static void
+iris_wsqueue_init (IrisWSQueue *queue)
+{
+	queue->priv = G_TYPE_INSTANCE_GET_PRIVATE (queue,
+	                                           IRIS_TYPE_WSQUEUE,
+	                                           IrisWSQueuePrivate);
+
+	queue->priv->mask = WSQUEUE_DEFAULT_SIZE - 1;
+	queue->priv->mutex = g_mutex_new ();
+	queue->priv->length = WSQUEUE_DEFAULT_SIZE;
+	queue->priv->items = g_malloc0 (sizeof (gpointer) * WSQUEUE_DEFAULT_SIZE);
+	queue->priv->head_idx = 0;
+	queue->priv->tail_idx = 0;
+}
+
+IrisQueue*
+iris_wsqueue_new (IrisQueue  *global,
+                  IrisRRobin *rrobin)
+{
+	IrisWSQueue *queue;
+
+	g_return_val_if_fail (global != NULL, NULL);
+	g_return_val_if_fail (rrobin != NULL, NULL);
+
+	queue = g_object_new (IRIS_TYPE_WSQUEUE, NULL);
+	queue->priv->global = g_object_ref (global);
+	queue->priv->rrobin = iris_rrobin_ref (rrobin);
+
+	return IRIS_QUEUE (queue);
+}
+
+static void
+iris_wsqueue_real_push (IrisQueue *queue,
+                        gpointer   data)
+{
+	g_warning ("iris_queue_push should not be called for IrisWSQueue");
+}
+
+
 static gboolean
-iris_wsqueue_pop_real_cb (IrisRRobin *rrobin,
-                          gpointer    data,
-                          gpointer    user_data)
+iris_wsqueue_pop_cb (IrisRRobin *rrobin,
+                     gpointer    data,
+                     gpointer    user_data)
 {
 	struct StealInfo *steal    = user_data;
 	IrisWSQueue      *neighbor = data;
@@ -124,7 +194,7 @@ iris_wsqueue_pop_real_cb (IrisRRobin *rrobin,
 }
 
 static gpointer
-iris_wsqueue_pop_real (IrisQueue *queue)
+iris_wsqueue_real_pop (IrisQueue *queue)
 {
 	GTimeVal tv     = {0,0};
 	gpointer result = NULL;
@@ -134,41 +204,42 @@ iris_wsqueue_pop_real (IrisQueue *queue)
 	 */
 
 	g_get_current_time (&tv);
+
 	if (!(result = iris_queue_timed_pop (queue, &tv))) {
 		/* Since only our local thread can push items to our
 		 * queue, we can safely block on the global queue now
 		 * for a result.
 		 */
-		result = iris_queue_pop (IRIS_WSQUEUE (queue)->global);
+		result = iris_queue_pop (IRIS_WSQUEUE (queue)->priv->global);
 	}
 
 	return result;
 }
 
 static gpointer
-iris_wsqueue_try_pop_real (IrisQueue *queue)
+iris_wsqueue_real_try_pop (IrisQueue *queue)
 {
 	/*
 	 * This code path is to only be hit by the thread that owns the Queue!
 	 */
-
-	return iris_wsqueue_pop_real (queue);
+	return iris_wsqueue_real_pop (queue);
 }
 
 static gpointer
-iris_wsqueue_timed_pop_real (IrisQueue *queue,
+iris_wsqueue_real_timed_pop (IrisQueue *queue,
                              GTimeVal  *timeout)
 {
 	/*
 	 * This code path is to only be hit by the thread that owns the Queue!
 	 */
 
-	struct StealInfo  steal;
-	IrisWSQueue      *real_queue;
+	IrisWSQueuePrivate *priv;
+	struct StealInfo    steal;
 
 	g_return_val_if_fail (queue != NULL, NULL);
+	g_return_val_if_fail (timeout != NULL, NULL);
 
-	real_queue = (IrisWSQueue*)queue;
+	priv = IRIS_WSQUEUE (queue)->priv;
 	steal.queue = queue;
 	steal.result = NULL;
 
@@ -186,96 +257,38 @@ iris_wsqueue_timed_pop_real (IrisQueue *queue,
 
 	/* Round One */
 
-	if ((steal.result = iris_wsqueue_local_pop (real_queue)) != NULL) {
+	if (NULL != (steal.result = iris_wsqueue_local_pop (IRIS_WSQUEUE (queue))))
 		return steal.result;
-	}
-
-	if ((steal.result = iris_queue_try_pop (real_queue->global)) != NULL) {
+	else if (NULL != (steal.result = iris_queue_try_pop (priv->global)))
 		return steal.result;
-	}
 
-	iris_rrobin_foreach (real_queue->rrobin,
-	                     iris_wsqueue_pop_real_cb,
-	                     &steal);
+	iris_rrobin_foreach (priv->rrobin, iris_wsqueue_pop_cb, &steal);
 
 	if (steal.result)
 		return steal.result;
 
 	/* Round Two */
 
-	if ((steal.result = iris_queue_timed_pop (real_queue->global, timeout)) != NULL) {
+	if (NULL != (steal.result = iris_queue_timed_pop (priv->global, timeout)))
 		return steal.result;
-	}
 
-	iris_rrobin_foreach (real_queue->rrobin,
-	                     iris_wsqueue_pop_real_cb,
-	                     &steal);
+	iris_rrobin_foreach (priv->rrobin, iris_wsqueue_pop_cb, &steal);
 
 	return steal.result;
 }
 
 static guint
-iris_wsqueue_length_real (IrisQueue *queue)
+iris_wsqueue_real_length (IrisQueue *queue)
 {
-	IrisWSQueue *real_queue;
+	IrisWSQueuePrivate *priv;
+
 	g_return_val_if_fail (queue != NULL, 0);
-	real_queue = (IrisWSQueue*)queue;
-	return real_queue->tail_idx - real_queue->head_idx;
+
+	priv = IRIS_WSQUEUE (queue)->priv;
+
+	return (priv->tail_idx - priv->head_idx);
 }
 
-static void
-iris_wsqueue_dispose_real (IrisQueue *queue)
-{
-	g_slice_free (IrisWSQueue, (IrisWSQueue*)queue);
-}
-
-static IrisQueueVTable wsqueue_vtable = {
-	iris_wsqueue_push_real,
-	iris_wsqueue_pop_real,
-	iris_wsqueue_try_pop_real,
-	iris_wsqueue_timed_pop_real,
-	iris_wsqueue_length_real,
-	iris_wsqueue_dispose_real,
-};
-
-/**
- * iris_wsqueue_new:
- * @global: An #IrisQueue of global work items
- * @peers: An #IrisRRobin of peer thread #IrisQueue<!-- -->'s
- *
- * Creates a new instance of #IrisWSQueue.
- *
- * A dequeue first tries to retreive from the local queue.  If nothing
- * is available in the queue, we check the global queue.  If nothing is
- * found in the global queue, then we will try to steal an item from a
- * neighbor in the #IrisRRobin.
- *
- * Return value: The newly created #IrisWSQueue instance.
- */
-IrisQueue*
-iris_wsqueue_new (IrisQueue  *global,
-                  IrisRRobin *peers)
-{
-	IrisWSQueue *queue;
-
-	queue = g_slice_new0 (IrisWSQueue);
-
-	queue->parent.vtable = &wsqueue_vtable;
-	queue->parent.ref_count = 1;
-
-	if (global)
-		queue->global = iris_queue_ref (global);
-
-	queue->rrobin = peers;
-	queue->mask = WSQUEUE_DEFAULT_SIZE - 1;
-	queue->mutex = g_mutex_new ();
-	queue->length = WSQUEUE_DEFAULT_SIZE;
-	queue->items = g_malloc0 (sizeof (gpointer) * queue->length);
-	queue->head_idx = 0;
-	queue->tail_idx = 0;
-
-	return (IrisQueue*)queue;
-}
 
 /**
  * iris_wsqueue_local_push:
@@ -291,44 +304,46 @@ void
 iris_wsqueue_local_push (IrisWSQueue *queue,
                          gpointer     data)
 {
-	gpointer *old_items;
-	gpointer *new_items;
-	gint      tail;
-	gint      head;
-	gint      count;
+	IrisWSQueuePrivate *priv;
+	gpointer           *old_items;
+	gpointer           *new_items;
+	gint                tail;
+	gint                head;
+	gint                count;
 
 	g_return_if_fail (queue != NULL);
 
-	tail = queue->tail_idx;
+	priv = queue->priv;
+	tail = priv->tail_idx;
 
-	if (tail < (queue->head_idx + queue->mask)) {
+	if (tail < (priv->head_idx + priv->mask)) {
 		/* local push fast path */
-		queue->items [tail & queue->mask] = data;
-		g_atomic_int_set (&queue->tail_idx, tail + 1);
+		priv->items [tail & priv->mask] = data;
+		g_atomic_int_set (&priv->tail_idx, tail + 1);
 	}
 	else {
 		/* slow path, must resize the array */
-		g_mutex_lock (queue->mutex);
+		g_mutex_lock (priv->mutex);
 
-		head = queue->head_idx;
-		count = queue->tail_idx - queue->head_idx;
-		old_items = queue->items;
+		head = priv->head_idx;
+		count = priv->tail_idx - priv->head_idx;
+		old_items = priv->items;
 
-		if (count >= queue->mask) {
+		if (count >= priv->mask) {
 			/* double the array size */
-			new_items = g_malloc0 (sizeof (gpointer) * (queue->length << 1));
+			new_items = g_malloc0 (sizeof (gpointer) * (priv->length << 1));
 
 			/* copy the existing items over */
 			memcpy (new_items,
 			        old_items,
-			        queue->length * sizeof (gpointer));
+			        priv->length * sizeof (gpointer));
 
 			/* assign the new array */
-			queue->items = new_items;
-			queue->head_idx = 0;
-			queue->tail_idx = tail = count;
-			queue->mask = (queue->mask << 1) | 1;
-			queue->length = queue->length << 1;
+			priv->items = new_items;
+			priv->head_idx = 0;
+			priv->tail_idx = tail = count;
+			priv->mask = (priv->mask << 1) | 1;
+			priv->length = priv->length << 1;
 
 			/* FIXME: Free old_items safely (can't really be done)
 			 *   or save the buffer to a list for periodic GC.
@@ -339,10 +354,10 @@ iris_wsqueue_local_push (IrisWSQueue *queue,
 			/* g_free (old_items); */
 		}
 
-		queue->items [tail & queue->mask] = data;
-		queue->tail_idx = tail + 1;
+		priv->items [tail & priv->mask] = data;
+		priv->tail_idx = tail + 1;
 
-		g_mutex_unlock (queue->mutex);
+		g_mutex_unlock (priv->mutex);
 	}
 }
 
@@ -358,35 +373,37 @@ iris_wsqueue_local_push (IrisWSQueue *queue,
 gpointer
 iris_wsqueue_local_pop (IrisWSQueue *queue)
 {
-	gpointer result = NULL;
-	gint     tail;
+	IrisWSQueuePrivate *priv;
+	gpointer            result = NULL;
+	gint                tail;
 
 	g_return_val_if_fail (queue != NULL, NULL);
 
-	tail = queue->tail_idx;
-	if (queue->head_idx >= tail)
+	priv = queue->priv;
+	tail = priv->tail_idx;
+
+	if (priv->head_idx >= tail)
 		return NULL;
 
 	tail -= 1;
-	g_atomic_int_set (&queue->tail_idx, tail);
+	g_atomic_int_set (&priv->tail_idx, tail);
 
-	if (queue->head_idx <= tail) {
-		result = queue->items [tail & queue->mask];
-	}
+	if (priv->head_idx <= tail)
+		result = priv->items [tail & priv->mask];
 	else {
-		g_mutex_lock (queue->mutex);
+		g_mutex_lock (priv->mutex);
 
-		if (queue->head_idx <= tail) {
+		if (priv->head_idx <= tail) {
 			/* item is still available */
-			result = queue->items [tail & queue->mask];
+			result = priv->items [tail & priv->mask];
 		}
 		else {
 			/* we lost the race, restore the tail */
-			queue->tail_idx = tail + 1;
+			priv->tail_idx = tail + 1;
 			result = NULL;
 		}
 
-		g_mutex_unlock (queue->mutex);
+		g_mutex_unlock (priv->mutex);
 	}
 
 	return result;
@@ -406,12 +423,15 @@ gpointer
 iris_wsqueue_try_steal (IrisWSQueue *queue,
                         guint        timeout)
 {
-	GTimeVal tv     = {0,0};
-	gboolean taken  = FALSE;
-	gpointer result = NULL;
-	gint     head;
+	IrisWSQueuePrivate *priv;
+	GTimeVal            tv     = {0,0};
+	gboolean            taken  = FALSE;
+	gpointer            result = NULL;
+	gint                head;
 
 	g_return_val_if_fail (queue != NULL, NULL);
+
+	priv = queue->priv;
 
 	g_get_current_time (&tv);
 	g_time_val_add (&tv, (G_USEC_PER_SEC / 1000) * timeout);
@@ -420,33 +440,19 @@ iris_wsqueue_try_steal (IrisWSQueue *queue,
 	 * the non-portable pthread call directly.
 	 */
 	taken = pthread_mutex_timedlock (
-			(pthread_mutex_t*)queue->mutex,
+			(pthread_mutex_t*)priv->mutex,
 			(struct timespec*)&tv);
 
-	head = queue->head_idx;
-	g_atomic_int_set (&queue->head_idx, head + 1);
+	head = priv->head_idx;
+	g_atomic_int_set (&priv->head_idx, head + 1);
 
-	if (head < queue->tail_idx) {
-		result = queue->items [head & queue->mask];
-	}
-	else {
-		queue->head_idx = head;
-	}
+	if (head < priv->tail_idx)
+		result = priv->items [head & priv->mask];
+	else
+		priv->head_idx = head;
 
 	if (taken)
-		g_mutex_unlock (queue->mutex);
+		g_mutex_unlock (priv->mutex);
 
 	return result;
-}
-
-GType
-iris_wsqueue_get_type (void)
-{
-	static GType wsqueue_type = 0;
-	if (G_UNLIKELY (!wsqueue_type))
-		wsqueue_type = g_boxed_type_register_static (
-				"IrisWSQueue",
-				(GBoxedCopyFunc)iris_queue_ref,
-				(GBoxedFreeFunc)iris_queue_unref);
-	return wsqueue_type;
 }

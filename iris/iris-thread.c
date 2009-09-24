@@ -180,7 +180,7 @@ iris_thread_handle_manage (IrisThread  *thread,
 	g_return_if_fail (queue != NULL);
 
 	g_mutex_lock (thread->mutex);
-	thread->active = iris_queue_ref (queue);
+	thread->active = g_object_ref (queue);
 	g_mutex_unlock (thread->mutex);
 
 	if (G_UNLIKELY (exclusive))

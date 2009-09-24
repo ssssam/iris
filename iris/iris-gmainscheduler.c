@@ -86,7 +86,7 @@ iris_gmainscheduler_finalize (GObject *object)
 
 	priv->source = 0;
 	priv->context = NULL;
-	iris_queue_unref (priv->queue);
+	g_object_unref (priv->queue);
 	priv->queue = NULL;
 
 	G_OBJECT_CLASS (iris_gmainscheduler_parent_class)->finalize (object);

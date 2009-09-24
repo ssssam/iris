@@ -6,7 +6,7 @@ test1 (void)
 {
 	IrisQueue *queue = iris_queue_new ();
 	g_assert (queue != NULL);
-	g_assert (queue->impl_queue != NULL);
+	g_assert (queue->priv->q != NULL);
 }
 
 static void
@@ -32,7 +32,7 @@ test4 (void)
 {
 	IrisQueue *queue = iris_queue_new ();
 	g_assert (queue != NULL);
-	iris_queue_unref (queue);
+	g_object_unref (queue);
 	/* success if no segfault :-) */
 }
 
@@ -63,34 +63,6 @@ test6 (void)
 	g_assert (iris_queue_length (queue) == 0);
 }
 
-static gboolean test7_data = FALSE;
-
-static void
-test7_cb (IrisQueue *queue)
-{
-	test7_data = TRUE;
-}
-
-static void
-test7 (void)
-{
-	IrisQueue *queue = iris_queue_new ();
-	VTABLE (queue)->dispose = test7_cb;
-	iris_queue_unref (queue);
-	g_assert (test7_data == TRUE);
-}
-
-static void
-test8 (void)
-{
-	IrisQueue *queue = iris_queue_new ();
-	VTABLE (queue)->dispose = test7_cb;
-	iris_queue_ref (queue);
-	iris_queue_unref (queue);
-	iris_queue_unref (queue);
-	g_assert (test7_data == TRUE);
-}
-
 static void
 test9 (void)
 {
@@ -111,8 +83,6 @@ main (int   argc,
 	g_test_add_func ("/queue/free", test4);
 	g_test_add_func ("/queue/push_pop_empty", test5);
 	g_test_add_func ("/queue/get_length", test6);
-	g_test_add_func ("/queue/unref1", test7);
-	g_test_add_func ("/queue/unref2", test8);
 	g_test_add_func ("/queue/get_type", test9);
 
 	return g_test_run ();

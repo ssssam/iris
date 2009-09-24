@@ -20,73 +20,58 @@
 
 #include "iris-queue.h"
 #include "iris-queue-private.h"
-#include "gstamppointer.h"
 
 /**
  * SECTION:iris-queue
  * @title: IrisQueue
- * @short_description: A concurrent queue
+ * @short_description: Thread-safe queues
  *
  * #IrisQueue is a queue abstraction for concurrent queues.  The default
  * implementation wraps #GAsyncQueue which is a lock-based queue.
  *
- * See also #IrisLFQueue and #IrisWSQueue.
+ * See also #IrisLFQueue and #IrisWSQueue
  */
 
+G_DEFINE_TYPE (IrisQueue, iris_queue, G_TYPE_OBJECT)
+
+static void     iris_queue_real_push      (IrisQueue *queue,
+                                           gpointer   data);
+static gpointer iris_queue_real_pop       (IrisQueue *queue);
+static gpointer iris_queue_real_try_pop   (IrisQueue *queue);
+static gpointer iris_queue_real_timed_pop (IrisQueue *queue,
+                                           GTimeVal  *timeout);
+static guint    iris_queue_real_length    (IrisQueue *queue);
+
 static void
-iris_queue_push_real (IrisQueue *queue,
-                      gpointer   data)
+iris_queue_finalize (GObject *object)
 {
-	return g_async_queue_push (queue->impl_queue, data);
-}
-
-static gpointer
-iris_queue_pop_real (IrisQueue *queue)
-{
-	return g_async_queue_pop (queue->impl_queue);
-}
-
-static gpointer
-iris_queue_try_pop_real (IrisQueue *queue)
-{
-	return g_async_queue_try_pop (queue->impl_queue);
-}
-
-static gpointer
-iris_queue_timed_pop_real (IrisQueue *queue,
-                           GTimeVal  *timeout)
-{
-	return g_async_queue_timed_pop (queue->impl_queue, timeout);
-}
-
-static guint
-iris_queue_length_real (IrisQueue *queue)
-{
-	return g_async_queue_length (queue->impl_queue);
+	G_OBJECT_CLASS (iris_queue_parent_class)->finalize (object);
 }
 
 static void
-iris_queue_dispose_real (IrisQueue *queue)
+iris_queue_class_init (IrisQueueClass *klass)
 {
-	g_async_queue_unref (queue->impl_queue);
-	queue->impl_queue = NULL;
-	g_slice_free (IrisQueue, queue);
+	GObjectClass *object_class;
+
+	object_class = G_OBJECT_CLASS (klass);
+	object_class->finalize = iris_queue_finalize;
+	g_type_class_add_private (object_class, sizeof (IrisQueuePrivate));
+
+	klass->push = iris_queue_real_push;
+	klass->pop = iris_queue_real_pop;
+	klass->try_pop = iris_queue_real_try_pop;
+	klass->timed_pop = iris_queue_real_timed_pop;
+	klass->length = iris_queue_real_length;
 }
 
-static IrisQueueVTable queue_vtable = {
-	iris_queue_push_real,
-	iris_queue_pop_real,
-	iris_queue_try_pop_real,
-	iris_queue_timed_pop_real,
-	iris_queue_length_real,
-	iris_queue_dispose_real,
-};
-
 static void
-iris_queue_dispose (IrisQueue *queue)
+iris_queue_init (IrisQueue *queue)
 {
-	if (G_LIKELY (VTABLE (queue)->dispose))
-		VTABLE (queue)->dispose (queue);
+	queue->priv = G_TYPE_INSTANCE_GET_PRIVATE (queue, IRIS_TYPE_QUEUE, IrisQueuePrivate);
+
+	/* only create GAsyncQueue if needed */
+	if (G_TYPE_FROM_INSTANCE (queue) == IRIS_TYPE_QUEUE)
+		queue->priv->q = g_async_queue_new ();
 }
 
 /**
@@ -94,156 +79,117 @@ iris_queue_dispose (IrisQueue *queue)
  *
  * Creates a new instance of #IrisQueue.
  *
- * The default implementation of #IrisQueue is a lock-free queue that works
- * well under highly concurrent scenarios.
- *
- * Return value: The newly created #IrisQueue instance.
+ * Return value: the newly created #IrisQueue.
  */
 IrisQueue*
-iris_queue_new (void)
+iris_queue_new ()
 {
-	IrisQueue *queue;
-
-	queue = g_slice_new0 (IrisQueue);
-	queue->vtable = &queue_vtable;
-	queue->ref_count = 1;
-	queue->impl_queue = g_async_queue_new ();
-
-	return queue;
-}
-
-/**
- * iris_queue_ref:
- * @queue: An #IrisQueue
- *
- * Increases the reference count of @queue atomically by one.
- *
- * Return value: the @queue pointer.
- */
-IrisQueue*
-iris_queue_ref (IrisQueue *queue)
-{
-	g_return_val_if_fail (queue != NULL, NULL);
-	g_return_val_if_fail (queue->ref_count > 0, NULL);
-
-	g_atomic_int_inc (&queue->ref_count);
-
-	return queue;
-}
-
-/**
- * iris_queue_unref:
- * @queue: An #IrisQueue
- *
- * Atomically decreases the reference count of @queue by one.  If the
- * reference count reaches zero, the queue is destroyed and all its
- * allocated resources are freed.
- */
-void
-iris_queue_unref (IrisQueue *queue)
-{
-	g_return_if_fail (queue != NULL);
-	g_return_if_fail (queue->ref_count > 0);
-
-	if (g_atomic_int_dec_and_test (&queue->ref_count))
-		iris_queue_dispose (queue);
+	return g_object_new (IRIS_TYPE_QUEUE, NULL);
 }
 
 /**
  * iris_queue_push:
  * @queue: An #IrisQueue
- * @data: a gpointer
+ * @data: a pointer to store that is not %NULL
  *
- * Enqueues a new pointer into the queue. The default implementation does
- * this atomically and lock-free.
+ * Pushes a non-%NULL pointer onto the queue.
  */
 void
 iris_queue_push (IrisQueue *queue,
                  gpointer   data)
 {
-	g_return_if_fail (queue != NULL);
-	VTABLE (queue)->push (queue, data);
+	IRIS_QUEUE_GET_CLASS (queue)->push (queue, data);
 }
 
 /**
  * iris_queue_pop:
  * @queue: An #IrisQueue
  *
- * Dequeues the next item from the queue. The default implementation does
- * this atomically and lock-free.
+ * Pops an item off the queue.  It is up to the queue implementation to
+ * determine if this method should block.  The default implementation of
+ * #IrisQueue blocks until an item is available.
  *
- * Return value: the next item from the queue or %NULL
+ * Return value: the next item off the queue or %NULL if there was an error
  */
 gpointer
 iris_queue_pop (IrisQueue *queue)
 {
-	g_return_val_if_fail (queue != NULL, NULL);
-	return VTABLE (queue)->pop (queue);
+	return IRIS_QUEUE_GET_CLASS (queue)->pop (queue);
 }
 
 /**
  * iris_queue_try_pop:
  * @queue: An #IrisQueue
  *
- * Tries to pop an item off of the queue.  If no item is available, %NULL is
- * returned.
+ * Tries to pop an item off the queue.  If no item is available %NULL
+ * is returned.
  *
- * Return value: An item from the queue or %NULL
+ * Return value: the next item off the queue or %NULL if none was available.
  */
 gpointer
 iris_queue_try_pop (IrisQueue *queue)
 {
-	g_return_val_if_fail (queue != NULL, NULL);
-	return VTABLE (queue)->try_pop (queue);
+	return IRIS_QUEUE_GET_CLASS (queue)->try_pop (queue);
 }
 
 /**
  * iris_queue_timed_pop:
  * @queue: An #IrisQueue
- * @timeout: absolute time for timeout
+ * @timeout: the absolute timeout for pop
  *
- * Tries to pop an item off of the queue within before the specified time
- * has passed.
+ * Pops an item off the queue or returns %NULL when @timeout has passed.
  *
- * Return value: An item from the queue or %NULL.
+ * Return value: the next item off the queue or %NULL if @timeout has passed.
  */
 gpointer
 iris_queue_timed_pop (IrisQueue *queue,
                       GTimeVal  *timeout)
 {
-	g_return_val_if_fail (queue != NULL, NULL);
-	return VTABLE (queue)->timed_pop (queue, timeout);
+	return IRIS_QUEUE_GET_CLASS (queue)->timed_pop (queue, timeout);
 }
 
 /**
  * iris_queue_length:
  * @queue: An #IrisQueue
  *
- * Retreives the length of the queue.
+ * Retrieves the current length of the queue.
  *
- * The default implementation does not use
- * a fence since the length of a concurrent queue may not be the same between
- * a read and a write anyway. This means that updates from other threads may
- * not have propogated the cache lines to the host cpu (but in most cases,
- * this is probably fine).
- *
- * Return value: the length of the queue.
+ * Return value: the length of the queue
  */
 guint
 iris_queue_length (IrisQueue *queue)
 {
-	g_return_val_if_fail (queue != NULL, 0);
-	return VTABLE (queue)->length (queue);
+	return IRIS_QUEUE_GET_CLASS (queue)->length (queue);
 }
 
-GType
-iris_queue_get_type (void)
+static void
+iris_queue_real_push (IrisQueue *queue,
+                      gpointer   data)
 {
-	static GType queue_type = 0;
-	if (G_UNLIKELY (!queue_type))
-		queue_type = g_boxed_type_register_static (
-				"IrisQueue",
-				(GBoxedCopyFunc)iris_queue_ref,
-				(GBoxedFreeFunc)iris_queue_unref);
-	return queue_type;
+	g_async_queue_push (queue->priv->q, data);
+}
+
+static gpointer
+iris_queue_real_pop (IrisQueue *queue)
+{
+	return g_async_queue_pop (queue->priv->q);
+}
+
+static gpointer
+iris_queue_real_try_pop (IrisQueue *queue)
+{
+	return g_async_queue_try_pop (queue->priv->q);
+}
+
+static gpointer
+iris_queue_real_timed_pop (IrisQueue *queue,
+                           GTimeVal  *timeout)
+{
+	return g_async_queue_timed_pop (queue->priv->q, timeout);
+}
+
+static guint
+iris_queue_real_length (IrisQueue *queue)
+{
+	return g_async_queue_length (queue->priv->q);
 }

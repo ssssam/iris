@@ -21,6 +21,8 @@
 #ifndef __G_STAMP_POINTER_H__
 #define __G_STAMP_POINTER_H__
 
+#include <glib.h>
+
 /* #gstamppointer is a pointer that uses the lower 2 bits of the pointer
  * for a stamp. The stamp is a simple counter that can be incremented
  * repeatedly, and will roll over.
@@ -35,6 +37,8 @@
  * The GSlice allocator provides alignment to sizeof(void*).
  */
 
+G_BEGIN_DECLS
+
 typedef gpointer gstamppointer;
 
 #define G_STAMP_POINTER(p)             ((gstamppointer)p)
@@ -44,5 +48,7 @@ typedef gpointer gstamppointer;
         (((gulong)((G_STAMP_POINTER_GET_STAMP(p) + 1) & 0x03)) \
         |((gulong)(G_STAMP_POINTER_GET_POINTER(p)))))
 #define G_STAMP_POINTER_GET_LINK(p)    ((IrisLink*)G_STAMP_POINTER_GET_POINTER(p))
+
+G_END_DECLS
 
 #endif /* __G_STAMP_POINTER_H__ */

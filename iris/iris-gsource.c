@@ -66,7 +66,7 @@ iris_gsource_finalize (GSource *gsource)
 
 	source = (IrisGSource*)gsource;
 
-	iris_queue_unref (source->queue);
+	g_object_unref (source->queue);
 	source->context = NULL;
 }
 
@@ -96,7 +96,7 @@ iris_gsource_new (IrisQueue    *queue,
 
 	source = (IrisGSource*)gsource;
 	source->context = context != NULL? context : g_main_context_default ();
-	source->queue = iris_queue_ref (queue);
+	source->queue = g_object_ref (queue);
 
 	result = g_source_attach (gsource, context);
 	g_source_unref (gsource);

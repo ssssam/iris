@@ -1,4 +1,4 @@
-/* iris-queue-private.h
+/* iris-stack-private.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -18,18 +18,22 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_QUEUE_PRIVATE_H__
-#define __IRIS_QUEUE_PRIVATE_H__
+#ifndef __IRIS_STACK_PRIVATE_H__
+#define __IRIS_STACK_PRIVATE_H__
 
-#include <glib.h>
+#include "iris-link.h"
+#include "iris-free-list.h"
 
 G_BEGIN_DECLS
 
-struct _IrisQueuePrivate
+struct _IrisStack
 {
-	GAsyncQueue *q;
+	/*< private >*/
+	IrisLink      *head;
+	IrisFreeList  *free_list;
+	volatile gint  ref_count;
 };
 
 G_END_DECLS
 
-#endif /* __IRIS_QUEUE_PRIVATE_H__ */
+#endif /* __IRIS_STACK_PRIVATE_H__ */

@@ -118,7 +118,7 @@ iris_wsscheduler_remove_thread_real (IrisScheduler *scheduler,
 	thread->user_data = NULL;
 
 	iris_rrobin_remove (priv->rrobin, queue);
-	iris_queue_unref (queue);
+	g_object_unref (queue);
 }
 
 static void
@@ -149,7 +149,7 @@ iris_wsscheduler_add_thread_real (IrisScheduler  *scheduler,
 	return;
 
 error:
-	iris_queue_unref (queue);
+	g_object_unref (queue);
 	thread->user_data = NULL;
 }
 

@@ -1,14 +1,15 @@
 #include <iris/iris.h>
-#include <iris/iris-free-list.h>
-#include <iris/iris-queue-private.h>
+#include <iris/iris-lfqueue-private.h>
 
 static void
 test1 (void)
 {
 	IrisQueue *queue = iris_lfqueue_new ();
-	g_assert (queue != NULL);
-	g_assert (((IrisLFQueue*)queue)->head != NULL);
-	g_assert (((IrisLFQueue*)queue)->head->next == NULL);
+
+	g_assert (queue);
+	g_assert (IRIS_IS_LFQUEUE (queue));
+	g_assert (IRIS_LFQUEUE (queue)->priv->head);
+	g_assert (!IRIS_LFQUEUE (queue)->priv->head->next);
 }
 
 static void
@@ -34,9 +35,9 @@ test4 (void)
 {
 	IrisQueue *queue = iris_lfqueue_new ();
 	g_assert (queue != NULL);
-	g_assert (((IrisLFQueue*)queue)->head != NULL);
-	g_assert (((IrisLFQueue*)queue)->head->next == NULL);
-	iris_queue_unref (queue);
+	g_assert (((IrisLFQueue*)queue)->priv->head != NULL);
+	g_assert (((IrisLFQueue*)queue)->priv->head->next == NULL);
+	g_object_unref (queue);
 }
 
 static void
@@ -66,34 +67,6 @@ test6 (void)
 	g_assert (iris_queue_length (queue) == 0);
 }
 
-static gboolean test7_data = FALSE;
-
-static void
-test7_cb (IrisQueue *queue)
-{
-	test7_data = TRUE;
-}
-
-static void
-test7 (void)
-{
-	IrisQueue *queue = iris_lfqueue_new ();
-	VTABLE (queue)->dispose = test7_cb;
-	iris_queue_unref (queue);
-	g_assert (test7_data == TRUE);
-}
-
-static void
-test8 (void)
-{
-	IrisQueue *queue = iris_lfqueue_new ();
-	VTABLE (queue)->dispose = test7_cb;
-	iris_queue_ref (queue);
-	iris_queue_unref (queue);
-	iris_queue_unref (queue);
-	g_assert (test7_data == TRUE);
-}
-
 static void
 test9 (void)
 {
@@ -114,8 +87,6 @@ main (int   argc,
 	g_test_add_func ("/lfqueue/free", test4);
 	g_test_add_func ("/lfqueue/push_pop_empty", test5);
 	g_test_add_func ("/lfqueue/length", test6);
-	g_test_add_func ("/lfqueue/unref1", test7);
-	g_test_add_func ("/lfqueue/unref2", test8);
 	g_test_add_func ("/lfqueue/get_type", test9);
 
 	return g_test_run ();

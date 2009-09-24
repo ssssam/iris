@@ -4,13 +4,18 @@ sources_public_h =						\
 	$(top_srcdir)/iris/iris.h				\
 	$(top_srcdir)/iris/iris-arbiter.h			\
 	$(top_srcdir)/iris/iris-gmainscheduler.h		\
+	$(top_srcdir)/iris/iris-lfqueue.h			\
 	$(top_srcdir)/iris/iris-message.h			\
 	$(top_srcdir)/iris/iris-port.h				\
+	$(top_srcdir)/iris/iris-queue.h				\
 	$(top_srcdir)/iris/iris-receiver.h			\
+	$(top_srcdir)/iris/iris-rrobin.h			\
 	$(top_srcdir)/iris/iris-scheduler.h			\
 	$(top_srcdir)/iris/iris-scheduler-manager.h		\
 	$(top_srcdir)/iris/iris-service.h			\
+	$(top_srcdir)/iris/iris-stack.h				\
 	$(top_srcdir)/iris/iris-task.h				\
+	$(top_srcdir)/iris/iris-wsqueue.h			\
 	$(top_srcdir)/iris/iris-wsscheduler.h			\
 	$(NULL)
 
@@ -23,18 +28,17 @@ sources_private_h =						\
 	$(top_srcdir)/iris/iris-free-list.h			\
 	$(top_srcdir)/iris/iris-gsource.h			\
 	$(top_srcdir)/iris/iris-link.h				\
-	$(top_srcdir)/iris/iris-lfqueue.h			\
+	$(top_srcdir)/iris/iris-lfqueue-private.h		\
 	$(top_srcdir)/iris/iris-port-private.h			\
-	$(top_srcdir)/iris/iris-queue.h				\
+	$(top_srcdir)/iris/iris-queue-private.h			\
 	$(top_srcdir)/iris/iris-receiver-private.h		\
-	$(top_srcdir)/iris/iris-rrobin.h			\
 	$(top_srcdir)/iris/iris-scheduler-private.h		\
 	$(top_srcdir)/iris/iris-scheduler-manager-private.h	\
 	$(top_srcdir)/iris/iris-service-private.h		\
-	$(top_srcdir)/iris/iris-stack.h				\
+	$(top_srcdir)/iris/iris-stack-private.h			\
 	$(top_srcdir)/iris/iris-task-private.h			\
 	$(top_srcdir)/iris/iris-util.h				\
-	$(top_srcdir)/iris/iris-wsqueue.h			\
+	$(top_srcdir)/iris/iris-wsqueue-private.h		\
 	$(top_srcdir)/iris/gstamppointer.h			\
 	$(NULL)
 

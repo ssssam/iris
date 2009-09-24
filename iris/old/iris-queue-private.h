@@ -21,13 +21,20 @@
 #ifndef __IRIS_QUEUE_PRIVATE_H__
 #define __IRIS_QUEUE_PRIVATE_H__
 
-#include <glib.h>
-
 G_BEGIN_DECLS
 
-struct _IrisQueuePrivate
+#define VTABLE(q) ((IrisQueueVTable*)(q->vtable))
+
+typedef struct _IrisQueueVTable IrisQueueVTable;
+
+struct _IrisQueueVTable
 {
-	GAsyncQueue *q;
+	void     (*push)      (IrisQueue *queue, gpointer data);
+	gpointer (*pop)       (IrisQueue *queue);
+	gpointer (*try_pop)   (IrisQueue *queue);
+	gpointer (*timed_pop) (IrisQueue *queue, GTimeVal *timeout);
+	guint    (*length)    (IrisQueue *queue);
+	void     (*dispose)   (IrisQueue *queue);
 };
 
 G_END_DECLS

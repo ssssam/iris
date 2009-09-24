@@ -21,39 +21,44 @@
 #ifndef __IRIS_WSQUEUE_H__
 #define __IRIS_WSQUEUE_H__
 
-#include <glib-object.h>
-
-#include "iris-link.h"
 #include "iris-queue.h"
 #include "iris-rrobin.h"
 
 G_BEGIN_DECLS
 
-#define IRIS_TYPE_WSQUEUE (iris_wsqueue_get_type())
-#define IRIS_WSQUEUE(q) ((IrisWSQueue*)q)
+#define IRIS_TYPE_WSQUEUE		(iris_wsqueue_get_type ())
+#define IRIS_WSQUEUE(obj)		(G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_WSQUEUE, IrisWSQueue))
+#define IRIS_WSQUEUE_CONST(obj)		(G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_WSQUEUE, IrisWSQueue const))
+#define IRIS_WSQUEUE_CLASS(klass)	(G_TYPE_CHECK_CLASS_CAST ((klass), IRIS_TYPE_WSQUEUE, IrisWSQueueClass))
+#define IRIS_IS_WSQUEUE(obj)		(G_TYPE_CHECK_INSTANCE_TYPE ((obj), IRIS_TYPE_WSQUEUE))
+#define IRIS_IS_WSQUEUE_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE ((klass), IRIS_TYPE_WSQUEUE))
+#define IRIS_WSQUEUE_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS ((obj), IRIS_TYPE_WSQUEUE, IrisWSQueueClass))
 
-typedef struct _IrisWSQueue IrisWSQueue;
+typedef struct _IrisWSQueue		IrisWSQueue;
+typedef struct _IrisWSQueueClass	IrisWSQueueClass;
+typedef struct _IrisWSQueuePrivate	IrisWSQueuePrivate;
 
 struct _IrisWSQueue
 {
-	IrisQueue      parent;
+	IrisQueue parent;
 
-	/*< private >*/
-	IrisQueue     *global;
-	IrisRRobin    *rrobin;
-	gint           mask;
-	GMutex        *mutex;
-	volatile gint  head_idx;
-	volatile gint  tail_idx;
-	gpointer      *items;
-	gulong         length;
+	/*< private >*/	
+	IrisWSQueuePrivate *priv;
 };
 
-GType      iris_wsqueue_get_type   (void) G_GNUC_CONST;
-IrisQueue* iris_wsqueue_new        (IrisQueue *global, IrisRRobin *peers);
-gpointer   iris_wsqueue_try_steal  (IrisWSQueue *queue, guint timeout);
-void       iris_wsqueue_local_push (IrisWSQueue *queue, gpointer data);
-gpointer   iris_wsqueue_local_pop  (IrisWSQueue *queue);
+struct _IrisWSQueueClass
+{
+	IrisQueueClass parent_class;
+};
+
+GType        iris_wsqueue_get_type   (void) G_GNUC_CONST;
+IrisQueue*   iris_wsqueue_new        (IrisQueue   *global,
+                                      IrisRRobin  *peers);
+gpointer     iris_wsqueue_try_steal  (IrisWSQueue *queue,
+                                      guint        timeout);
+void         iris_wsqueue_local_push (IrisWSQueue *queue,
+                                      gpointer     data);
+gpointer     iris_wsqueue_local_pop  (IrisWSQueue *queue);
 
 G_END_DECLS
 

@@ -23,33 +23,50 @@
 
 #include <glib-object.h>
 
-#include "iris-link.h"
-
 G_BEGIN_DECLS
 
-#define IRIS_TYPE_QUEUE (iris_queue_get_type())
+#define IRIS_TYPE_QUEUE            (iris_queue_get_type ())
+#define IRIS_QUEUE(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_QUEUE, IrisQueue))
+#define IRIS_QUEUE_CONST(obj)      (G_TYPE_CHECK_INSTANCE_CAST ((obj), IRIS_TYPE_QUEUE, IrisQueue const))
+#define IRIS_QUEUE_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), IRIS_TYPE_QUEUE, IrisQueueClass))
+#define IRIS_IS_QUEUE(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), IRIS_TYPE_QUEUE))
+#define IRIS_IS_QUEUE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), IRIS_TYPE_QUEUE))
+#define IRIS_QUEUE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), IRIS_TYPE_QUEUE, IrisQueueClass))
 
-typedef struct _IrisQueue IrisQueue;
+typedef struct _IrisQueue        IrisQueue;
+typedef struct _IrisQueueClass   IrisQueueClass;
+typedef struct _IrisQueuePrivate IrisQueuePrivate;
 
 struct _IrisQueue
 {
+	GObject parent;
+
 	/*< private >*/
-	gpointer         vtable;
-	volatile gint    ref_count;
-	GAsyncQueue     *impl_queue;
+	IrisQueuePrivate *priv;
 };
 
-GType      iris_queue_get_type  (void) G_GNUC_CONST;
-IrisQueue* iris_queue_new       (void);
+struct _IrisQueueClass
+{
+	GObjectClass parent_class;
 
-IrisQueue* iris_queue_ref       (IrisQueue *queue);
-void       iris_queue_unref     (IrisQueue *queue);
+	void     (*push)      (IrisQueue *queue,
+	                       gpointer   data);
+	gpointer (*pop)       (IrisQueue *queue);
+	gpointer (*try_pop)   (IrisQueue *queue);
+	gpointer (*timed_pop) (IrisQueue *queue,
+	                       GTimeVal  *timeout);
+	guint    (*length)    (IrisQueue *queue);
+};
 
-void       iris_queue_push      (IrisQueue *queue, gpointer data);
-gpointer   iris_queue_pop       (IrisQueue *queue);
-gpointer   iris_queue_try_pop   (IrisQueue *queue);
-gpointer   iris_queue_timed_pop (IrisQueue *queue, GTimeVal *timeout);
-guint      iris_queue_length    (IrisQueue *queue);
+GType       iris_queue_get_type  (void) G_GNUC_CONST;
+IrisQueue * iris_queue_new       (void);
+void        iris_queue_push      (IrisQueue *queue,
+                                  gpointer   data);
+gpointer    iris_queue_pop       (IrisQueue *queue);
+gpointer    iris_queue_try_pop   (IrisQueue *queue);
+gpointer    iris_queue_timed_pop (IrisQueue *queue,
+                                  GTimeVal  *timeout);
+guint       iris_queue_length    (IrisQueue *queue);
 
 G_END_DECLS
 

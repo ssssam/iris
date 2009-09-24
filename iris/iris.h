@@ -26,6 +26,7 @@
 #include "iris-lfqueue.h"
 #include "iris-wsqueue.h"
 #include "iris-rrobin.h"
+#include "iris-stack.h"
 
 /* scheduler subsystem */
 #include "iris-scheduler.h"
