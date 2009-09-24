@@ -28,13 +28,13 @@
   <part>
     <title>Advanced Features</title>
     <chapter>
-      <title>Implementing a custom scheduler</title>
+      <title>Implementing a Custom Scheduler</title>
     </chapter>
     <chapter>
       <title>Arbitration of Message Passing</title>
     </chapter>
     <chapter>
-      <title></title>
+      <title>Lock-Free Data Structures</title>
     </chapter>
   </part>
 
@@ -61,6 +61,7 @@
       <title>Schedulers</title>
       <xi:include href="xml/iris-scheduler.xml"/>
       <xi:include href="xml/iris-wsscheduler.xml"/>
+      <xi:include href="xml/iris-lfscheduler.xml"/>
       <xi:include href="xml/iris-scheduler-manager.xml"/>
       <xi:include href="xml/iris-thread.xml"/>
     </chapter>

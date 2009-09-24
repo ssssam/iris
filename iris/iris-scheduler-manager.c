@@ -26,7 +26,7 @@
 /**
  * SECTION:iris-scheduler-manager
  * @title: IrisSchedulerManager
- * @short_description: scheduler management
+ * @short_description: Management of schedulers
  *
  * The scheduler manager helps provide dynamic thread-management for
  * schedulers.  It also has some helpers for debugging complex threading

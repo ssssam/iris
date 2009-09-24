@@ -1,3 +1,4 @@
+iris_lfscheduler_get_type
 iris_gmainscheduler_get_type
 iris_task_get_type
 iris_queue_get_type
@@ -13,3 +14,4 @@ iris_rrobin_get_type
 iris_wsqueue_get_type
 iris_stack_get_type
 iris_lfqueue_get_type
+iris_queue_get_type

@@ -1,4 +1,22 @@
 <SECTION>
+<FILE>iris-lfscheduler</FILE>
+IRIS_LFSCHEDULER_CONST
+IrisLFSchedulerPrivate
+<TITLE>IrisLFScheduler</TITLE>
+IrisLFScheduler
+iris_lfscheduler_new
+iris_lfscheduler_new_full
+<SUBSECTION Standard>
+IRIS_LFSCHEDULER
+IRIS_IS_LFSCHEDULER
+IRIS_TYPE_LFSCHEDULER
+iris_lfscheduler_get_type
+IRIS_LFSCHEDULER_CLASS
+IRIS_IS_LFSCHEDULER_CLASS
+IRIS_LFSCHEDULER_GET_CLASS
+</SECTION>
+
+<SECTION>
 <FILE>iris-gmainscheduler</FILE>
 IRIS_GMAINSCHEDULER_CONST
 IrisGMainSchedulerPrivate
@@ -72,6 +90,28 @@ iris_task_get_type
 IRIS_TASK_CLASS
 IRIS_IS_TASK_CLASS
 IRIS_TASK_GET_CLASS
+</SECTION>
+
+<SECTION>
+<FILE>iris-queue</FILE>
+IRIS_QUEUE_CONST
+IrisQueuePrivate
+<TITLE>IrisQueue</TITLE>
+IrisQueue
+iris_queue_new
+iris_queue_push
+iris_queue_pop
+iris_queue_try_pop
+iris_queue_timed_pop
+iris_queue_length
+<SUBSECTION Standard>
+IRIS_QUEUE
+IRIS_IS_QUEUE
+IRIS_TYPE_QUEUE
+iris_queue_get_type
+IRIS_QUEUE_CLASS
+IRIS_IS_QUEUE_CLASS
+IRIS_QUEUE_GET_CLASS
 </SECTION>
 
 <SECTION>
@@ -204,18 +244,45 @@ iris_receiver_get_type
 </SECTION>
 
 <SECTION>
-<FILE>iris-queue</FILE>
-IRIS_TYPE_QUEUE
-IrisQueue
-iris_queue_get_type
-iris_queue_new
-iris_queue_ref
-iris_queue_unref
-iris_queue_push
-iris_queue_pop
-iris_queue_try_pop
-iris_queue_timed_pop
-iris_queue_length
+<FILE>iris-wsqueue</FILE>
+IRIS_WSQUEUE_CONST
+IrisWSQueuePrivate
+<TITLE>IrisWSQueue</TITLE>
+IrisWSQueue
+iris_wsqueue_new
+iris_wsqueue_try_steal
+iris_wsqueue_local_push
+iris_wsqueue_local_pop
+<SUBSECTION Standard>
+IRIS_WSQUEUE
+IRIS_IS_WSQUEUE
+IRIS_TYPE_WSQUEUE
+iris_wsqueue_get_type
+IRIS_WSQUEUE_CLASS
+IRIS_IS_WSQUEUE_CLASS
+IRIS_WSQUEUE_GET_CLASS
+</SECTION>
+
+<SECTION>
+<FILE>iris-lfqueue</FILE>
+IRIS_LFQUEUE_CONST
+IrisLFQueuePrivate
+<TITLE>IrisLFQueue</TITLE>
+IrisLFQueue
+iris_lfqueue_new
+<SUBSECTION Standard>
+IRIS_LFQUEUE
+IRIS_IS_LFQUEUE
+IRIS_TYPE_LFQUEUE
+iris_lfqueue_get_type
+IRIS_LFQUEUE_CLASS
+IRIS_IS_LFQUEUE_CLASS
+IRIS_LFQUEUE_GET_CLASS
+</SECTION>
+
+<SECTION>
+<FILE>iris-lfqueue-private</FILE>
+IrisLFQueuePrivate
 </SECTION>
 
 <SECTION>
@@ -298,8 +365,7 @@ iris_gsource_new
 
 <SECTION>
 <FILE>iris-queue-private</FILE>
-VTABLE
-IrisQueueVTable
+IrisQueuePrivate
 </SECTION>
 
 <SECTION>
@@ -328,15 +394,8 @@ iris_free_list_put
 </SECTION>
 
 <SECTION>
-<FILE>iris-wsqueue</FILE>
-IRIS_TYPE_WSQUEUE
-IRIS_WSQUEUE
-IrisWSQueue
-iris_wsqueue_get_type
-iris_wsqueue_new
-iris_wsqueue_try_steal
-iris_wsqueue_local_push
-iris_wsqueue_local_pop
+<FILE>iris-wsqueue-private</FILE>
+IrisWSQueuePrivate
 </SECTION>
 
 <SECTION>
@@ -352,10 +411,28 @@ iris_stack_unref
 </SECTION>
 
 <SECTION>
-<FILE>iris-lfqueue</FILE>
-IRIS_TYPE_LFQUEUE
-IrisLFQueue
-iris_lfqueue_get_type
-iris_lfqueue_new
+<FILE>iris-stack-private</FILE>
+IrisStack
+</SECTION>
+
+<SECTION>
+<FILE>iris-queue</FILE>
+IRIS_TYPE_QUEUE
+IrisQueue
+iris_queue_get_type
+iris_queue_new
+iris_queue_ref
+iris_queue_unref
+iris_queue_push
+iris_queue_pop
+iris_queue_try_pop
+iris_queue_timed_pop
+iris_queue_length
+</SECTION>
+
+<SECTION>
+<FILE>iris-queue-private</FILE>
+VTABLE
+IrisQueueVTable
 </SECTION>
 

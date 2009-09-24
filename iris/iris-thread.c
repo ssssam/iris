@@ -31,7 +31,7 @@
 /**
  * SECTION:iris-thread
  * @title: IrisThread
- * @short_description: thread abstraction for schedulers
+ * @short_description: Thread abstraction for schedulers
  *
  * #IrisThread provides an abstraction upon the underlying threading
  * system for use by #IrisScheduler implementations.
