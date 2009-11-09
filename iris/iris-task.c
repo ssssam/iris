@@ -1054,7 +1054,6 @@ handle_complete (IrisTask    *task,
 {
 	g_return_if_fail (FLAG_IS_ON (task, IRIS_TASK_FLAG_EXECUTING));
 	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_CALLBACKS));
-	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_FINISHED));
 
 	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELED))
 		return;
