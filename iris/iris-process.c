@@ -1015,6 +1015,20 @@ iris_process_post_work_item (IrisMessage *work_item,
 	IRIS_PROCESS_GET_CLASS (process)->post_work_item (process, work_item);
 }
 
+#define UPDATE_WATCHES()                                              \
+	for (node=priv->watch_callback_list; node; node=node->next) {     \
+		IrisProcessWatchClosure *state;                               \
+		state = g_slice_new (IrisProcessWatchClosure);                \
+                                                                      \
+		state->task = task;                                           \
+		state->completed = g_atomic_int_get (&priv->processed_items); \
+		state->total = g_atomic_int_get (&priv->total_items);         \
+		state->cancelled = cancelled;                                 \
+                                                                      \
+		state->watch_callback = node->data;                           \
+		g_idle_add (progress_watch_idle_callback, state);             \
+	}
+
 static void
 iris_process_execute_real (IrisTask *task)
 {
@@ -1044,19 +1058,7 @@ iris_process_execute_real (IrisTask *task)
 		/* Update progress monitors, no more than four times a second */
 		if (g_timer_elapsed (priv->watch_callback_timer, NULL) > 0.250) {
 			g_timer_reset (priv->watch_callback_timer);
-
-			for (node=priv->watch_callback_list; node; node=node->next) {
-				IrisProcessWatchClosure *state;
-				state = g_slice_new (IrisProcessWatchClosure);
-
-				state->task = task;
-				state->completed = g_atomic_int_get (&priv->processed_items);
-				state->total = g_atomic_int_get (&priv->total_items);
-				state->cancelled = cancelled;
-
-				state->watch_callback = node->data;
-				g_idle_add (progress_watch_idle_callback, state);
-			}
+			UPDATE_WATCHES();
 		}
 
 		if (cancelled)
@@ -1091,6 +1093,8 @@ iris_process_execute_real (IrisTask *task)
 
 		g_atomic_int_inc (&priv->processed_items);
 	};
+
+	UPDATE_WATCHES();
 
 	g_closure_invalidate (task->priv->closure);
 	g_closure_unref (task->priv->closure);

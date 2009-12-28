@@ -474,15 +474,15 @@ iris_process_get_type
 <FILE>iris-progress-monitor</FILE>
 <TITLE>IrisProgressMonitor</TITLE>
 IrisProgressMonitor
+iris_progress_monitor_watch_process
+iris_progress_monitor_watch_process_chain
+iris_progress_monitor_set_title
+iris_progress_monitor_set_close_delay
+<SUBSECTION Custom Watches>
 iris_progress_monitor_add_watch
 iris_progress_monitor_update_watch
 iris_progress_monitor_watch_cancelled
 iris_progress_monitor_watch_complete
-iris_progress_monitor_set_title
-iris_progress_monitor_set_close_delay
-<SUBSECTION process-specific>
-iris_progress_monitor_watch_process
-iris_progress_monitor_watch_process_chain
 <SUBSECTION Standard>
 IRIS_TYPE_PROGRESS_MONITOR
 iris_progress_monitor_get_type

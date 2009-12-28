@@ -30,7 +30,7 @@
  * @see_also: #IrisProgressDialog, #IrisProgressInfoBar
  *
  * This interface is not of direct use unless you want to implement a new
- * monitoring widget, or monitor something other than an #IrisTask: you might
+ * monitoring widget, or monitor something other than an #IrisTask - you might
  * like #IrisProgressDialog or #IrisProgressInfoBar which are implementations.
  *
  * #IrisProgressMonitor is an interface for widgets which display the progress
@@ -39,14 +39,16 @@
  * iris_progress_monitor_watch_process_chain() functions.
  *
  * The interface has the flexibility to watch any #IrisTask objects if desired.
- * The task will need to call iris_progress_monitor_watch_callback()
- * periodically to update the progress monitor. This function must be called
- * from the GLib main loop; see the documentation for the function for more
- * information.
+ * To do this you must first call iris_progress_monitor_add_watch() and then
+ * periodically call iris_progress_monitor_update_watch() to keep it up to date.
+ * The task must call one of iris_progress_monitor_watch_cancelled() or
+ * iris_progress_monitor_watch_complete() before the progress monitor will close.
  *
- * This interface should only be called from the GLib main loop thread.
- *
- * FIXME: Write. Try actually using for an arbitrary task.
+ * This interface should only be called from the GLib main loop thread. For
+ * functions that update widgets (ie. iris_progress_monitor_update_watch())
+ * note that calling the function with the GDK lock is not enough if you want
+ * your app to work on MS Windows; the safest method is to use g_idle_add() to
+ * execute a callback from the GLib main loop thread.
  */
 
 enum {
@@ -115,6 +117,18 @@ iris_progress_monitor_base_init (gpointer g_class)
 	                G_TYPE_NONE, 0);
 }
 
+/**
+ * iris_progress_monitor_add_watch:
+ * @progress_monitor: an #IrisProgressMonitor
+ * @title: name of the task being watched, used to label its progress bar, or
+ *         %NULL.
+ *
+ * Causes @progress_monitor to add a new watch (generally represented by
+ * a progress bar) for a task, which needs to update it periodically by calling
+ * iris_progress_monitor_update_watch(). The watch must be marked as finished
+ * using iris_progress_monitor_watch_cancelled() or
+ * iris_progress_monitor_watch_complete().
+ **/
 IrisProgressWatch *
 iris_progress_monitor_add_watch (IrisProgressMonitor *progress_monitor,
                                  const gchar         *title)
@@ -164,7 +178,10 @@ calculate_fraction (IrisProgressWatch *watch)
  * This function allows you to use #IrisProgressMonitor widgets to watch any
  * kind of IrisTask. After adding a watch with
  * iris_progress_monitor_add_watch(), your task or task series should call this
- * function periodically to update the UI.
+ * function periodically to update the UI. It must be called from the main GLib
+ * thread if updating Gtk+ widgets (using gdk_threads_enter() is NOT enough if
+ * you want your app to work on MS Windows); the best way to do this is to use
+ * g_idle_add() to insert a callback in the main thread.
  **/
 void
 iris_progress_monitor_update_watch (IrisProgressWatch *watch,
@@ -284,7 +301,7 @@ iris_progress_monitor_set_title (IrisProgressMonitor *progress_monitor,
  * for 0.5 seconds before doing so, mainly because the values they display are
  * often slightly behind the actual processes being watched and so they can
  * appear to have stopped without finishing. This function allows you to tweak
- * this behaviour.
+ * the behaviour.
  *
  * A timeout of 0 seconds will cause @progress_monitor to disappear as soon as
  * the process completes. A timeout < 0 will stop #IrisProgressDialog and
@@ -361,6 +378,14 @@ process_watch_callback (IrisProcess *process,
 	interface->update_watch (progress_monitor, watch);
 }
 
+/**
+ * iris_progress_monitor_watch_process:
+ * @progress_monitor: An #IrisProgressMonitor
+ * @process: an #IrisProcess
+ *
+ * Visually display the progress of @process. If @process has source or sink
+ * processes connected, they are ignored.
+ **/
 void
 iris_progress_monitor_watch_process (IrisProgressMonitor *progress_monitor,
                                      IrisProcess         *process)
@@ -398,6 +423,15 @@ iris_progress_monitor_watch_process (IrisProgressMonitor *progress_monitor,
 	                                 watch, NULL);
 }
 
+/**
+ * iris_progress_monitor_watch_process_chain:
+ * @progress_monitor: An #IrisProgressMonitor
+ * @process: an #IrisProcess
+ *
+ * Visually display the progress of @process, and any processes which are
+ * connected. Each process in the chain is displayed separately in the order of
+ * the data flow.
+ **/
 void
 iris_progress_monitor_watch_process_chain (IrisProgressMonitor *progress_monitor,
                                            IrisProcess         *process)
