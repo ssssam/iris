@@ -187,11 +187,13 @@ iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 	vbox_outer = gtk_vbox_new (FALSE, 4);
 	gtk_container_set_border_width (GTK_CONTAINER (vbox_outer), 4);
 
-	title_formatted = g_strdup_printf ("<b>%s</b>", watch->title);
-	title = gtk_label_new (title_formatted);
-	gtk_label_set_use_markup (GTK_LABEL (title), TRUE);
-	gtk_misc_set_alignment (GTK_MISC (title), 0.0, 0.5);
-	g_free (title_formatted);
+	if (watch->title != NULL) {
+		title_formatted = g_strdup_printf ("<b>%s</b>", watch->title);
+		title = gtk_label_new (title_formatted);
+		gtk_label_set_use_markup (GTK_LABEL (title), TRUE);
+		gtk_misc_set_alignment (GTK_MISC (title), 0.0, 0.5);
+		g_free (title_formatted);
+	}
 
 	hbox = gtk_hbox_new(FALSE, 0);
 	vbox_inner = gtk_vbox_new(FALSE, 0);
@@ -203,7 +205,9 @@ iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 	gtk_box_pack_start (GTK_BOX(vbox_inner), progress_bar, TRUE, TRUE, 0);
 	gtk_box_pack_start (GTK_BOX(vbox_inner), progress_label, FALSE, FALSE, 0);
 	gtk_box_pack_start (GTK_BOX(hbox),       vbox_inner, TRUE, TRUE, 18);
-	gtk_box_pack_start (GTK_BOX(vbox_outer), title, FALSE, FALSE, 0);
+
+	if (watch->title != NULL)
+		gtk_box_pack_start (GTK_BOX(vbox_outer), title, FALSE, FALSE, 0);
 	gtk_box_pack_start (GTK_BOX(vbox_outer), hbox, FALSE, FALSE, 0);
 	gtk_widget_show_all(vbox_outer);
 

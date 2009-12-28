@@ -223,8 +223,10 @@ iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 
 	indent = gtk_label_new ("    ");
 
-	title_label = gtk_label_new (watch->title);
-	gtk_misc_set_alignment (GTK_MISC (title_label), 1.0, 0.5);
+	if (watch->title != NULL) {
+		title_label = gtk_label_new (watch->title);
+		gtk_misc_set_alignment (GTK_MISC (title_label), 1.0, 0.5);
+	}
 
 	progress_bar = gtk_progress_bar_new ();
 
@@ -233,8 +235,10 @@ iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 
 	gtk_table_attach (GTK_TABLE (priv->watch_table), indent,
 	                  0, 1, row_n, row_n + 1, GTK_FILL, GTK_FILL, 4, 4);
-	gtk_table_attach (GTK_TABLE (priv->watch_table), title_label,
-	                  1, 2, row_n, row_n + 1, GTK_FILL, GTK_FILL, 4, 4);
+
+	if (watch->title != NULL)
+		gtk_table_attach (GTK_TABLE (priv->watch_table), title_label,
+						  1, 2, row_n, row_n + 1, GTK_FILL, GTK_FILL, 4, 4);
 	gtk_table_attach (GTK_TABLE (priv->watch_table), progress_bar,
 	                  2, 3, row_n, row_n + 1, 
 	                  GTK_EXPAND | GTK_FILL, GTK_FILL, 4, 4);
