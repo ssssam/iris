@@ -9,6 +9,7 @@ m4_define([lt_revision], [iris_interface_age])
 m4_define([lt_age], [m4_eval(iris_binary_age - iris_interface_age)])
 
 m4_define([glib_req_version], [2.16])
+m4_define([gtk_req_version], [2.18])
 
 AC_PREREQ([2.59])
 
@@ -45,6 +46,10 @@ IRIS_LT_VERSION="$IRIS_LT_CURRENT:$IRIS_LT_REVISION:$IRIS_LT_AGE"
 IRIS_LT_LDFLAGS="-version-info $IRIS_LT_VERSION"
 AC_SUBST(IRIS_LT_LDFLAGS)
 
+IRIS_EXTRA_PACKAGES=
+IRIS_EXTRA_LIBS=
+IRIS_EXTRA_CFLAGS=
+
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_ISC_POSIX
@@ -61,8 +66,6 @@ AC_PATH_PROG([GTESTER_REPORT], [gtester-report])
 AM_CONDITIONAL(PLATFORM_LINUX, echo x$host| grep -q linux)
 
 PKG_CHECK_MODULES(IRIS, gobject-2.0 >= glib_req_version gthread-2.0 >= glib_req_version gio-2.0 >= glib_req_version)
-AC_SUBST(IRIS_CFLAGS)
-AC_SUBST(IRIS_LIBS)
 
 AM_CONDITIONAL(ENABLE_GLIB_TEST, test "x$enable_glibtest" = "xyes")
 
@@ -81,6 +84,29 @@ esac
 AC_MSG_RESULT(ok)
 AM_CONDITIONAL(PLATFORM_WIN32, test x$platform_win32 = xyes)
 AM_CONDITIONAL(PLATFORM_DARWIN, test x$platform_darwin = xyes)
+
+dnl = Enable GTK+ widgets ==================================================
+AC_ARG_ENABLE([gtk],
+              AS_HELP_STRING([--disable-gtk],[Disable GTK+ widgets]),
+              [], [enable_gtk=yes])
+PKG_CHECK_MODULES(GTK, [gtk+-2.0 >= gtk_req_version], , enable_gtk=no)
+AC_DEFINE([ENABLE_GTK],[1],[Define to compile with GTK+ support])
+AM_CONDITIONAL(ENABLE_GTK, [test "x$enable_gtk" = "xyes"])
+
+IRIS_CFLAGS="$IRIS_CFLAGS $GTK_CFLAGS"
+IRIS_LIBS="$IRIS_LIBS $GTK_LIBS"
+
+if test "x$enable_gtk" = "xyes"; then
+	IRIS_EXTRA_PACKAGES=gtk+-2.0
+	IRIS_EXTRA_LIBS=$GTK_LIBS
+	IRIS_EXTRA_CFLAGS=$GTK_CFLAGS
+fi
+
+
+AC_SUBST(GTK_PACKAGES)
+AC_SUBST(GTK_EXTRA_LIBS)
+AC_SUBST(GTK_EXTRA_CFLAGS)
+
 
 dnl = Enable Vala ==========================================================
 enable_vala=no
@@ -269,6 +295,15 @@ AM_CONDITIONAL([ENABLE_PYTHON],[test "x$enable_python" = "xyes"])
 
 
 dnl = Misc =================================================================
+# for automake
+AC_SUBST(IRIS_CFLAGS)
+AC_SUBST(IRIS_LIBS)
+
+# for pkg-config
+AC_SUBST(IRIS_EXTRA_PACKAGES)
+AC_SUBST(IRIS_EXTRA_LIBS)
+AC_SUBST(IRIS_EXTRA_CFLAGS)
+
 GTK_DOC_CHECK([1.11])
 SHAVE_INIT([build/autotools], [enable])
 
@@ -300,6 +335,7 @@ echo "   Maintainer Compiler flags:  ${enable_maintainer_flags}"
 echo "   Profiling................:  ${enable_profiling}"
 echo "   Build API reference......:  ${enable_gtk_doc}"
 echo "   Enable test suite........:  ${enable_glibtest}"
+echo "   Enable GTK+ widgets......:  ${enable_gtk}"
 echo ""
 echo " Preview Bindings"
 echo ""

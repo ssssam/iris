@@ -6,6 +6,6 @@ includedir=${exec_prefix}/include
 Name: Iris
 Description: Message Passing and Asynchronous Tasks for GObject
 Version: @VERSION@
-Libs: -L${libdir} -liris-1.0
-Cflags: -I${includedir}/iris-1.0
-Requires: gobject-2.0 gthread-2.0 gio-2.0
+Libs: -L${libdir} -liris-1.0 @IRIS_EXTRA_LIBS@
+Cflags: -I${includedir}/iris-1.0 @IRIS_EXTRA_CFLAGS@
+Requires: gobject-2.0 gthread-2.0 gio-2.0 @IRIS_EXTRA_PACKAGES@

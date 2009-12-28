@@ -1,4 +1,4 @@
-/* iris.h
+/* iris-gtk.h
  *
  * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
  *
@@ -18,38 +18,11 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_H__
-#define __IRIS_H__
+#ifndef __IRIS_GTK_H__
+#define __IRIS_GTK_H__
 
-/* basic data structures */
-#include "iris-queue.h"
-#include "iris-lfqueue.h"
-#include "iris-wsqueue.h"
-#include "iris-rrobin.h"
-#include "iris-stack.h"
+/* GTK monitoring widgets */
+#include "iris-progress-dialog.h"
+#include "iris-progress-info-bar.h"
 
-/* scheduler subsystem */
-#include "iris-scheduler.h"
-#include "iris-gmainscheduler.h"
-#include "iris-lfscheduler.h"
-#include "iris-wsscheduler.h"
-#include "iris-scheduler-manager.h"
-
-/* message passing and arbitration */
-#include "iris-message.h"
-#include "iris-receiver.h"
-#include "iris-port.h"
-#include "iris-arbiter.h"
-
-/* high level abstractions */
-#include "iris-service.h"
-#include "iris-task.h"
-#include "iris-process.h"
-
-/* monitoring */
-#include "iris-progress-monitor.h"
-
-/* global API methods */
-void iris_init (void);
-
-#endif /* __IRIS_H__ */
+#endif /* __IRIS_GTK_H__ */
