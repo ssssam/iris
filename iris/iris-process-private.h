@@ -67,8 +67,9 @@ struct _IrisProcessPrivate
 	/* For status indicators. */
 	gchar        *title;
 
-	/* Watch callbacks for monitoring UI */
-	GList        *watch_callback_list;
+	/* Monitoring UI */
+	GList        *watch_callback_list;  /* List of watchers */
+	GTimer       *watch_callback_timer; /* Time since we last updated them */
 };
 
 #endif /* __IRIS_PROCESS_PRIVATE_H__ */

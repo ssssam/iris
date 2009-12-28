@@ -30,9 +30,11 @@
  * @title: IrisProcess
  * @short_description: A concurrent and asynchronous process abstraction
  *
- * #IrisProcess is a work queue that performs atomic pieces of work. An example
- * of this could be reading information from every file in a directory, or
- * processing a large number of independent calculations.
+ * #IrisProcess is a work queue that operates on atomic work items. An example
+ * of this is be reading information from every file in a directory, or
+ * processing a complex calculation with a series of inputs. This is a special
+ * case of #IrisTask, which is better if you want to do one long task such as
+ * downloading a single file.
  *
  * Once the #IrisProcess is created, you can give it work to do with
  * iris_process_enqueue(). You can start it processing the work at any point
@@ -40,17 +42,7 @@
  * iris_process_no_more_work(), so the thread will exit once it has finished
  * working.
  *
- * The order the work items are executed in is unspecified.
- *
- * FIXME: potential improvements!
- *   * Talk about why it's better than iristask for some things.
- *   * IrisProcess should be able to enqueue GTasks, perhaps? It would
- *     essentially become a grouping unit at this point, so a bunch of tasks
- *     could be monitored, cancelled etc. in one place.
- *   * IrisProcess possibly isn't a great name, because a 'Process' is already an instance of a
- *     program. It's hard to think of any other names though. Maybe just be sure you always refer
- *     to it as an 'IrisProcess' and not a 'process'.
- *   * How could IrisProcess use no CPU power until it receives some work?
+ * The order the work items are executed in is unspecified. 
  */
 
 /* How frequently the process checks for cancellation between try_pop calls. */
@@ -73,16 +65,6 @@ static void             iris_process_dummy         (IrisProcess *task,
                                                     IrisMessage *work_item,
                                                     gpointer user_data);
 
-#if 0
-
-/* We keep a list of main schedulers for processing work
- * work items in a main thread.  We have one scheduler for
- * each main-context that is used.  Of course, this is only
- * done if a task requests a main-context.
- */
-static GList* main_schedulers = NULL;
-
-#endif
 
 /* Used to pass the parameters for a source/sink-connected signal to an idle
  * callback, process_connected_idle_callback(). */
@@ -895,7 +877,7 @@ handle_add_source (IrisProcess *process,
 	ENABLE_FLAG (process, IRIS_PROCESS_FLAG_HAS_SOURCE);
 
 	/* Signal. FIXME: it is bad to call g_idle_add if no main loop is running, and the
-	 * closure is leaked */
+	 * closure is leaked in that case*/
 	signal_closure = g_slice_new (IrisProcessConnectionClosure);
 	signal_closure->process = process;
 	signal_closure->connected_process = source_process;
@@ -1053,19 +1035,22 @@ iris_process_execute_real (IrisTask *task)
 
 		cancelled = iris_process_is_canceled (process);
 
-		/* FIXME: for fast-processing tasks, this is too often ... we should throttle these
-		 * callbacks to say 1 every 250ms at most, using a timer. */
-		for (node=priv->watch_callback_list; node; node=node->next) {
-			IrisProcessWatchClosure *state;
-			state = g_slice_new (IrisProcessWatchClosure);
+		/* Update progress monitors, no more than four times a second */
+		if (g_timer_elapsed (priv->watch_callback_timer, NULL) > 0.250) {
+			g_timer_reset (priv->watch_callback_timer);
 
-			state->task = task;
-			state->completed = g_atomic_int_get (&priv->processed_items);
-			state->total = g_atomic_int_get (&priv->total_items);
-			state->cancelled = cancelled;
+			for (node=priv->watch_callback_list; node; node=node->next) {
+				IrisProcessWatchClosure *state;
+				state = g_slice_new (IrisProcessWatchClosure);
 
-			state->watch_callback = node->data;
-			g_idle_add (progress_watch_idle_callback, state);
+				state->task = task;
+				state->completed = g_atomic_int_get (&priv->processed_items);
+				state->total = g_atomic_int_get (&priv->total_items);
+				state->cancelled = cancelled;
+
+				state->watch_callback = node->data;
+				g_idle_add (progress_watch_idle_callback, state);
+			}
 		}
 
 		if (cancelled)
@@ -1123,6 +1108,8 @@ iris_process_finalize (GObject *object)
 	GList *node;
 
 	g_free (priv->title);
+
+	g_timer_destroy (priv->watch_callback_timer);
 
 	for (node=priv->watch_callback_list; node; node=node->next)
 		g_closure_unref (node->data);
@@ -1218,8 +1205,9 @@ iris_process_init (IrisProcess *process)
 	priv->title = NULL;
 
 	priv->watch_callback_list = NULL;
+	priv->watch_callback_timer = g_timer_new ();
 
-	/* FIXME: do this properly */
+	/* FIXME: very, very simplistic implementation .. */
 	IrisScheduler *scheduler = iris_scheduler_default ();
 	if (scheduler->maxed)
 		g_warning ("Scheduler maxed.\n");
