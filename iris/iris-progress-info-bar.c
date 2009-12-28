@@ -26,12 +26,19 @@
 #include "iris-progress-info-bar-private.h"
 
 /**
- * SECTION:iris-progress-info_bar
+ * SECTION:iris-progress-info-bar
  * @title: IrisProgressInfoBar
- * @short_description: InfoBar showing progress through tasks or processes.
+ * @short_description: GtkInfoBar showing progress of tasks and processes.
+ * @see_also: #IrisProgressDialog
+ * @include: iris/iris-gtk.h
  *
- * #IrisProgressInfoBar 
- * FIXME: Write
+ * #IrisProgressInfoBar creates a #GtkInfobar which shows the status of various
+ * #IrisProcess and #IrisTask objects in a small bar you can place at the top
+ * or bottom of an application window. By default it shows a single-line
+ * #GtkProgressBar representing the overall progress of the tasks it is
+ * watching, to save space, but there is a #GtkExpander containing the
+ * individual progress bars. Use the #IrisProgressMonitor interface to control
+ * it.
  */
 
 static void     iris_progress_info_bar_class_init      (IrisProgressInfoBarClass *progress_info_bar_class);

@@ -57,6 +57,10 @@ IGNORE_HFILES=						\
 	iris-coordination-arbiter-private.h		\
 	iris-debug.h					\
 	iris-port-private.h				\
+	iris-process-private.h				\
+	iris-progress-monitor-private.h		\
+	iris-progress-dialog-private.h		\
+	iris-progress-info-bar-private.h	\
 	iris-receiver-private.h				\
 	iris-scheduler-manager-private.h		\
 	iris-scheduler-private.h			\

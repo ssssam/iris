@@ -28,10 +28,13 @@
 /**
  * SECTION:iris-progress-dialog
  * @title: IrisProgressDialog
- * @short_description: Dialog showing progress through tasks or processes.
+ * @short_description: Dialog showing progress of tasks and processes.
+ * @see_also: #IrisProgressInfoBar
+ * @include: iris/iris-gtk.h
  *
- * #IrisProgressDialog 
- * FIXME: Write
+ * #IrisProgressDialog creates a #GtkDialog which shows the status of various
+ * #IrisProcess and #IrisTask objects, in a separate window to any application
+ * windows. Use the #IrisProgressMonitor interface to control it.
  */
 
 static void     iris_progress_dialog_class_init      (IrisProgressDialogClass *progress_dialog_class);

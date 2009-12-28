@@ -57,7 +57,7 @@ typedef struct _IrisProgressWatch IrisProgressWatch;
 
 /**
  * IrisProgressWatchCallback:
- * @process: The #IrisProcess that is being monitored.
+ * @task: The #IrisProcess that is being monitored.
  * @completed: Number of work items completed so far
  * @total: Total number of work items enqueued so far
  * @cancelled: %TRUE if the process has been cancelled.
@@ -98,7 +98,7 @@ IrisProcess*  iris_process_new_with_func        (IrisProcessFunc      func,
 IrisProcess*  iris_process_new_with_closure     (GClosure            *closure);
 
 void          iris_process_run                  (IrisProcess            *process);
-void          iris_process_cancel               (IrisProcess            *task);
+void          iris_process_cancel               (IrisProcess            *process);
 
 void          iris_process_enqueue              (IrisProcess            *process,
                                                  IrisMessage            *work_item);

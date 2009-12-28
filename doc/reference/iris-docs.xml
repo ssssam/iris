@@ -66,6 +66,14 @@
       <title>High-Level Abstractions</title>
       <xi:include href="xml/iris-service.xml"/>
       <xi:include href="xml/iris-task.xml"/>
+      <xi:include href="xml/iris-process.xml"/>
+    </chapter>
+
+    <chapter>
+      <title>Progress Monitors</title>
+      <xi:include href="xml/iris-progress-monitor.xml"/>
+      <xi:include href="xml/iris-progress-dialog.xml"/>
+      <xi:include href="xml/iris-progress-info-bar.xml"/>
     </chapter>
 
     <chapter id="object-tree">

@@ -42,7 +42,13 @@
  * iris_process_no_more_work(), so the thread will exit once it has finished
  * working.
  *
- * The order the work items are executed in is unspecified. 
+ * The order the work items are executed in is unspecified. If they depend on
+ * each other, you will be better served by #IrisTask, or by breaking the
+ * function up into a series of chained processes.
+ *
+ * The progress of an #IrisProcess can be monitored using some kind of
+ * #IrisProgressMonitor, such as an #IrisProgressDialog. If you want to do this
+ * you may want to call iris_process_set_title() to give the process a label.
  */
 
 /* How frequently the process checks for cancellation between try_pop calls. */
@@ -299,7 +305,7 @@ iris_process_no_more_work (IrisProcess *process)
  *       iris_message_set_pointer (pointer_to_some_work);
  *       iris_process_forward (self, work_item);
  *     }
- * |]
+ * ]|
  *
  * When processes are chained together, the behaviour of other functions is
  * altered:
@@ -308,7 +314,7 @@ iris_process_no_more_work (IrisProcess *process)
  *   <para>
  *     run events are propagated DOWN the chain. To start work, you need to
  *     call:
- *       |[ iris_process_run (head); |]
+ *       |[ iris_process_run (head); ]|
  *     And the whole chain will start processing.
  *   </para>
  *  </listitem>
@@ -324,7 +330,7 @@ iris_process_no_more_work (IrisProcess *process)
  *   <para>
  *     cancel events are propagated UP the chain, so to cancel a whole chain
  *     you should call:
- *       |[ iris_process_cancel (tail); |]
+ *       |[ iris_process_cancel (tail); ]|
  *     If you cancel @head, @tail will carry on processing work.
  *   </para>
  *  </listitem>

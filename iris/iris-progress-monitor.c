@@ -27,6 +27,7 @@
  * SECTION:iris-progress-monitor
  * @title: IrisProgressMonitor
  * @short_description: Interface for progress monitor widgets
+ * @see_also: #IrisProgressDialog, #IrisProgressInfoBar
  *
  * This interface is not of direct use unless you want to implement a new
  * monitoring widget, or monitor something other than an #IrisTask: you might
@@ -157,7 +158,6 @@ calculate_fraction (IrisProgressWatch *watch)
  * iris_progress_monitor_update_watch:
  * @watch: an #IrisProgressWatch, as returned by
  *         iris_process_monitor_add_watch()
- * @task: an #IrisTask or #IrisProcess
  * @processed_items: number of work items completed
  * @total_items: total number of work items
  *
@@ -277,7 +277,7 @@ iris_progress_monitor_set_title (IrisProgressMonitor *progress_monitor,
 /**
  * iris_progress_monitor_set_close_delay:
  * @progress_monitor: An #IrisProgressMonitor
- * @seconds: Time to wait before @progress_monitor destroys itself
+ * @milliseconds: Time to wait before @progress_monitor destroys itself
  *
  * #IrisProgressDialog and #IrisProgressInfoBar will call gtk_widget_destroy()
  * on themselves when all of their watches complete. By default they will wait
