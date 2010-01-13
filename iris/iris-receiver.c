@@ -102,6 +102,9 @@ iris_receiver_worker (gpointer data)
 	if (priv->arbiter)
 		iris_arbiter_receive_completed (priv->arbiter,
 		                                worker->receiver);
+
+	/* Call our destroy notify */
+	iris_receiver_worker_cb (data);
 }
 
 static IrisDeliveryStatus
