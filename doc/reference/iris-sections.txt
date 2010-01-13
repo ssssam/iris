@@ -172,6 +172,8 @@ IrisSchedulerPrivate
 IrisThread
 IrisThreadWork
 IrisCallback
+IrisSchedulerForeachAction
+IrisSchedulerForeachFunc
 <TITLE>IrisScheduler</TITLE>
 IrisScheduler
 iris_scheduler_get_type
@@ -182,6 +184,7 @@ iris_scheduler_set_default
 iris_scheduler_get_min_threads
 iris_scheduler_get_max_threads
 iris_scheduler_queue
+iris_scheduler_foreach
 iris_scheduler_add_thread
 iris_scheduler_remove_thread
 iris_thread_new

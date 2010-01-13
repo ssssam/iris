@@ -84,6 +84,71 @@ iris_lfscheduler_queue_real (IrisScheduler  *scheduler,
 	                   thread_work);
 }
 
+typedef struct {
+	IrisScheduler            *scheduler;
+	IrisSchedulerForeachFunc  callback;
+	gpointer                  user_data;
+} IrisSchedulerForeachClosure;
+
+static gboolean
+iris_scheduler_foreach_rrobin_cb (IrisRRobin *rrobin,
+                                  gpointer    data,
+                                  gpointer    user_data)
+{
+	IrisQueue                    *queue   = data;
+	IrisSchedulerForeachClosure  *closure = user_data;
+	gboolean continue_flag = TRUE;
+	gint i;
+
+	/* Foreach the queue in a really hacky way. FIXME: be neater! */
+	for (i=0; i<iris_queue_length(queue); i++) {
+		IrisSchedulerForeachAction  action;
+		IrisThreadWork             *thread_work = iris_queue_try_pop (queue);
+
+		if (!thread_work) break;
+
+		action = closure->callback (closure->scheduler,
+		                            thread_work->callback,
+		                            thread_work->data,
+		                            closure->user_data);
+
+		if (!(action & IRIS_SCHEDULER_REMOVE_ITEM))
+			iris_queue_push (queue, thread_work);
+		else
+			i --;
+
+		if (!(action & IRIS_SCHEDULER_CONTINUE)) {
+			continue_flag = FALSE;
+			break;
+		}
+	}
+
+	return continue_flag;
+}
+
+static void
+iris_lfscheduler_foreach_real (IrisScheduler            *scheduler,
+                               IrisSchedulerForeachFunc  callback,
+                               gpointer                  user_data)
+{
+	IrisLFSchedulerPrivate      *priv;
+	IrisSchedulerForeachClosure  closure;
+
+	g_return_if_fail (scheduler != NULL);
+	g_return_if_fail (callback != NULL);
+
+	priv = IRIS_LFSCHEDULER (scheduler)->priv;
+
+	closure.scheduler = scheduler;
+	closure.callback  = callback;
+	closure.user_data = user_data;
+
+	/* Iterate through each of our queues */
+	iris_rrobin_foreach (priv->rrobin,
+	                     iris_scheduler_foreach_rrobin_cb,
+	                     &closure);
+};
+
 static void
 iris_lfscheduler_add_thread_real (IrisScheduler  *scheduler,
                                   IrisThread     *thread)
@@ -163,6 +228,7 @@ iris_lfscheduler_class_init (IrisLFSchedulerClass *klass)
 	IrisSchedulerClass *sched_class = IRIS_SCHEDULER_CLASS (klass);
 
 	sched_class->queue = iris_lfscheduler_queue_real;
+	sched_class->foreach = iris_lfscheduler_foreach_real;
 	sched_class->add_thread = iris_lfscheduler_add_thread_real;
 	sched_class->remove_thread = iris_lfscheduler_remove_thread_real;
 	object_class->finalize = iris_lfscheduler_finalize;

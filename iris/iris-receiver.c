@@ -222,6 +222,47 @@ iris_receiver_finalize (GObject *object)
 	G_OBJECT_CLASS (iris_receiver_parent_class)->finalize (object);
 }
 
+static IrisSchedulerForeachAction
+iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
+                                 IrisCallback   callback,
+                                 gpointer       data,
+                                 gpointer       user_data)
+{
+	IrisWorkerData      *worker_data;
+	IrisReceiver        *receiver;
+	IrisReceiverPrivate *priv;
+	gboolean             continue_flag;
+
+	g_return_val_if_fail (IRIS_IS_RECEIVER (user_data), FALSE);
+
+	receiver = IRIS_RECEIVER (user_data);
+	priv = receiver->priv;
+
+	if (callback != iris_receiver_worker)
+		return IRIS_SCHEDULER_CONTINUE;
+
+	worker_data = data;
+
+	if (worker_data->receiver != receiver)
+		return IRIS_SCHEDULER_CONTINUE;
+
+	/* FIXME: because work item destroy notify's aren't called by the
+	 * scheduler, we have no way of freeing the data without risking a race
+	 * where the worker is executed just before we return.
+	 */
+	//continue_flag = !(g_atomic_int_dec_and_test (&priv->active));
+
+
+	/* COUNTERPOINT: because of the way foreach is implemented in all of the
+	 * schedulers at the moment, the above isn't true. However, I don't like
+	 * depending on that fact ...
+	 */
+	iris_receiver_worker_cb (data);
+	continue_flag = g_atomic_int_get (&priv->active) > 0;
+
+	return continue_flag | IRIS_SCHEDULER_REMOVE_ITEM;
+}
+
 static void
 iris_receiver_dispose (GObject *object)
 {
@@ -230,6 +271,18 @@ iris_receiver_dispose (GObject *object)
 	g_return_if_fail (IRIS_IS_RECEIVER (object));
 
 	priv = IRIS_RECEIVER (object)->priv;
+
+	/* Unqueue any callbacks still queued */
+	if (g_atomic_int_get (&priv->active)) {
+		iris_scheduler_foreach (priv->scheduler,
+		                        iris_receiver_worker_unqueue_cb,
+		                        object);
+	}
+
+	/* Not possible to race here, because to get new messages we have to be
+	 * connected to a port, and that will hold a reference ..
+	 */
+	g_warn_if_fail (g_atomic_int_get (&priv->active) == 0);
 
 	g_object_unref (priv->port);
 	g_object_unref (priv->scheduler);

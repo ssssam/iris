@@ -61,6 +61,27 @@ typedef struct _IrisThread           IrisThread;
 typedef struct _IrisThreadWork       IrisThreadWork;
 typedef void   (*IrisCallback)       (gpointer data);
 
+
+/**
+ * IrisSchedulerForeachAction:
+ * @IRIS_SCHEDULER_STOP: stop iterating
+ * @IRIS_SCHEDULER_CONTINUE: carry on iterating
+ * @IRIS_SCHEDULER_REMOVE_ITEM: remove the current item
+ *
+ * These flags control iris_scheduler_foreach().
+ *
+ **/
+typedef enum {
+	IRIS_SCHEDULER_STOP         = 0,
+	IRIS_SCHEDULER_CONTINUE     = 1,
+	IRIS_SCHEDULER_REMOVE_ITEM  = 2
+} IrisSchedulerForeachAction;
+
+typedef IrisSchedulerForeachAction (*IrisSchedulerForeachFunc) (IrisScheduler *scheduler,
+                                                                IrisCallback callback,
+                                                                gpointer data,
+                                                                gpointer user_data);
+
 struct _IrisScheduler
 {
 	GObject parent;
@@ -81,6 +102,9 @@ struct _IrisSchedulerClass
 	                          IrisCallback    func,
 	                          gpointer        data,
 	                          GDestroyNotify  notify);
+	void  (*foreach)         (IrisScheduler            *scheduler,
+	                          IrisSchedulerForeachFunc  callback,
+	                          gpointer                  user_data);
 
 	void (*add_thread)       (IrisScheduler  *scheduler,
 	                          IrisThread     *thread);
@@ -123,10 +147,14 @@ void            iris_scheduler_set_default     (IrisScheduler *scheduler);
 
 gint            iris_scheduler_get_min_threads (IrisScheduler  *scheduler);
 gint            iris_scheduler_get_max_threads (IrisScheduler  *scheduler);
+
 void            iris_scheduler_queue           (IrisScheduler  *scheduler,
                                                 IrisCallback    func,
                                                 gpointer        data,
                                                 GDestroyNotify  notify);
+void            iris_scheduler_foreach         (IrisScheduler            *scheduler,
+                                                IrisSchedulerForeachFunc  callback,
+                                                gpointer                  user_data);
 
 void            iris_scheduler_add_thread      (IrisScheduler  *scheduler,
                                                 IrisThread     *thread);

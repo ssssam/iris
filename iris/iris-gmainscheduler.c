@@ -65,6 +65,45 @@ iris_gmainscheduler_queue_real (IrisScheduler  *scheduler,
 	g_main_context_wakeup (priv->context);
 }
 
+
+static void
+iris_gmainscheduler_foreach_real (IrisScheduler            *scheduler,
+                                  IrisSchedulerForeachFunc  callback,
+                                  gpointer                  user_data)
+{
+	IrisGMainSchedulerPrivate *priv;
+	gint i;
+
+	g_return_if_fail (scheduler != NULL);
+	g_return_if_fail (callback != NULL);
+
+	priv = IRIS_GMAINSCHEDULER (scheduler)->priv;
+
+	/* Foreach the queue in a really hacky way. FIXME: don't do it like this! */
+	for (i=0; i<iris_queue_length (priv->queue); i++) {
+		IrisSchedulerForeachAction  action;
+		IrisThreadWork             *thread_work;
+
+		thread_work = iris_queue_try_pop (priv->queue);
+
+		if (!thread_work) break;
+
+		action = callback (scheduler,
+		                   thread_work->callback,
+		                   thread_work->data,
+		                   user_data);
+
+		if (!(action & IRIS_SCHEDULER_REMOVE_ITEM))
+			iris_queue_push (priv->queue, thread_work);
+		else
+			i --;
+
+		if (!(action & IRIS_SCHEDULER_CONTINUE))
+			return;
+	}
+};
+
+
 static void
 iris_gmainscheduler_remove_thread_real (IrisScheduler *scheduler,
                                         IrisThread    *thread)
@@ -100,6 +139,7 @@ iris_gmainscheduler_class_init (IrisGMainSchedulerClass *klass)
 
 	sched_class = IRIS_SCHEDULER_CLASS (klass);
 	sched_class->queue = iris_gmainscheduler_queue_real;
+	sched_class->foreach = iris_gmainscheduler_foreach_real;
 	sched_class->add_thread = iris_gmainscheduler_add_thread_real;
 	sched_class->remove_thread = iris_gmainscheduler_remove_thread_real;
 

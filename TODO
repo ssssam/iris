@@ -11,6 +11,9 @@ IrisScheduler
 	Either add use of execution notify, or remove it from the
 	signatures.
 
+	iris_scheduler_foreach () is a big bunch of code that should be a lot
+	neater.
+
 IrisMessage
 
 	We should make the ref-counting for messages use the sink concept

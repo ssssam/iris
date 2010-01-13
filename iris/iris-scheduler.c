@@ -101,6 +101,71 @@ iris_scheduler_queue_real (IrisScheduler  *scheduler,
 	iris_rrobin_apply (priv->rrobin, iris_scheduler_queue_rrobin_cb, thread_work);
 }
 
+typedef struct {
+	IrisScheduler            *scheduler;
+	IrisSchedulerForeachFunc  callback;
+	gpointer                  user_data;
+} IrisSchedulerForeachClosure;
+
+static gboolean
+iris_scheduler_foreach_rrobin_cb (IrisRRobin *rrobin,
+                                  gpointer    data,
+                                  gpointer    user_data)
+{
+	IrisQueue                    *queue   = data;
+	IrisSchedulerForeachClosure  *closure = user_data;
+	gboolean continue_flag = TRUE;
+	gint i;
+
+	/* Foreach the queue in a really hacky way. FIXME: be neater! */
+	for (i=0; i<iris_queue_length(queue); i++) {
+		IrisSchedulerForeachAction  action;
+		IrisThreadWork             *thread_work = iris_queue_try_pop (queue);
+
+		if (!thread_work) break;
+
+		action = closure->callback (closure->scheduler,
+		                            thread_work->callback,
+		                            thread_work->data,
+		                            closure->user_data);
+
+		if (!(action & IRIS_SCHEDULER_REMOVE_ITEM))
+			iris_queue_push (queue, thread_work);
+		else
+			i --;
+
+		if (!(action & IRIS_SCHEDULER_CONTINUE)) {
+			continue_flag = FALSE;
+			break;
+		}
+	}
+
+	return continue_flag;
+}
+
+static void
+iris_scheduler_foreach_real (IrisScheduler            *scheduler,
+                             IrisSchedulerForeachFunc  callback,
+                             gpointer                  user_data)
+{
+	IrisSchedulerPrivate        *priv;
+	IrisSchedulerForeachClosure  closure;
+
+	g_return_if_fail (scheduler != NULL);
+	g_return_if_fail (callback != NULL);
+
+	priv = scheduler->priv;
+
+	closure.scheduler = scheduler;
+	closure.callback  = callback;
+	closure.user_data = user_data;
+
+	/* Iterate through each of our queues */
+	iris_rrobin_foreach (priv->rrobin,
+	                     iris_scheduler_foreach_rrobin_cb,
+	                     &closure);
+};
+
 static guint
 iris_scheduler_get_n_cpu (void)
 {
@@ -210,6 +275,7 @@ iris_scheduler_class_init (IrisSchedulerClass *klass)
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
 	klass->queue = iris_scheduler_queue_real;
+	klass->foreach = iris_scheduler_foreach_real;
 	klass->get_min_threads = iris_scheduler_get_min_threads_real;
 	klass->get_max_threads = iris_scheduler_get_max_threads_real;
 	klass->add_thread = iris_scheduler_add_thread_real;
@@ -346,6 +412,43 @@ iris_scheduler_queue (IrisScheduler  *scheduler,
 
 	IRIS_SCHEDULER_GET_CLASS (scheduler)->queue (scheduler, func, data, notify);
 }
+
+/**
+ * iris_scheduler_foreach:
+ * @scheduler: An #IrisScheduler
+ * @callback: An #IrisSchedulerForeachCallback
+ * @user_data: data for @func
+ *
+ * Calls @callback for each piece of queued work in @scheduler. @callback
+ * receives as its parameters the callback function and data for the work item,
+ * plus @user_data.
+ *
+ * The return value of @callback should be from the #IrisSchedulerForeachAction
+ * flags. This mirrors normal glib foreach behaviour - %TRUE continues and
+ * %FALSE stops - but you may | these with IRIS_SCHEDULER_REMOVE_ITEM to unqueue
+ * the work item.
+ *
+ * This function is useful if you need to unqueue work, for example due to an
+ * object's destruction.
+ */
+void iris_scheduler_foreach (IrisScheduler            *scheduler,
+                             IrisSchedulerForeachFunc  callback,
+                             gpointer                  user_data)
+{
+	IrisSchedulerPrivate *priv;
+
+	g_return_if_fail (scheduler != NULL);
+
+	priv = scheduler->priv;
+
+	if (G_UNLIKELY (!priv->initialized))
+		return;
+
+	IRIS_SCHEDULER_GET_CLASS (scheduler)->foreach (scheduler,
+	                                               callback,
+	                                               user_data);
+}
+
 
 /**
  * iris_scheduler_get_max_threads:
