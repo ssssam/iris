@@ -20,6 +20,8 @@
 
 #include <glib/gi18n.h>
 
+#include "iris-arbiter.h"
+#include "iris-gmainscheduler.h"
 #include "iris-progress-monitor.h"
 #include "iris-progress-monitor-private.h"
 #include "iris-progress-info-bar.h"
@@ -52,12 +54,12 @@ static void     iris_progress_info_bar_finalize        (GObject *object);
 
 static void     iris_progress_info_bar_add_watch       (IrisProgressMonitor *progress_monitor,
                                                         IrisProgressWatch   *watch);
-static void     iris_progress_info_bar_update_watch    (IrisProgressMonitor *progress_monitor,
-                                                        IrisProgressWatch   *watch);
-static void     iris_progress_info_bar_watch_stopped   (IrisProgressMonitor *progress_monitor);
+static void     iris_progress_info_bar_handle_message  (IrisProgressMonitor *progress_monitor,
+                                                        IrisProgressWatch   *watch,
+                                                        IrisMessage         *message);
 
-static gboolean iris_progress_info_bar_is_watching_process (IrisProgressMonitor *progress_monitor,
-                                                            IrisProcess         *process);
+static gboolean iris_progress_info_bar_is_watching_task (IrisProgressMonitor *progress_monitor,
+                                                         IrisTask            *task);
 
 static void     iris_progress_info_bar_set_title       (IrisProgressMonitor *progress_monitor,
                                                         const gchar         *title);
@@ -95,6 +97,8 @@ iris_progress_info_bar_init (IrisProgressInfoBar *progress_info_bar)
 
 	progress_info_bar->priv = priv;
 
+	priv->scheduler = iris_gmainscheduler_new (NULL);
+
 	priv->watch_list = NULL;
 
 	priv->completed = FALSE;
@@ -109,8 +113,15 @@ iris_progress_info_bar_finalize (GObject *object)
 	IrisProgressInfoBar        *info_bar = IRIS_PROGRESS_INFO_BAR (object);
 	IrisProgressInfoBarPrivate *priv   = info_bar->priv;
 
-	for (node=priv->watch_list; node; node=node->next)
+	for (node=priv->watch_list; node; node=node->next) {
+		IrisProgressWatch *watch = node->data;
+
+		iris_port_set_receiver (watch->port, NULL);
+		g_warn_if_fail (G_OBJECT (watch->receiver)->ref_count == 1);
+		g_object_unref (watch->receiver);
+
 		_iris_progress_watch_free (node->data);
+	}
 
 	G_OBJECT_CLASS(iris_progress_info_bar_parent_class)->finalize (object);
 }
@@ -118,12 +129,11 @@ iris_progress_info_bar_finalize (GObject *object)
 static void
 iris_progress_monitor_interface_init (IrisProgressMonitorInterface *interface)
 {
-	interface->add_watch           = iris_progress_info_bar_add_watch;
-	interface->update_watch        = iris_progress_info_bar_update_watch;
-	interface->watch_stopped       = iris_progress_info_bar_watch_stopped;
-	interface->is_watching_process = iris_progress_info_bar_is_watching_process;
-	interface->set_title           = iris_progress_info_bar_set_title;
-	interface->set_close_delay     = iris_progress_info_bar_set_close_delay;
+	interface->add_watch        = iris_progress_info_bar_add_watch;
+	interface->handle_message   = iris_progress_info_bar_handle_message;
+	interface->is_watching_task = iris_progress_info_bar_is_watching_task;
+	interface->set_title        = iris_progress_info_bar_set_title;
+	interface->set_close_delay  = iris_progress_info_bar_set_close_delay;
 }
 
 static GObject *
@@ -179,12 +189,12 @@ iris_progress_info_bar_constructor (GType type,
 
 
 static gint
-find_watch_by_process (gconstpointer a,
+find_watch_by_task (gconstpointer a,
                        gconstpointer b)
 {
 	const IrisProgressWatch *watch = a;
 
-	if (watch->process == b)
+	if (watch->task == IRIS_TASK (b))
 		return 0;
 	return 1;
 }
@@ -209,7 +219,16 @@ iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 	progress_info_bar = IRIS_PROGRESS_INFO_BAR (progress_monitor);
 	priv = progress_info_bar->priv;
 
+	/* Add watch */
+
+	watch->receiver = iris_arbiter_receive
+	                    (priv->scheduler, watch->port, 
+	                     _iris_progress_monitor_handle_message,
+	                     watch, NULL);
+
 	priv->watch_list = g_list_append (priv->watch_list, watch);
+
+	/* Add UI for watch */
 
 	g_object_get (GTK_TABLE (priv->watch_table),
 	              "n-rows", &table_rows,
@@ -251,6 +270,79 @@ iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 	watch->user_data2 = progress_label;
 }
 
+static gboolean
+iris_progress_info_bar_is_watching_task (IrisProgressMonitor *progress_monitor,
+                                         IrisTask            *task)
+{
+	IrisProgressInfoBarPrivate *priv;
+
+	g_return_val_if_fail (IRIS_IS_PROGRESS_INFO_BAR (progress_monitor), FALSE);
+
+	priv = IRIS_PROGRESS_INFO_BAR (progress_monitor)->priv;
+
+	return (g_list_find_custom (priv->watch_list, task,
+	                            find_watch_by_task)     != NULL);
+}
+
+
+/**************************************************************************
+ *                        Message processing                              *
+ *************************************************************************/
+
+static gboolean
+_delayed_close (gpointer data)
+{
+	GtkWidget *dialog = GTK_WIDGET (data);
+
+	gtk_widget_destroy (dialog);
+
+	return FALSE;
+}
+
+/* When a watch completes/is cancelled, we check to see if any are still running
+ * and if they are all done, we self destruct. */
+static void
+handle_stopped (IrisProgressMonitor *progress_monitor,
+                IrisProgressWatch   *watch,
+                IrisMessage         *message)
+{
+	IrisProgressInfoBarPrivate *priv;
+
+	g_return_if_fail (IRIS_IS_PROGRESS_INFO_BAR (progress_monitor));
+
+	priv = IRIS_PROGRESS_INFO_BAR (progress_monitor)->priv;
+
+	/* If any watches are still running, keep working .. */
+	if (!_iris_progress_monitor_watch_list_finished (priv->watch_list))
+		return;
+
+	/* Check if we've already stopped (this can happen when two processes end
+	 * at the same time)
+	 */
+	if (priv->destroy_timer_id != 0)
+		return;
+
+	/* We can delay the close to give the display time to update, and also so
+	 * we can disable it for eg. tests
+	 */
+	if (priv->close_delay == 0)
+		_delayed_close (progress_monitor);
+	else {
+		/* Make the 'cancel' button into a 'close' button */
+		gtk_button_set_label (GTK_BUTTON (priv->button),
+		                      _("Close"));
+		priv->completed = TRUE;
+
+		if (priv->close_delay > 0)
+			priv->destroy_timer_id = g_timeout_add (priv->close_delay,
+			                                        _delayed_close,
+			                                        progress_monitor);
+		else
+			/* Delay < 0: never close */
+			priv->destroy_timer_id = 0;
+	}
+}
+
 static void
 update_total_progress (IrisProgressInfoBar *info_bar)
 {
@@ -277,25 +369,12 @@ update_total_progress (IrisProgressInfoBar *info_bar)
 	                               fraction);
 }
 
-static gboolean
-iris_progress_info_bar_is_watching_process (IrisProgressMonitor *progress_monitor,
-                                            IrisProcess         *process)
-{
-	IrisProgressInfoBarPrivate *priv;
-
-	g_return_val_if_fail (IRIS_IS_PROGRESS_INFO_BAR (progress_monitor), FALSE);
-
-	priv = IRIS_PROGRESS_INFO_BAR (progress_monitor)->priv;
-
-	return (g_list_find_custom (priv->watch_list, process,
-	                            find_watch_by_process)     != NULL);
-}
-
 static void
-iris_progress_info_bar_update_watch (IrisProgressMonitor *progress_monitor,
-                                     IrisProgressWatch   *watch)
+handle_update (IrisProgressMonitor *progress_monitor,
+               IrisProgressWatch   *watch,
+               IrisMessage         *message)
 {
-	char  progress_text[256];
+	char                 progress_text[256];
 	IrisProgressInfoBar *info_bar;
 	GtkWidget           *progress_bar, *progress_label;
 
@@ -306,16 +385,8 @@ iris_progress_info_bar_update_watch (IrisProgressMonitor *progress_monitor,
 	progress_bar = GTK_WIDGET (watch->user_data);
 	progress_label = GTK_WIDGET (watch->user_data2);
 
-	if (watch->complete)
-		g_snprintf (progress_text, 255, _("Complete"));
-	else {
-		if (watch->cancelled)
-			g_snprintf (progress_text, 255, _("Cancelled"));
-		else
-			g_snprintf (progress_text, 255, _("%i items of %i"), 
-			            watch->processed_items,
-			            watch->total_items);
-	}
+	_iris_progress_monitor_format_watch (progress_monitor, watch,
+	                                     progress_text);
 
 	gtk_label_set_text (GTK_LABEL (progress_label), progress_text);
 	gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (progress_bar),
@@ -324,50 +395,30 @@ iris_progress_info_bar_update_watch (IrisProgressMonitor *progress_monitor,
 	update_total_progress (info_bar);
 };
 
-static gboolean
-_delayed_close (gpointer data)
+
+
+static void
+iris_progress_info_bar_handle_message (IrisProgressMonitor *progress_monitor,
+                                       IrisProgressWatch   *watch,
+                                       IrisMessage         *message)
 {
-	GtkWidget *info_bar = GTK_WIDGET (data);
+	g_return_if_fail (IRIS_IS_PROGRESS_INFO_BAR(progress_monitor));
 
-	gtk_widget_destroy (info_bar);
-
-	return FALSE;
-}
-
-/* When a watch completes/is cancelled, we check to see if any are still running
- * and if they are all done, we self destruct. */
-void
-iris_progress_info_bar_watch_stopped (IrisProgressMonitor *progress_monitor)
-{
-	IrisProgressInfoBarPrivate *priv;
-
-	g_return_if_fail (IRIS_IS_PROGRESS_INFO_BAR (progress_monitor));
-
-	priv = IRIS_PROGRESS_INFO_BAR (progress_monitor)->priv;
-
-	/* If any watches are still running, keep working .. */
-	if (!_iris_progress_monitor_watch_list_finished (priv->watch_list))
-		return;
-
-	/* Finished. We can delay the close to give the display time to update,
-	 * and also so we can disable it for eg. tests
-	 */
-	if (priv->close_delay == 0)
-		_delayed_close (progress_monitor);
-	else {
-		/* Make the 'cancel' button into a 'close' button */
-		gtk_button_set_label (GTK_BUTTON (priv->button),
-		                      _("Close"));
-		priv->completed = TRUE;
-
-		if (priv->close_delay > 0)
-			priv->destroy_timer_id = g_timeout_add (priv->close_delay,
-			                                        _delayed_close,
-			                                        progress_monitor);
-		else
-			priv->destroy_timer_id = 0;
+	switch (message->what) {
+		case IRIS_PROGRESS_MESSAGE_COMPLETE:
+		case IRIS_PROGRESS_MESSAGE_CANCELLED:
+			handle_stopped (progress_monitor, watch, message);
+			break;
+		case IRIS_PROGRESS_MESSAGE_FRACTION:
+		case IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS:
+		case IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS:
+			handle_update (progress_monitor, watch, message);
+			break;
+		default:
+			g_warn_if_reached ();
 	}
-}
+};
+
 
 GtkWidget *
 iris_progress_info_bar_new (const gchar *title)

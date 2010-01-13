@@ -23,20 +23,27 @@
 
 G_BEGIN_DECLS
 
+#include "iris-scheduler.h"
+
 #define IRIS_PROGRESS_DIALOG_GET_PRIVATE(object)                  \
           (G_TYPE_INSTANCE_GET_PRIVATE((object),                  \
            IRIS_TYPE_PROGRESS_DIALOG, IrisProgressDialogPrivate))
 
 struct _IrisProgressDialogPrivate
 {
-	GList *watch_list;
+	IrisScheduler *scheduler;
+
+	GList         *watch_list;
 
 	GtkWidget *button;
 
 	gboolean completed;
 
-	gint    close_delay;
-	gint    destroy_timer_id;
+	gint    close_delay;        /* millisecs to wait befor closing after the
+	                               last watch completes */
+	gint    destroy_timer_id;   /* source tag for the timeout to close the
+	                               dialog, to ensure we only try to close
+	                               once */
 };
 
 G_END_DECLS

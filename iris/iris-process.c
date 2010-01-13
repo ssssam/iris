@@ -22,6 +22,7 @@
 #include "iris-task-private.h"
 #include "iris-process.h"
 #include "iris-process-private.h"
+#include "iris-progress.h"
 
 #include <stdio.h>
 
@@ -54,12 +55,6 @@
 /* How frequently the process checks for cancellation between try_pop calls. */
 #define WAKE_UP_INTERVAL  20000
 
-enum {
-	SOURCE_CONNECTED,
-	SINK_CONNECTED,
-	LAST_SIGNAL
-};
-
 #define FLAG_IS_ON(p,f)  ((IRIS_TASK(p)->priv->flags & f) != 0)
 #define FLAG_IS_OFF(p,f) ((IRIS_TASK(p)->priv->flags & f) == 0)
 #define ENABLE_FLAG(p,f) G_STMT_START{IRIS_TASK(p)->priv->flags|=f;}G_STMT_END
@@ -71,64 +66,6 @@ static void             iris_process_dummy         (IrisProcess *task,
                                                     IrisMessage *work_item,
                                                     gpointer user_data);
 
-
-/* Used to pass the parameters for a source/sink-connected signal to an idle
- * callback, process_connected_idle_callback(). */
-typedef struct {
-	IrisProcess *process;
-	IrisProcess *connected_process;
-	int          signal_id;
-} IrisProcessConnectionClosure;
-
-/* Used to pass the process state to an idle callback,
- * progress_watch_idle_callback(), which in turn calls an IrisProgressMonitor
- * object's watch callback. */
-typedef struct {
-	IrisTask *task;
-	gint      completed, total;
-	gboolean  cancelled;
-	GClosure *watch_callback;
-} IrisProcessWatchClosure;
-
-static guint process_signals[LAST_SIGNAL] = { 0 };
-
-/* FIXME: iris-marshall.h, and generate automatically .. */
-static void
-g_cclosure_marshal_VOID__INT_INT_BOOLEAN (GClosure *closure,
-                                          GValue *return_value,
-                                          guint n_param_values,
-                                          const GValue *param_values,
-                                          gpointer invocation_hint,
-                                          gpointer marshal_data)
-{
-	typedef void (*GMarshalFunc_VOID__INT_INT_BOOLEAN) (gpointer data1,
-	                                                    gpointer arg_1,
-	                                                    gpointer arg_2,
-	                                                    gpointer arg_3,
-	                                                    gpointer data2);
-	register GMarshalFunc_VOID__INT_INT_BOOLEAN callback;
-	register GCClosure *cc = (GCClosure*) closure;
-	register gpointer   data1, data2;
-
-	g_return_if_fail (n_param_values==4);
-
-	if (G_CCLOSURE_SWAP_DATA (closure)) {
-		data1=closure->data;
-		data2=g_value_peek_pointer (param_values+0);
-	} else {
-		data1 = g_value_peek_pointer (param_values+0);
-		data2 = closure->data;
-	}
-
-	callback = (GMarshalFunc_VOID__INT_INT_BOOLEAN) (marshal_data ?
-	                                                 marshal_data :
-	                                                 cc->callback);
-	callback (data1,
-	          GINT_TO_POINTER(g_value_get_int(param_values+1)),
-	          GINT_TO_POINTER(g_value_get_int(param_values+2)),
-	          GINT_TO_POINTER(g_value_get_boolean(param_values+3)),
-	          data2);
-}
 
 /**************************************************************************
  *                          IrisProcess Public API                       *
@@ -264,7 +201,6 @@ iris_process_enqueue (IrisProcess *process,
 	g_atomic_int_inc (&priv->total_items);
 
 	iris_port_post (priv->work_port, work_item);
-	iris_message_unref (work_item);
 };
 
 /**
@@ -458,7 +394,6 @@ iris_process_recurse (IrisProcess *process,
 	g_atomic_int_inc (&priv->total_items);
 
 	iris_port_post (priv->work_port, work_item);
-	iris_message_unref (work_item);
 }
 
 /**
@@ -576,7 +511,8 @@ iris_process_get_queue_length (IrisProcess *process) {
  *
  * Return value: a pointer to the an #IrisProcess, or %NULL
  */
-IrisProcess*  iris_process_get_predecessor      (IrisProcess            *process)
+IrisProcess *
+iris_process_get_predecessor (IrisProcess *process)
 {
 	g_return_val_if_fail (IRIS_IS_PROCESS (process), NULL);
 
@@ -591,7 +527,8 @@ IrisProcess*  iris_process_get_predecessor      (IrisProcess            *process
  *
  * Return value: a pointer to the an #IrisProcess, or %NULL
  */
-IrisProcess*  iris_process_get_successor        (IrisProcess            *process)
+IrisProcess *
+iris_process_get_successor (IrisProcess *process)
 {
 	g_return_val_if_fail (IRIS_IS_PROCESS (process), NULL);
 
@@ -693,110 +630,29 @@ iris_process_set_title (IrisProcess *process,
 
 
 /**
- * iris_process_add_watch_callback:
+ * iris_process_add_watch:
  * @process: An #IrisProcess
- * @callback: An #IrisProgressWatchCallback, called as an idle after each work
- *            item is processed.
- * @user_data: user data for @callback
- * @notify: An optional #GDestroyNotify or %NULL
+ * @port: An #IrisPort
  *
- * Adds a watch callback to @process. This is useful for creating UI to monitor
- * the progress of the work. @callback will be executed using g_idle_add after
- * each work item is processed, so a GLib main loop must be running for it to be
- * of any use.
+ * @port will receive status updates from @process. The messages sent are of
+ * #IrisProcessWatchMessageType.
+ *
+ * The #IrisProgressMonitor interface and its implementors provide a more
+ * higher-level facility for progress monitoring.
  */
 void
-iris_process_add_watch_callback (IrisProcess               *process,
-                                 IrisProgressWatchCallback  callback,
-                                 gpointer                   user_data,
-                                 GDestroyNotify             notify)
-{
-	GClosure *closure;
-
-	g_return_if_fail (IRIS_IS_PROCESS (process));
-
-	if (!callback)
-		return;
-
-	closure = g_cclosure_new (G_CALLBACK (callback),
-	                          user_data,
-	                          (GClosureNotify)notify);
-	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__INT_INT_BOOLEAN);
-	iris_process_add_watch_closure (process, closure);
-	g_closure_unref (closure);
-};
-
-/**
- * iris_process_add_watch_closure:
- * @process: An #IrisProcess
- * @closure: A #GClosure, called as an idle after each work item is processed.
- *
- * A variant of iris_process_add_watch_callback() that takes a #GClosure.
- */
-void
-iris_process_add_watch_closure (IrisProcess *process,
-                                GClosure    *closure)
+iris_process_add_watch (IrisProcess               *process,
+                        IrisPort                  *watch_port)
 {
 	IrisMessage *message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
-	g_return_if_fail (closure != NULL);
+	g_return_if_fail (IRIS_IS_PORT (watch_port));
 
-	message = iris_message_new_data (IRIS_PROCESS_MESSAGE_ADD_WATCH_CALLBACK,
-	                                 G_TYPE_CLOSURE, closure);
+	message = iris_message_new_data (IRIS_PROCESS_MESSAGE_ADD_WATCH,
+	                                 IRIS_TYPE_PORT, watch_port);
 	iris_port_post (IRIS_TASK(process)->priv->port, message);
 };
-
-/**************************************************************************
- *                  GMainLoop idle callbacks                              *
- *************************************************************************/
-
-/* These functions are used to ensure callbacks and signal handlers run in the
- * GLib main loop thread, which is important for Gtk+ calls to work. (Note that
- * using gdk_threads_enter()/leave() isn't enough on Windows platforms, it must
- * actually be the main thread or everything breaks).
- */
-
-static gboolean
-process_connected_idle_callback (gpointer data) {
-	IrisProcessConnectionClosure *state = data;
-
-	g_signal_emit (state->process, state->signal_id, 0,
-	               state->connected_process);
-
-	g_slice_free (IrisProcessConnectionClosure, state);
-
-	return FALSE;
-}
-
-static gboolean
-progress_watch_idle_callback (gpointer data) {
-	GValue params[4] = { {0, }, {0, }, {0, } };
-	IrisProcessWatchClosure *state = data;
-
-	/* The finished callback has probably got to the monitor before this idle
-	 * has been called, so let's not call methods on an object that's been
-	 * freed. We do need to notify the watcher this way if we were cancelled,
-	 * because in that case it won't receive any callbacks. */
-	if (FLAG_IS_ON (state->task, IRIS_TASK_FLAG_FINISHED) &&
-	    FLAG_IS_OFF (state->task, IRIS_TASK_FLAG_CANCELED))
-		return FALSE;
-
-	g_value_init (&params[0], IRIS_TYPE_TASK);
-	g_value_set_object (&params[0], state->task);
-	g_value_init (&params[1], G_TYPE_INT);
-	g_value_set_int (&params[1], state->completed);
-	g_value_init (&params[2], G_TYPE_INT);
-	g_value_set_int (&params[2], state->total);
-	g_value_init (&params[3], G_TYPE_BOOLEAN);
-	g_value_set_boolean (&params[3], state->cancelled);
-
-	g_closure_invoke (state->watch_callback, NULL, 4, params, NULL);
-
-	g_slice_free (IrisProcessWatchClosure, state);
-
-	return FALSE;
-}
 
 
 /**************************************************************************
@@ -867,7 +723,6 @@ handle_add_source (IrisProcess *process,
 	IrisProcessPrivate           *priv;
 	const GValue                 *data;
 	IrisProcess                  *source_process;
-	IrisProcessConnectionClosure *signal_closure;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (message != NULL);
@@ -881,14 +736,6 @@ handle_add_source (IrisProcess *process,
 	priv->source = source_process;
 
 	ENABLE_FLAG (process, IRIS_PROCESS_FLAG_HAS_SOURCE);
-
-	/* Signal. FIXME: it is bad to call g_idle_add if no main loop is running, and the
-	 * closure is leaked in that case*/
-	signal_closure = g_slice_new (IrisProcessConnectionClosure);
-	signal_closure->process = process;
-	signal_closure->connected_process = source_process;
-	signal_closure->signal_id = process_signals[SOURCE_CONNECTED];
-	g_idle_add (process_connected_idle_callback, signal_closure);
 }
 
 static void
@@ -898,7 +745,6 @@ handle_add_sink (IrisProcess *process,
 	IrisProcessPrivate           *priv;
 	const GValue                 *data;
 	IrisProcess                  *sink_process;
-	IrisProcessConnectionClosure *signal_closure;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (message != NULL);
@@ -912,23 +758,15 @@ handle_add_sink (IrisProcess *process,
 	priv->sink = sink_process;
 
 	ENABLE_FLAG (process, IRIS_PROCESS_FLAG_HAS_SINK);
-
-	/* Signal. FIXME: it is bad to call g_idle_add if no main loop is running, and the
-	 * closure is leaked */
-	signal_closure = g_slice_new (IrisProcessConnectionClosure);
-	signal_closure->process = process;
-	signal_closure->connected_process = sink_process;
-	signal_closure->signal_id = process_signals[SINK_CONNECTED];
-	g_idle_add (process_connected_idle_callback, signal_closure);
 }
 
 static void
-handle_add_watch_callback (IrisProcess *process,
-                           IrisMessage *message)
+handle_add_watch (IrisProcess *process,
+                  IrisMessage *message)
 {
 	IrisProcessPrivate *priv;
 	const GValue       *data;
-	GClosure           *closure;
+	IrisPort           *watch_port;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (message != NULL);
@@ -936,11 +774,11 @@ handle_add_watch_callback (IrisProcess *process,
 	priv = process->priv;
 
 	data = iris_message_get_data (message);
-	closure = g_value_get_boxed (data);
+	watch_port = IRIS_PORT (g_value_get_object (data));
 
-	g_closure_ref (closure);
-	priv->watch_callback_list = g_list_append (priv->watch_callback_list,
-	                                           closure);
+	g_object_ref (watch_port);
+	priv->watch_port_list = g_list_append (priv->watch_port_list,
+	                                       watch_port);
 }
 
 static void
@@ -975,8 +813,8 @@ iris_process_handle_message_real (IrisTask    *task,
 		handle_add_sink (process, message);
 		break;
 
-	case IRIS_PROCESS_MESSAGE_ADD_WATCH_CALLBACK:
-		handle_add_watch_callback (process, message);
+	case IRIS_PROCESS_MESSAGE_ADD_WATCH:
+		handle_add_watch (process, message);
 		break;
 
 	default:
@@ -1000,6 +838,53 @@ iris_task_post_work_item_real (IrisProcess *process,
 }
 
 /**************************************************************************
+ *                      IrisProcess Internal Helpers                      *
+ *************************************************************************/
+
+static void
+post_progress_message (IrisProcess *process,
+                       IrisMessage *progress_message)
+{
+	GList    *node;
+	IrisPort *watch_port;
+	IrisProcessPrivate *priv;
+
+	priv = process->priv;
+
+	for (node=priv->watch_port_list; node; node=node->next) {
+		watch_port = IRIS_PORT (node->data);
+		iris_port_post (watch_port, progress_message);
+	}
+};
+
+static void
+update_status (IrisProcess *process)
+{
+	IrisProcessPrivate *priv;
+	IrisMessage        *message;
+	int                 total;
+
+	priv = process->priv;
+
+	message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS,
+	                                 G_TYPE_INT,
+	                                 g_atomic_int_get (&priv->processed_items));
+	post_progress_message (process, message);
+	iris_message_unref (message);
+
+	total = g_atomic_int_get (&priv->total_items);
+	if (priv->total_items_pushed < total) {
+		priv->total_items_pushed = total;
+
+		message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS,
+	                                     G_TYPE_INT,
+	                                     total);
+		post_progress_message (process, message);
+		iris_message_unref (message);
+	}
+}
+
+/**************************************************************************
  *                 IrisTask Class VTable Implementations                  *
  **************************************************************************/
 
@@ -1015,28 +900,15 @@ iris_process_post_work_item (IrisMessage *work_item,
 	IRIS_PROCESS_GET_CLASS (process)->post_work_item (process, work_item);
 }
 
-#define UPDATE_WATCHES()                                              \
-	for (node=priv->watch_callback_list; node; node=node->next) {     \
-		IrisProcessWatchClosure *state;                               \
-		state = g_slice_new (IrisProcessWatchClosure);                \
-                                                                      \
-		state->task = task;                                           \
-		state->completed = g_atomic_int_get (&priv->processed_items); \
-		state->total = g_atomic_int_get (&priv->total_items);         \
-		state->cancelled = cancelled;                                 \
-                                                                      \
-		state->watch_callback = node->data;                           \
-		g_idle_add (progress_watch_idle_callback, state);             \
-	}
 
 static void
 iris_process_execute_real (IrisTask *task)
 {
 	GValue    params[2] = { {0,}, {0,} };
-	GList    *node;
 	gboolean  cancelled;
 	IrisProcess        *process;
 	IrisProcessPrivate *priv;
+	IrisMessage        *message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (task));
 
@@ -1056,9 +928,10 @@ iris_process_execute_real (IrisTask *task)
 		cancelled = iris_process_is_canceled (process);
 
 		/* Update progress monitors, no more than four times a second */
-		if (g_timer_elapsed (priv->watch_callback_timer, NULL) > 0.250) {
-			g_timer_reset (priv->watch_callback_timer);
-			UPDATE_WATCHES();
+		if (priv->watch_port_list != NULL &&
+		    g_timer_elapsed (priv->watch_timer, NULL) >= 0.250) {
+			g_timer_reset (priv->watch_timer);
+			update_status (process);
 		}
 
 		if (cancelled)
@@ -1094,19 +967,26 @@ iris_process_execute_real (IrisTask *task)
 		g_atomic_int_inc (&priv->processed_items);
 	};
 
-	UPDATE_WATCHES();
-
 	g_closure_invalidate (task->priv->closure);
 	g_closure_unref (task->priv->closure);
 	task->priv->closure = NULL;
 	g_value_unset (&params[1]);
 	g_value_unset (&params[0]);
 
-	if (cancelled)
-		return;
+	if (priv->watch_port_list != NULL) {
+		update_status (process);
 
-	// Execute callbacks and then mark finished.
-	iris_task_complete (IRIS_TASK (process));
+		if (cancelled)
+			message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
+		else
+			message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
+		post_progress_message (process, message);
+		iris_message_unref (message);
+	}
+
+	if (!cancelled)
+		// Execute callbacks and then mark finished.
+		iris_task_complete (IRIS_TASK (process));
 }
 
 
@@ -1119,11 +999,11 @@ iris_process_finalize (GObject *object)
 
 	g_free (priv->title);
 
-	g_timer_destroy (priv->watch_callback_timer);
+	for (node=priv->watch_port_list; node; node=node->next)
+		g_object_unref (IRIS_PORT (node->data));
+	g_list_free (priv->watch_port_list);
 
-	for (node=priv->watch_callback_list; node; node=node->next)
-		g_closure_unref (node->data);
-	g_list_free (priv->watch_callback_list);
+	g_timer_destroy (priv->watch_timer);
 
 	G_OBJECT_CLASS (iris_process_parent_class)->finalize (object);
 }
@@ -1142,48 +1022,6 @@ iris_process_class_init (IrisProcessClass *process_class)
 
 	object_class = G_OBJECT_CLASS (process_class);
 	object_class->finalize = iris_process_finalize;
-
-	/**
-	* IrisProcess::source-connected:
-	* @process: the #IrisProcess
-	* @predecessor: the source #IrisProcess
-	*
-	* The "source-connected" signal is emitted when a process is connected as a
-	* source to @process.
-	*
-	* The signal is emitted in the GLib main loop thread using g_idle_add, so
-	* it will only be emitted if the GLib main loop is running.
-	*/
-	process_signals[SOURCE_CONNECTED] =
-	  g_signal_new (("source-connected"),
-	                G_OBJECT_CLASS_TYPE (object_class),
-	                G_SIGNAL_RUN_FIRST,
-	                0,
-	                NULL, NULL,
-	                g_cclosure_marshal_VOID__OBJECT,
-	                G_TYPE_NONE, 1,
-	                IRIS_TYPE_PROCESS);
-
-	/**
-	* IrisProcess::sink-connected:
-	* @process: the #IrisProcess
-	* @successor: the sink #IrisProcess
-	*
-	* The "sink-connected" signal is emitted when @process is connected as a
-	* a source to @successor.
-	*
-	* The signal is emitted in the GLib main loop thread using g_idle_add, so
-	* it will only be emitted if the GLib main loop is running.
-	*/
-	process_signals[SINK_CONNECTED] =
-	  g_signal_new (("sink-connected"),
-	                G_OBJECT_CLASS_TYPE (object_class),
-	                G_SIGNAL_RUN_FIRST,
-	                0,
-	                NULL, NULL,
-	                g_cclosure_marshal_VOID__OBJECT,
-	                G_TYPE_NONE, 1,
-	                IRIS_TYPE_PROCESS);
 
 	g_type_class_add_private (object_class, sizeof(IrisProcessPrivate));
 }
@@ -1211,11 +1049,12 @@ iris_process_init (IrisProcess *process)
 
 	priv->processed_items = 0;
 	priv->total_items = 0;
+	priv->total_items_pushed = 0;
 
 	priv->title = NULL;
 
-	priv->watch_callback_list = NULL;
-	priv->watch_callback_timer = g_timer_new ();
+	priv->watch_port_list = NULL;
+	priv->watch_timer = g_timer_new ();
 
 	/* FIXME: very, very simplistic implementation .. */
 	IrisScheduler *scheduler = iris_scheduler_default ();

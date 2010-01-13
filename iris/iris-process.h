@@ -25,6 +25,7 @@
 #include <gio/gio.h>
 
 #include "iris-message.h"
+#include "iris-port.h"
 #include "iris-task.h"
 
 
@@ -51,23 +52,6 @@ typedef struct _IrisProcessPrivate IrisProcessPrivate;
  * Callback for processes, to handle one work item.
  */
 typedef void (*IrisProcessFunc) (IrisProcess *process, IrisMessage *work_item, gpointer user_data);
-
-
-typedef struct _IrisProgressWatch IrisProgressWatch;
-
-/**
- * IrisProgressWatchCallback:
- * @task: The #IrisProcess that is being monitored.
- * @completed: Number of work items completed so far
- * @total: Total number of work items enqueued so far
- * @cancelled: %TRUE if the process has been cancelled.
- * @user_data: user specified data
- *
- * Callback for widgets that want to monitor progress of a task.
- */
-typedef void (*IrisProgressWatchCallback) (IrisProcess *task, gint completed, gint total,
-                                           gboolean cancelled, gpointer user_data);
-
 
 struct _IrisProcess
 {
@@ -131,12 +115,8 @@ void          iris_process_set_closure          (IrisProcess            *process
 void          iris_process_set_title            (IrisProcess            *process,
                                                  const gchar            *title);
 
-void          iris_process_add_watch_callback   (IrisProcess               *process,
-                                                 IrisProgressWatchCallback  callback,
-                                                 gpointer                   user_data,
-                                                 GDestroyNotify             notify);
-void          iris_process_add_watch_closure    (IrisProcess               *process,
-                                                 GClosure                  *closure);
+void          iris_process_add_watch            (IrisProcess            *process,
+                                                 IrisPort               *watch_port);
 
 G_END_DECLS
 

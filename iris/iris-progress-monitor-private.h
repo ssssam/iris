@@ -26,12 +26,18 @@ G_BEGIN_DECLS
 struct _IrisProgressWatch
 {
 	IrisProgressMonitor *monitor;
+	IrisPort            *port;
+
+	IrisReceiver        *receiver;
 
 	guint cancelled: 1;
 	guint complete: 1;
 
+	IrisProgressMonitorDisplayStyle display_style;
+
 	/* These three are set by the interface in
-	 * iris_progress_monitor_update_watch () */
+	 * iris_progress_monitor_update_watch() and
+	 * iris_progress_monitor_update_watch_items(). */
 	gint  processed_items, total_items;
 	float fraction;
 
@@ -39,7 +45,7 @@ struct _IrisProgressWatch
 
 	/* This member should be used by implementations to ensure the same process
 	 * is not watched multiple times. */
-	IrisProcess *process;
+	IrisTask *task;
 
 	/* For use by implementations */
 	gpointer user_data,
@@ -58,7 +64,19 @@ gboolean _iris_progress_monitor_watch_list_finished (GList *watch_list);
  * watch_list and emit 'cancel' signal.
  */
 void     _iris_progress_monitor_cancel              (IrisProgressMonitor *progress_monitor,
-                                                     GList               *process_watch_list);
+                                                     GList               *watch_list);
+
+/* Format status of watch into 'progress_text', as for example x% or a/b items.
+ * progress_text must point to a character array of 256 bytes or more. */
+void     _iris_progress_monitor_format_watch        (IrisProgressMonitor *progress_monitor,
+                                                     IrisProgressWatch   *watch,
+                                                     gchar               *progress_text);
+
+/* This function should be the handler for the watch's progress messages.
+ * It invokes the class handler after updating the watch object.
+ */
+void     _iris_progress_monitor_handle_message      (IrisMessage       *message,
+                                                     gpointer           user_data);
 
 G_END_DECLS
 

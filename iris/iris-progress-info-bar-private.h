@@ -23,12 +23,16 @@
 
 G_BEGIN_DECLS
 
+#include "iris-scheduler.h"
+
 #define IRIS_PROGRESS_INFO_BAR_GET_PRIVATE(object)                  \
           (G_TYPE_INSTANCE_GET_PRIVATE((object),                  \
            IRIS_TYPE_PROGRESS_INFO_BAR, IrisProgressInfoBarPrivate))
 
 struct _IrisProgressInfoBarPrivate
 {
+	IrisScheduler *scheduler;
+
 	GList *watch_list;
 
 	GtkWidget *title_label,

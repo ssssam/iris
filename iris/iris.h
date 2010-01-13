@@ -41,6 +41,9 @@
 #include "iris-port.h"
 #include "iris-arbiter.h"
 
+/* standard messages */
+#include "iris-progress.h"
+
 /* high level abstractions */
 #include "iris-service.h"
 #include "iris-task.h"

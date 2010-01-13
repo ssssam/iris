@@ -14,6 +14,7 @@ noinst_PROGRAMS =		\
 	process-1		\
 	queue-1			\
 	receiver-1		\
+	receiver-scheduler-1	\
 	rrobin-1		\
 	scheduler-manager-1	\
 	scheduler-1		\
@@ -35,6 +36,7 @@ TEST_PROGS +=			\
 	process-1		\
 	queue-1			\
 	receiver-1		\
+	receiver-scheduler-1	\
 	rrobin-1		\
 	scheduler-manager-1	\
 	scheduler-1		\
@@ -77,6 +79,7 @@ gstamppointer_1_sources = gstamppointer-1.c
 coordination_arbiter_1_sources = coordination-arbiter-1.c
 service_1_sources = service-1.c
 gmainscheduler_1_sources = gmainscheduler-1.c
+receiver_scheduler_1_sources = receiver-scheduler-1.c
 
 progress_monitor_gtk_1_sources = progress-monitor-gtk-1.c
 

@@ -18,6 +18,8 @@
  * 02110-1301 USA
  */
 
+#include <glib/gi18n.h>
+
 #include "iris-progress-monitor.h"
 #include "iris-progress-monitor-private.h"
 
@@ -39,16 +41,11 @@
  * iris_progress_monitor_watch_process_chain() functions.
  *
  * The interface has the flexibility to watch any #IrisTask objects if desired.
- * To do this you must first call iris_progress_monitor_add_watch() and then
- * periodically call iris_progress_monitor_update_watch() to keep it up to date.
- * The task must call one of iris_progress_monitor_watch_cancelled() or
- * iris_progress_monitor_watch_complete() before the progress monitor will close.
+ * To do this you must first call iris_progress_monitor_add_watch(). This
+ * returns an #IrisPort object where you should then send messages of
+ * #IrisProgressMessageType. The progress monitor will watch the task until it
+ * receives @IRIS_PROGRESS_MESSAGE_CANCELLED or @IRIS_PROGRESS_MESSAGE_COMPLETE.
  *
- * This interface should only be called from the GLib main loop thread. For
- * functions that update widgets (ie. iris_progress_monitor_update_watch())
- * note that calling the function with the GDK lock is not enough if you want
- * your app to work on MS Windows; the safest method is to use g_idle_add() to
- * execute a callback from the GLib main loop thread.
  */
 
 enum {
@@ -117,30 +114,24 @@ iris_progress_monitor_base_init (gpointer g_class)
 	                G_TYPE_NONE, 0);
 }
 
-/**
- * iris_progress_monitor_add_watch:
- * @progress_monitor: an #IrisProgressMonitor
- * @title: name of the task being watched, used to label its progress bar, or
- *         %NULL.
- *
- * Causes @progress_monitor to add a new watch (generally represented by
- * a progress bar) for a task, which needs to update it periodically by calling
- * iris_progress_monitor_update_watch(). The watch must be marked as finished
- * using iris_progress_monitor_watch_cancelled() or
- * iris_progress_monitor_watch_complete().
- **/
-IrisProgressWatch *
-iris_progress_monitor_add_watch (IrisProgressMonitor *progress_monitor,
-                                 const gchar         *title)
+
+static IrisProgressWatch *
+iris_progress_monitor_add_watch_internal (IrisProgressMonitor             *progress_monitor,
+                                          IrisTask                        *task,
+                                          IrisProgressMonitorDisplayStyle  display_style,
+                                          const gchar                     *title)
 {
 	IrisProgressMonitorInterface *iface;
 	IrisProgressWatch *watch;
 
 	watch = g_slice_new (IrisProgressWatch);
 	watch->monitor = progress_monitor;
+	watch->port = iris_port_new ();
 
 	watch->cancelled = FALSE;
 	watch->complete  = FALSE;
+
+	watch->display_style = display_style;
 
 	watch->processed_items = 0;
 	watch->total_items     = 0;
@@ -148,7 +139,7 @@ iris_progress_monitor_add_watch (IrisProgressMonitor *progress_monitor,
 
 	watch->title = g_strdup (title);
 
-	watch->process = NULL;
+	watch->task = task;
 
 	iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE(progress_monitor);
 	iface->add_watch (progress_monitor, watch);
@@ -156,115 +147,54 @@ iris_progress_monitor_add_watch (IrisProgressMonitor *progress_monitor,
 	return watch;
 }
 
-static void
-calculate_fraction (IrisProgressWatch *watch)
-{
-	if (watch->complete)
-		watch->fraction = 1.0;
-	else if (watch->processed_items == 0)
-		watch->fraction = 0.0;
-	else
-		watch->fraction = (float)watch->processed_items / 
-		                  (float)watch->total_items;
-};
-
 /**
- * iris_progress_monitor_update_watch:
- * @watch: an #IrisProgressWatch, as returned by
- *         iris_process_monitor_add_watch()
- * @processed_items: number of work items completed
- * @total_items: total number of work items
+ * iris_progress_monitor_add_watch:
+ * @progress_monitor: an #IrisProgressMonitor
+ * @task: the #IrisTask that is being watched. This gets used if the cancel
+ *        button is pressed, and to make sure the same task is not watched
+ *        multiple times.
+ * @display_style: format for the textual description, see
+ *                 #IrisProgressMonitorDisplayStyle.
+ * @title: name of the task being watched, used to label its progress bar, or
+ *         %NULL.
  *
- * This function allows you to use #IrisProgressMonitor widgets to watch any
- * kind of IrisTask. After adding a watch with
- * iris_progress_monitor_add_watch(), your task or task series should call this
- * function periodically to update the UI. It must be called from the main GLib
- * thread if updating Gtk+ widgets (using gdk_threads_enter() is NOT enough if
- * you want your app to work on MS Windows); the best way to do this is to use
- * g_idle_add() to insert a callback in the main thread.
+ * Causes @progress_monitor to add a new watch (generally represented by
+ * a progress bar) for a task, which needs to update it by posting messages on
+ * the #IrisPort that is returned. These messages should be from
+ * #IrisProgressMessageType. The watch will be removed when the port receives
+ * @IRIS_PROGRESS_MESSAGE_CANCELLED or @IRIS_PROGRESS_MESSAGE_COMPLETE.
+ *
+ * Returns: an #IrisPort, listening for progress messages.
+ *          
  **/
-void
-iris_progress_monitor_update_watch (IrisProgressWatch *watch,
-                                    gint               processed_items,
-                                    gint               total_items) 
+IrisPort *
+iris_progress_monitor_add_watch (IrisProgressMonitor             *progress_monitor,
+                                 IrisTask                        *task,
+                                 IrisProgressMonitorDisplayStyle  display_style,
+                                 const gchar                     *title)
 {
-	IrisProgressMonitor *progress_monitor = watch->monitor;
+	IrisProgressWatch            *watch;
 	IrisProgressMonitorInterface *iface;
 
-	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
-
-	watch->processed_items = processed_items;
-	watch->total_items = total_items;
-
-	calculate_fraction (watch);
-
 	iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
-	iface->update_watch (progress_monitor, watch);
-}
 
-/**
- * iris_progress_monitor_watch_cancelled:
- * @task: Ignored. This parameter is present so the function can be added as a
- *        callback/errback to an #IrisTask.
- * @watch: An #IrisProgressWatch. 
- *
- * This function notifies the monitor when a watch is cancelled. One of
- * iris_progress_monitor_watch_cancelled() or
- * iris_progress_monitor_watch_complete() must be called for each watch before
- * the monitor widget will disappear.
- *
- * NOTE: #IrisTask and #IrisProcess objects do not call any callbacks or
- * errbacks when they are cancelled. If you are using #IrisProgressMonitor to
- * watch an #IrisTask, you need to call this function in the task function when
- * it responds to iris_task_is_cancelled() == %TRUE.
- **/
-void
-iris_progress_monitor_watch_cancelled (IrisTask *task,
-                                       IrisProgressWatch *watch)
-{
-	IrisProgressMonitor *progress_monitor = watch->monitor;
-	IrisProgressMonitorInterface *interface;
+	if (iface->is_watching_task (progress_monitor, task))
+		return NULL;
 
-	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
-	interface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
+	watch = iris_progress_monitor_add_watch_internal (progress_monitor,
+	                                                  task,
+	                                                  display_style, 
+	                                                  title);
 
-	watch->cancelled = TRUE;
-
-	interface->update_watch (progress_monitor, watch);
-	interface->watch_stopped (progress_monitor);
-}
-
-/**
- * iris_progress_monitor_watch_complete:
- * @task: Ignored. This parameter is present so the function can be added as a
- *        callback/errback to an #IrisTask.
- * @watch: An #IrisProgressWatch. 
- *
- * This function notifies the monitor when a watch is complete.  One of
- * iris_progress_monitor_watch_cancelled() or
- * iris_progress_monitor_watch_complete() must be called for each watch before
- * the monitor widget will disappear.
- **/
-void
-iris_progress_monitor_watch_complete (IrisTask *task,
-                                      IrisProgressWatch *watch)
-{
-	IrisProgressMonitor *progress_monitor = watch->monitor;
-	IrisProgressMonitorInterface *interface;
-
-	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
-	interface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
-
-	watch->complete = TRUE;
-
-	interface->update_watch (progress_monitor, watch);
-	interface->watch_stopped (progress_monitor);
+	return watch->port;
 }
 
 void
 _iris_progress_watch_free (IrisProgressWatch *watch)
 {
 	g_free (watch->title);
+
+	g_object_unref (watch->port);
 
 	g_slice_free (IrisProgressWatch, watch);
 }
@@ -328,113 +258,70 @@ iris_progress_monitor_set_close_delay (IrisProgressMonitor *progress_monitor,
 /* IrisProgressMonitor can watch any kind of IrisTask, but we have special
  * support for IrisProcess. */
 
-static void
-process_source_connected (IrisProcess *process,
-                          IrisProcess *source,
-                          gpointer user_data)
+static IrisProgressWatch *
+watch_process_internal (IrisProgressMonitor             *progress_monitor,
+                        IrisProcess                     *process,
+                        IrisProgressMonitorDisplayStyle  display_style)
 {
-	IrisProgressMonitor *progress_monitor = IRIS_PROGRESS_MONITOR (user_data);
+	IrisProgressMonitorInterface *iface;
+	IrisProgressWatch *watch;
 
-	/* FIXME: have a way of ensuring it appears before 'process' in the dialog */
-	iris_progress_monitor_watch_process_chain (progress_monitor, source);
+	g_return_val_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor), NULL);
+	g_return_val_if_fail (IRIS_IS_PROCESS (process), NULL);
+
+	iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE(progress_monitor);
+
+	if (iface->is_watching_task (progress_monitor, IRIS_TASK (process)))
+		return NULL;
+
+	/* Add watch to implementation */
+	watch = iris_progress_monitor_add_watch_internal
+	          (progress_monitor,
+	           IRIS_TASK (process),
+	           display_style,
+	           iris_process_get_title (process));
+
+	watch->display_style = display_style;
+
+	iris_process_add_watch (process, watch->port);
+
+	return watch;
 }
 
-static void
-process_sink_connected (IrisProcess *process,
-                        IrisProcess *sink,
-                        gpointer user_data)
-{
-	IrisProgressMonitor *progress_monitor = IRIS_PROGRESS_MONITOR (user_data);
-
-	/* FIXME: have a way of ensuring it appears after 'process' in the dialog */
-	iris_progress_monitor_watch_process_chain (progress_monitor, sink);
-}
-
-static void
-process_watch_callback (IrisProcess *process,
-                        gint         processed_items,
-                        gint         total_items,
-                        gboolean     cancelled,
-                        gpointer     user_data)
-{
-	IrisProgressMonitor          *progress_monitor;
-	IrisProgressMonitorInterface *interface;
-	IrisProgressWatch            *watch = user_data;
-
-	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (watch->monitor));
-
-	progress_monitor = watch->monitor;
-	interface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
-
-	if (cancelled)
-		iris_progress_monitor_watch_cancelled (IRIS_TASK (process),
-		                                       watch);
-
-	watch->processed_items = processed_items;
-	watch->total_items = total_items;
-
-	calculate_fraction (watch);
-
-	interface->update_watch (progress_monitor, watch);
-}
 
 /**
  * iris_progress_monitor_watch_process:
  * @progress_monitor: An #IrisProgressMonitor
  * @process: an #IrisProcess
+ * @display_style: format to display progress, such as a percentage or
+ *                 as items/total. See #IrisProgressMonitorDisplayStyle.
  *
  * Visually display the progress of @process. If @process has source or sink
  * processes connected, they are ignored.
  **/
 void
-iris_progress_monitor_watch_process (IrisProgressMonitor *progress_monitor,
-                                     IrisProcess         *process)
+iris_progress_monitor_watch_process (IrisProgressMonitor             *progress_monitor,
+                                     IrisProcess                     *process,
+                                     IrisProgressMonitorDisplayStyle  display_style)
 {
-	IrisProgressMonitorInterface *iface;
-	IrisProgressWatch *watch;
-
-	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
-	g_return_if_fail (IRIS_IS_PROCESS (process));
-
-	iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE(progress_monitor);
-
-	if (iface->is_watching_process (progress_monitor, process))
-		return;
-
-	g_signal_connect_object (process, "source-connected",
-	                         G_CALLBACK (process_source_connected),
-	                         G_OBJECT (progress_monitor), 0);
-	g_signal_connect_object (process, "sink-connected",
-	                         G_CALLBACK (process_sink_connected),
-	                         G_OBJECT (progress_monitor), 0);
-
-	/* Add watch to implementation */
-	watch = iris_progress_monitor_add_watch (progress_monitor,
-	                                         iris_process_get_title (process));
-	watch->process = process;
-
-	iris_task_add_both (IRIS_TASK (process),
-	                    (IrisTaskFunc)iris_progress_monitor_watch_complete,
-	                    (IrisTaskFunc)iris_progress_monitor_watch_cancelled,
-	                    watch, NULL);
-
-	/* Start process updating the implementation using callback */
-	iris_process_add_watch_callback (process, process_watch_callback,
-	                                 watch, NULL);
+	watch_process_internal (progress_monitor, process, display_style);
 }
 
 /**
  * iris_progress_monitor_watch_process_chain:
  * @progress_monitor: An #IrisProgressMonitor
  * @process: an #IrisProcess
+ * @display_style: format to display progress, such as a percentage or
+ *                 as items/total. See #IrisProgressMonitorDisplayStyle.
  *
  * Visually display the progress of @process, and any processes which are
  * connected. Each process in the chain is displayed separately in the order of
  * the data flow.
  **/
 void
-iris_progress_monitor_watch_process_chain (IrisProgressMonitor *progress_monitor,
-                                           IrisProcess         *process)
+iris_progress_monitor_watch_process_chain (IrisProgressMonitor             *progress_monitor,
+                                           IrisProcess                     *process,
+                                           IrisProgressMonitorDisplayStyle  display_style)
 {
 	IrisProcess *head;
 
@@ -447,7 +334,9 @@ iris_progress_monitor_watch_process_chain (IrisProgressMonitor *progress_monitor
 
 	process = head;
 	do {
-		iris_progress_monitor_watch_process (progress_monitor, process);
+		watch_process_internal (progress_monitor,
+		                        process, 
+		                        display_style);
 	} while ((process = iris_process_get_successor (process)) != NULL);
 }
 
@@ -469,17 +358,6 @@ _iris_progress_monitor_watch_list_finished (GList *watch_list)
 
 		if ((!watch->complete) && (!watch->cancelled))
 			return FALSE;
-
-		/* It is possible that we are watching one process, which has now been
-		 * connected to some others but we are still waiting for our signal to
-		 * come through because it's being sent via a g_idle. So we check that
-		 * the source doesn't have any successors.
-		 */
-		if (watch->process != NULL) {
-			IrisProcess *sink = iris_process_get_successor (watch->process);
-			if (sink != NULL && !iris_process_is_finished (sink))
-				return FALSE;
-		}
 	}
 
 	return TRUE;
@@ -487,17 +365,130 @@ _iris_progress_monitor_watch_list_finished (GList *watch_list)
 
 void
 _iris_progress_monitor_cancel (IrisProgressMonitor *progress_monitor,
-                               GList               *process_watch_list)
+                               GList               *watch_list)
 {
 	GList *node;
 
 	/* Cancel every process being watched */
-	for (node=process_watch_list; node; node=node->next) {
+	for (node=watch_list; node; node=node->next) {
 		IrisProgressWatch *watch = node->data;
-
-		if (watch->process != NULL)
-			iris_process_cancel (watch->process);
+		iris_task_cancel (IRIS_TASK (watch->task));
 	}
 
 	g_signal_emit (progress_monitor, signals[CANCEL], 0);
+}
+
+static void
+handle_cancelled (IrisProgressWatch *watch,
+                  IrisMessage *message)
+{
+	watch->cancelled = TRUE;
+}
+
+static void
+handle_complete (IrisProgressWatch *watch,
+                 IrisMessage *message)
+{
+	watch->complete = TRUE;
+}
+
+static void
+handle_fraction (IrisProgressWatch *watch,
+                 IrisMessage *message)
+{
+	const GValue *value = iris_message_get_data (message);
+	watch->fraction = g_value_get_float (value);
+}
+
+static float
+calculate_fraction (IrisProgressWatch *watch)
+{
+	if (watch->complete)
+		return 1.0;
+	else if (watch->processed_items == 0 || watch->total_items == 0)
+		return 0.0;
+	else
+		return (float)watch->processed_items / 
+		       (float)watch->total_items;
+};
+
+static void
+handle_processed_items (IrisProgressWatch *watch,
+                        IrisMessage *message)
+{
+	const GValue *value = iris_message_get_data (message);
+	watch->processed_items = g_value_get_int (value);
+	watch->fraction = calculate_fraction (watch);
+}
+
+static void
+handle_total_items (IrisProgressWatch *watch,
+                    IrisMessage *message)
+{
+	const GValue *value = iris_message_get_data (message);
+	watch->total_items = g_value_get_int (value);
+	watch->fraction = calculate_fraction (watch);
+}
+
+void
+_iris_progress_monitor_handle_message (IrisMessage  *message,
+                                       gpointer      user_data)
+{
+	IrisProgressWatch            *watch = user_data;
+	IrisProgressMonitor          *progress_monitor = watch->monitor;
+	IrisProgressMonitorInterface *iface;
+
+	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
+
+	switch (message->what) {
+		case IRIS_PROGRESS_MESSAGE_CANCELLED:
+			handle_cancelled (watch, message);
+			break;
+		case IRIS_PROGRESS_MESSAGE_COMPLETE:
+			handle_complete (watch, message);
+			break;
+		case IRIS_PROGRESS_MESSAGE_FRACTION:
+			handle_fraction (watch, message);
+			break;
+		case IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS:
+			handle_processed_items (watch, message);
+			break;
+		case IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS:
+			handle_total_items (watch, message);
+			break;
+		default:
+			g_warn_if_reached ();
+	}
+
+	iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
+	iface->handle_message (progress_monitor, watch, message);
+}
+
+void
+_iris_progress_monitor_format_watch (IrisProgressMonitor *progress_monitor,
+                                     IrisProgressWatch   *watch,
+                                     gchar               *progress_text)
+{
+	if (watch->complete) {
+		g_snprintf (progress_text, 255, _("Complete"));
+		return;
+	} else if (watch->cancelled) {
+		g_snprintf (progress_text, 255, _("Cancelled"));
+		return;
+	}
+
+	switch (watch->display_style) {
+		case IRIS_PROGRESS_MONITOR_ITEMS:
+			g_snprintf (progress_text, 255, _("%i items of %i"), 
+			            watch->processed_items,
+			            watch->total_items);
+			break;
+		case IRIS_PROGRESS_MONITOR_PERCENTAGE:
+			g_snprintf (progress_text, 255, _("%.0f%% complete"), 
+			            (watch->fraction * 100.0));
+			break;
+		default:
+			g_warning ("Unrecognised value for watch->display_style.\n");
+			progress_text[0] = 0;
+	}
 }

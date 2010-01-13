@@ -9,6 +9,7 @@ sources_public_h =						\
 	$(top_srcdir)/iris/iris-message.h			\
 	$(top_srcdir)/iris/iris-port.h				\
 	$(top_srcdir)/iris/iris-process.h			\
+	$(top_srcdir)/iris/iris-progress.h			\
 	$(top_srcdir)/iris/iris-progress-monitor.h	\
 	$(top_srcdir)/iris/iris-queue.h				\
 	$(top_srcdir)/iris/iris-receiver.h			\

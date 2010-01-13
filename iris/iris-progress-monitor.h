@@ -24,6 +24,8 @@
 #include <glib-object.h>
 #include <gio/gio.h>
 
+#include "iris-port.h"
+#include "iris-progress.h"
 #include "iris-process.h"
 
 G_BEGIN_DECLS
@@ -36,8 +38,7 @@ G_BEGIN_DECLS
 typedef struct _IrisProgressMonitor            IrisProgressMonitor;
 typedef struct _IrisProgressMonitorInterface   IrisProgressMonitorInterface;
 
-// FIXME: declared in iris-process.h right now .. message
-//typedef struct _IrisProgressWatch              IrisProgressWatch;
+typedef struct _IrisProgressWatch              IrisProgressWatch;
 
 struct _IrisProgressMonitorInterface
 {
@@ -46,13 +47,12 @@ struct _IrisProgressMonitorInterface
 	void     (*add_watch)            (IrisProgressMonitor *progress_monitor,
 	                                  IrisProgressWatch   *watch);
 
-	void     (*update_watch)         (IrisProgressMonitor *progress_monitor,
-	                                  IrisProgressWatch   *watch);
+	void     (*handle_message)       (IrisProgressMonitor *progress_monitor,
+	                                  IrisProgressWatch   *watch,
+	                                  IrisMessage         *message);
 
-	void     (*watch_stopped)        (IrisProgressMonitor *progress_monitor);
-
-	gboolean (*is_watching_process)  (IrisProgressMonitor *progress_monitor,
-	                                  IrisProcess         *process);
+	gboolean (*is_watching_task)     (IrisProgressMonitor *progress_monitor,
+	                                  IrisTask            *task);
 
 	void     (*set_title)            (IrisProgressMonitor *progress_monitor,
 	                                  const gchar         *title);
@@ -66,21 +66,27 @@ struct _IrisProgressMonitorInterface
 	void     (*reserved4)            (void);
 };
 
+/**
+ * IrisProgressMonitorDisplayStyle:
+ * @IRIS_PROGRESS_MONITOR_ITEMS: display "x items of y"
+ * @IRIS_PROGRESS_MONITOR_PERCENTAGE: display "x% complete"
+ *
+ * These values instruct progress monitor widgets to display the progress of a
+ * watch in a specific format.
+ *
+ **/
+typedef enum {
+	IRIS_PROGRESS_MONITOR_ITEMS,
+	IRIS_PROGRESS_MONITOR_PERCENTAGE
+} IrisProgressMonitorDisplayStyle;
+
 GType         iris_progress_monitor_get_type             (void) G_GNUC_CONST;
 
 /* General API */
-IrisProgressWatch *iris_progress_monitor_add_watch       (IrisProgressMonitor *progress_monitor,
-                                                          const gchar         *title);
-
-void          iris_progress_monitor_update_watch         (IrisProgressWatch   *watch,
-                                                          gint                 processed_items,
-                                                          gint                 total_items);
-
-void          iris_progress_monitor_watch_cancelled      (IrisTask            *task,
-                                                          IrisProgressWatch   *watch);
-void          iris_progress_monitor_watch_complete       (IrisTask            *task,
-                                                          IrisProgressWatch   *watch);
-
+IrisPort     *iris_progress_monitor_add_watch            (IrisProgressMonitor             *progress_monitor,
+                                                          IrisTask                        *task,
+                                                          IrisProgressMonitorDisplayStyle  display_style,
+                                                          const gchar                     *title);
 
 void          iris_progress_monitor_set_title            (IrisProgressMonitor *progress_monitor,
                                                           const gchar *title);
@@ -90,10 +96,12 @@ void          iris_progress_monitor_set_close_delay      (IrisProgressMonitor *p
 
 
 /* IrisProcess-specific API */
-void          iris_progress_monitor_watch_process        (IrisProgressMonitor *progress_monitor,
-                                                          IrisProcess         *process);
-void          iris_progress_monitor_watch_process_chain  (IrisProgressMonitor *progress_monitor,
-                                                          IrisProcess         *process);
+void          iris_progress_monitor_watch_process        (IrisProgressMonitor             *progress_monitor,
+                                                          IrisProcess                     *process,
+                                                          IrisProgressMonitorDisplayStyle  display_style);
+void          iris_progress_monitor_watch_process_chain  (IrisProgressMonitor             *progress_monitor,
+                                                          IrisProcess                     *process,
+                                                          IrisProgressMonitorDisplayStyle  display_style);
 
 G_END_DECLS
 

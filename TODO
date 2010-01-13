@@ -20,6 +20,28 @@ IrisMessage
 	so that you don't need to unref your messages if you hit the usual
 	use-case of create->post.
 
+IrisProcess
+
+	Be more clever about threading. Right now each process is one thread,
+	which is executed continually to check if there is no work.
+	It would be better if the IrisScheduler was more integrated, so that
+	the work was spread between its threads and no CPU was used when the
+	process' queue was empty.
+
+IrisProgressMonitor
+
+	the errback and callback attached by IrisProgressMonitor aren't removed
+	when the progress monitor gets destroyed, so removing the monitor early
+	will cause a crash when the process is finished. Fixing this requires
+	the implementation of iris_task_remove_callback of some sort.
+
+Progress widgets
+
+	Add option to 'unwatch' completed processes after a time
+
+	For when you don't do that, make the widgets handle lists that are 
+	stupidly long.
+
 Alex added warnings for GSimpleAsyncResult when not used from main thread.
 We need to implement our own now since this isn't reusable.
 
@@ -47,3 +69,29 @@ iris_receiver_deliver_real()
 	both from the atomic operations as well as the locks incurred.
 	How can we reduce the potential for lock in these situations?
 
+
+---------------------------------------------------------------------------
+Niceties
+---------------------------------------------------------------------------
+
+Processes should 'feed forward' the totals when hooked up - makes no
+sense for B to have its total as A's processed count. It's normally the
+case that when A and B are connected, B has A->total_items left to process
+as well ... but this is not necessarily true. The solution must be to add an
+item_enqueued() class member, which by default calls
+iris_process_notify_future_work_item (B) .. but can be overridden by
+subclassing. Or maybe it should be a signal so the user does not need to
+subclass.
+
+IrisProgressMonitor should watch for the process changing its title.
+
+Processes should be throttleable - for example, say we are indexing the entire
+file system. A directory crawler process searches the FS for files recursively,
+but it may as well read the first 100 files, count the number of files in
+subdirectories not yet touched (to give the user better info) and then wait for
+the next processes to start working.
+
+tests/process/cancelling 2 is very slow ..
+
+Make branches of some GNOME apps to use Iris!
+For example: Nautilus, Banshee, Epiphany or Tracker.
