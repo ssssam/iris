@@ -23,7 +23,7 @@
 #elif DARWIN
 #include <sys/param.h>
 #include <sys/sysctl.h>
-#elif G_OS_WIN32
+#elif defined(WIN32)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
@@ -180,7 +180,7 @@ iris_scheduler_get_n_cpu (void)
 		size_t size = sizeof (n_cpu);
 		if (sysctlbyname ("hw.ncpu", &n_cpu, &size, NULL, 0))
 			n_cpu = 1;
-#elif G_OS_WIN32
+#elif defined(WIN32)
 		SYSTEM_INFO info;
 		GetSystemInfo (&info);
 		n_cpu = info.dwNumberOfProcessors;

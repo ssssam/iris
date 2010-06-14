@@ -18,8 +18,14 @@
  * 02110-1301 USA
  */
 
+#include <glib.h>
 #include <glib/gprintf.h>
+
+#ifdef WIN32
+#include <windows.h>
+#else
 #include <pthread.h>
+#endif
 
 #include "iris-debug.h"
 #include "iris-message.h"
@@ -45,6 +51,9 @@
 
 #if LINUX
 __thread IrisThread* my_thread = NULL;
+#elif defined(WIN32)
+static GOnce my_thread_once = G_ONCE_INIT;
+static DWORD my_thread;
 #else
 static pthread_once_t my_thread_once = PTHREAD_ONCE_INIT;
 static pthread_key_t my_thread;
@@ -209,6 +218,8 @@ iris_thread_worker (IrisThread *thread)
 
 #if LINUX
 	my_thread = thread;
+#elif defined(WIN32)
+	TlsSetValue (my_thread, thread);
 #else
 	pthread_setspecific (my_thread, thread);
 #endif
@@ -269,6 +280,13 @@ iris_thread_get_type (void)
 }
 
 #if LINUX
+#elif defined(WIN32)
+static void
+_winthreads_init (void)
+{
+	/* FIXME: is it a problem that this is not freed? */
+	my_thread = TlsAlloc ();
+}
 #else
 static void
 _pthread_init (void)
@@ -297,6 +315,8 @@ iris_thread_new (gboolean exclusive)
 	iris_debug (IRIS_DEBUG_THREAD);
 
 #if LINUX
+#elif defined(WIN32)
+	g_once (&my_thread_once, (GThreadFunc)_winthreads_init, NULL);
 #else
 	pthread_once (&my_thread_once, _pthread_init);
 #endif
@@ -329,6 +349,8 @@ iris_thread_get (void)
 {
 #if LINUX
 	return my_thread;
+#elif defined(WIN32)
+	return TlsGetValue (my_thread);
 #else
 	return pthread_getspecific (my_thread);
 #endif
