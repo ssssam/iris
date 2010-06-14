@@ -195,7 +195,7 @@ iris_rrobin_apply (IrisRRobin     *rrobin,
 _try_next_index:
 
 	/* get our index to try */
-	my_index = iris_atomics_fetch_and_add (&rrobin->active, 1) % rrobin->count;
+	my_index = iris_atomics_fetch_and_inc (&rrobin->active) % rrobin->count;
 
 	/* continue to look for an item if there isn't one here.
 	 * this should only happen during an item move.

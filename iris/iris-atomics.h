@@ -25,7 +25,7 @@
 
 G_BEGIN_DECLS
 
-inline gint iris_atomics_fetch_and_add (volatile void *ptr, gint add);
+inline gint iris_atomics_fetch_and_inc (volatile void *ptr);
 
 G_END_DECLS
 

@@ -22,19 +22,18 @@
 
 #if DARWIN
 #include <libkern/OSAtomic.h>
-#elif WIN32
-#include <Windows.h>
+#elif defined(WIN32)
+#include <windows.h>
 #endif
 
 inline gint
-iris_atomics_fetch_and_add (volatile void *ptr,
-                            gint           add)
+iris_atomics_fetch_and_inc (volatile void *ptr)
 {
 #if DARWIN
-	return OSAtomicAdd32 (add, ptr);
-#elif WIN32
-	return InterlockedAdd (ptr, add) - add;
+	return OSAtomicAdd32 (1, ptr) - 1;
+#elif defined(WIN32)
+	return InterlockedIncrement (ptr) - 1;
 #else
-	return __sync_fetch_and_add ((gint*)ptr, add);
+	return __sync_fetch_and_add ((gint*)ptr, 1);
 #endif
 }
