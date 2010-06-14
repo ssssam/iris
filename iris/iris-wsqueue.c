@@ -24,11 +24,16 @@
  * http://www.bluebytesoftware.com/blog/PermaLink,guid,1665653b-b5f3-49b4-8144-cfbc5e8c632b.aspx
  */
 
-#include <pthread.h>
 #include <string.h>
-#include <sys/errno.h>
 #include <sys/time.h>
 #include <time.h>
+
+#ifdef WIN32
+#include <windows.h>
+#else
+#include <pthread.h>
+#include <sys/errno.h>
+#endif
 
 #include "iris-wsqueue.h"
 #include "iris-wsqueue-private.h"
@@ -424,24 +429,37 @@ iris_wsqueue_try_steal (IrisWSQueue *queue,
                         guint        timeout)
 {
 	IrisWSQueuePrivate *priv;
-	GTimeVal            tv     = {0,0};
 	gboolean            taken  = FALSE;
 	gpointer            result = NULL;
 	gint                head;
+
+	#ifdef WIN32
+	DWORD    wait_result;
+	#else
+	GTimeVal tv          = {0,0};
+	#endif
 
 	g_return_val_if_fail (queue != NULL, NULL);
 
 	priv = queue->priv;
 
-	g_get_current_time (&tv);
-	g_time_val_add (&tv, (G_USEC_PER_SEC / 1000) * timeout);
-
 	/* GMutex does not export timedlock, so for now we will use
 	 * the non-portable pthread call directly.
 	 */
+	#ifdef WIN32
+	/* pthread_mutex_timedlock returns 0 on success */
+	wait_result = WaitForSingleObject (
+	              (CRITICAL_SECTION *)priv->mutex,
+	              timeout);
+	taken = (wait_result != WAIT_OBJECT_0);
+	#else
+	g_get_current_time (&tv);
+	g_time_val_add (&tv, (G_USEC_PER_SEC / 1000) * timeout);
+
 	taken = pthread_mutex_timedlock (
 			(pthread_mutex_t*)priv->mutex,
 			(struct timespec*)&tv);
+	#endif
 
 	head = priv->head_idx;
 	g_atomic_int_set (&priv->head_idx, head + 1);
