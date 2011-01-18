@@ -407,9 +407,12 @@ calculate_fraction (IrisProgressWatch *watch)
 		return 1.0;
 	else if (watch->processed_items == 0 || watch->total_items == 0)
 		return 0.0;
-	else
+	else {
+		g_return_val_if_fail (watch->processed_items <= watch->total_items, 1.0);
+
 		return (float)watch->processed_items / 
 		       (float)watch->total_items;
+	}
 };
 
 static void
