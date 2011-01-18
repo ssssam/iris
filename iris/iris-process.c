@@ -943,13 +943,19 @@ iris_process_execute_real (IrisTask *task)
 			if (iris_process_has_predecessor (process)) {
 				if (iris_process_is_finished (process))
 					break;
-			} else if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_NO_MORE_WORK)) {
-					if ((g_atomic_int_get (&priv->processed_items)) ==
-						(g_atomic_int_get (&priv->total_items)))
-						break;
+			}
+			else if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_NO_MORE_WORK)) {
+				/* No races possible: only recursive work items can post more work if the above flag
+				 * is set, and they must do so before they are marked as complete. Therefore
+				 * 'processed' can never reach 'total' before the last work item completes.
+				 */
+				if ((g_atomic_int_get (&priv->processed_items)) ==
+					(g_atomic_int_get (&priv->total_items)))
+					break;
 			}
 
-			/* FIXME: would be nice if we could tell the scheduler "don't execute this for at least
+			/* Yield, by reposting this function to the scheduler and returning.
+			 * FIXME: would be nice if we could tell the scheduler "don't execute this for at least
 			 * 20ms" or something so we don't waste quite as much power waiting for work.
 			 */
 			iris_scheduler_queue (iris_scheduler_default (),
@@ -959,6 +965,7 @@ iris_process_execute_real (IrisTask *task)
 			return;
 		}
 
+		/* Execute work item */
 		g_value_set_pointer (&params[1], work_item);
 		g_closure_invoke (task->priv->closure, NULL, 2, params, NULL);
 

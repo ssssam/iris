@@ -53,6 +53,7 @@ pre_counter_callback (IrisProcess *process,
 	iris_process_forward (process, new_work_item);
 }
 
+
 static void
 recursive_counter_callback (IrisProcess *process,
                             IrisMessage *work_item,
@@ -61,6 +62,7 @@ recursive_counter_callback (IrisProcess *process,
 	gint *counter_address = iris_message_get_pointer (work_item, "counter"),
 	      i;
 
+	/* Add 2 new work items, up to 100 */
 	if (*counter_address < 50) {
 		for (i=0; i<2; i++) {
 			IrisMessage *new_work_item = iris_message_new (0);
