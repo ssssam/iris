@@ -106,7 +106,7 @@ simple (void)
 
 
 static void
-recurse (void)
+recurse_1 (void)
 {
 	int counter = 0;
 
@@ -154,8 +154,37 @@ cancelling_1 (void)
 	g_object_unref (process);
 };
 
+/* Test that connect always executes before run. This behaviour is documented
+ * in the manual for iris-process.c. More generally a test that messages are
+ * received in the order they are sent. */
 static void
 chaining_1 (void)
+{
+	int i;
+
+	for (i=0; i < 1000; i++) {
+		IrisProcess *head_process = iris_process_new_with_func
+		                              (pre_counter_callback, NULL, NULL);
+		IrisProcess *tail_process = iris_process_new_with_func
+		                              (counter_callback, NULL, NULL);
+
+		iris_process_connect (head_process, tail_process);
+
+		iris_process_run (head_process);
+
+		while (1)
+			if (iris_process_is_executing (head_process)) {
+				g_assert (iris_process_has_successor (head_process));
+				break;
+			}
+
+		g_object_unref (head_process);
+		g_object_unref (tail_process);
+	}
+}
+
+static void
+chaining_2 (void)
 {
 	int counter = 0,
 	    i;
@@ -225,8 +254,9 @@ int main(int argc, char *argv[]) {
 
 	g_test_add_func ("/process/simple", simple);
 	g_test_add_func ("/process/cancelling 1", cancelling_1);
-	g_test_add_func ("/process/recurse", recurse);
+	g_test_add_func ("/process/recurse 1", recurse_1);
 	g_test_add_func ("/process/chaining 1", chaining_1);
+	g_test_add_func ("/process/chaining 2", chaining_2);
 	g_test_add_func ("/process/cancelling 2", cancelling_2);
 
   	return g_test_run();

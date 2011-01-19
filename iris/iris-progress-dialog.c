@@ -364,6 +364,15 @@ iris_progress_dialog_handle_message (IrisProgressMonitor *progress_monitor,
 };
 
 
+/**
+ * iris_progress_dialog_new:
+ * @title: string to put in window title bar
+ * @parent: window to act as the parent of this dialog, or %NULL
+ *
+ * Creates a new #IrisProgressDialog
+ *
+ * Return value: a newly-created #IrisProgressDialog widget
+ */
 GtkWidget *
 iris_progress_dialog_new (const gchar *title,
                           GtkWindow   *parent)

@@ -454,6 +454,7 @@ iris_process_no_more_work
 iris_process_connect
 iris_process_forward
 iris_process_recurse
+iris_process_is_executing
 iris_process_is_canceled
 iris_process_is_finished
 iris_process_has_predecessor
@@ -467,8 +468,16 @@ iris_process_set_closure
 iris_process_set_title 
 iris_process_add_watch
 <SUBSECTION Standard>
+IRIS_PROCESS
+IRIS_PROCESS_CONST
+IRIS_IS_PROCESS
 IRIS_TYPE_PROCESS
 iris_process_get_type
+IRIS_PROCESS_CLASS
+IRIS_IS_PROCESS_CLASS
+IRIS_PROCESS_GET_CLASS
+<SUBSECTION Private>
+IrisProcessPrivate
 </SECTION>
 
 <SECTION>
@@ -480,6 +489,7 @@ IrisProgressMessageType
 <SECTION>
 <FILE>iris-progress-monitor</FILE>
 <TITLE>IrisProgressMonitor</TITLE>
+IrisProgressWatch
 IrisProgressMonitor
 IrisProgressMonitorDisplayStyle
 iris_progress_monitor_watch_process
@@ -488,8 +498,11 @@ iris_progress_monitor_set_title
 iris_progress_monitor_set_close_delay
 iris_progress_monitor_add_watch
 <SUBSECTION Standard>
+IRIS_PROGRESS_MONITOR
+IRIS_IS_PROGRESS_MONITOR
 IRIS_TYPE_PROGRESS_MONITOR
 iris_progress_monitor_get_type
+IRIS_PROGRESS_MONITOR_GET_INTERFACE
 </SECTION>
 
 <SECTION>
@@ -498,8 +511,16 @@ iris_progress_monitor_get_type
 IrisProgressDialog
 iris_progress_dialog_new
 <SUBSECTION Standard>
+IRIS_PROGRESS_DIALOG
+IRIS_PROGRESS_DIALOG_CONST
+IRIS_IS_PROGRESS_DIALOG
 IRIS_TYPE_PROGRESS_DIALOG
 iris_progress_dialog_get_type
+IRIS_PROGRESS_DIALOG_CLASS
+IRIS_IS_PROGRESS_DIALOG_CLASS
+IRIS_PROGRESS_DIALOG_GET_CLASS
+<SUBSECTION Private>
+IrisProgressDialogPrivate
 </SECTION>
 
 <SECTION>
@@ -508,6 +529,14 @@ iris_progress_dialog_get_type
 IrisProgressInfoBar
 iris_progress_info_bar_new
 <SUBSECTION Standard>
+IRIS_PROGRESS_INFO_BAR
+IRIS_PROGRESS_INFO_BAR_CONST
+IRIS_IS_PROGRESS_INFO_BAR
 IRIS_TYPE_PROGRESS_INFO_BAR
 iris_progress_info_bar_get_type
+IRIS_PROGRESS_INFO_BAR_CLASS
+IRIS_IS_PROGRESS_INFO_BAR_CLASS
+IRIS_PROGRESS_INFO_BAR_GET_CLASS
+<SUBSECTION Private>
+IrisProgressInfoBarPrivate
 </SECTION>

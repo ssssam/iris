@@ -32,10 +32,10 @@
  * @short_description: A concurrent and asynchronous process abstraction
  *
  * #IrisProcess is a work queue that operates on atomic work items. An example
- * of this is be reading information from every file in a directory, or
+ * of this is reading information from every file in a directory, or
  * processing a complex calculation with a series of inputs. This is a special
- * case of #IrisTask, which is better if you want to do one long task such as
- * downloading a single file.
+ * case of #IrisTask, which would better suited you want to execute one long
+ * task such as downloading a single file.
  *
  * Once the #IrisProcess is created, you can give it work to do with
  * iris_process_enqueue(). You can start it processing the work at any point
@@ -50,6 +50,38 @@
  * The progress of an #IrisProcess can be monitored using some kind of
  * #IrisProgressMonitor, such as an #IrisProgressDialog. If you want to do this
  * you may want to call iris_process_set_title() to give the process a label.
+ *
+ * Internal note: because processes run asynchronously in their own threads,
+ * the controlling functions communicate through messages and will return
+ * before the message has been received by the process. This means, for
+ * example, that the following code has undefined behaviour:
+ * |[
+ *   IrisProcess *process;
+ *   process = iris_process_new_with_func (callback, NULL, NULL);
+ *
+ *   iris_process_run (process);
+ *   g_assert (iris_process_is_executing (process));
+ * ]|
+ * The assert may fail or pass, depending on whether @process has received the
+ * 'run' message. Messages are executed in order, so given that
+ * iris_process_connect() can only be called before iris_process_run(), the
+ * following code is valid:
+ * |[
+ *   IrisProcess *head, *tail;
+ *   head = iris_process_new_with_func (callback_1, NULL, NULL);
+ *   tail = iris_process_new_with_func (callback_1, NULL, NULL); *
+ *
+ *   iris_process_connect (head, tail);
+ *   iris_process_run (head);
+ *
+ *   while (1)
+ *     if (iris_process_is_executing (head)) {
+ *       g_assert (iris_process_has_successor (head));
+ *       break;
+ *     }
+ * ]|
+ * Once the 'run' message has been executed, we know for sure that the
+ * 'connect' message has also executed.
  */
 
 /* How frequently the process checks for cancellation between try_pop calls. */
@@ -135,7 +167,7 @@ iris_process_new_with_closure (GClosure *closure)
  * @process: An #IrisProcess
  *
  * Starts the #IrisProcess executing work items. Its thread will run until it
- * runs out of work AND iris_process_no_more_data() (or iris_process_cancel())
+ * runs out of work AND iris_process_no_more_work() (or iris_process_cancel())
  * is called.
  *
  * If @process has any successors, they will also start. For more information,
@@ -279,7 +311,17 @@ iris_process_no_more_work (IrisProcess *process)
  * It is not currently possible to disconnect processes. A process can only have
  * one source and one sink process. Both these things shouldn't be too hard to
  * implement.
+ *
+ * Remember that iris_process_connect() will return before the connection
+ * actually takes place. However, because connections must be made before the
+ * tasks execute, it is guaranteed that the connection has taken place once
+ * iris_process_is_executing() returns %TRUE. It is also guaranteed to have
+ * taken place if you are calling from the work function, of course. This
+ * affects the functions iris_process_get_predecessor(),
+ * iris_process_get_successor(), iris_process_has_predecessor() and
+ * iris_process_has_successor().
  */
+
 void
 iris_process_connect (IrisProcess *head,
                       IrisProcess *tail)
@@ -397,6 +439,20 @@ iris_process_recurse (IrisProcess *process,
 }
 
 /**
+ * iris_process_is_executing:
+ * @process: An #IrisProcess
+ *
+ * Checks if a process is executing.
+ *
+ * Return value: %TRUE if the process is executing.
+ */
+gboolean
+iris_process_is_executing (IrisProcess *process)
+{
+	return iris_task_is_executing (IRIS_TASK (process));
+}
+
+/**
  * iris_process_is_canceled:
  * @process: An #IrisProcess
  *
@@ -450,6 +506,10 @@ iris_process_is_finished (IrisProcess *process)
  * Checks if @process has another process feeding it work. For more
  * information, see iris_process_connect().
  *
+ * Note: iris_process_connect() returns before the connection is actually
+ * made. You should not call this function outside of the work function, unless
+ * iris_process_is_executing() returns %TRUE. See above for more information.
+ *
  * Return value: %TRUE if the process has a predecessor connected.
  */
 gboolean
@@ -466,6 +526,10 @@ iris_process_has_predecessor (IrisProcess *process)
  *
  * Checks if @process is connected to a process that it can send work to using
  * iris_process_forward(). For more information, see iris_process_connect().
+ *
+ * Note: iris_process_connect() returns before the connection is actually
+ * made. You should not call this function outside of the work function, unless
+ * iris_process_is_executing() returns %TRUE. See above for more information.
  *
  * Return value: %TRUE if the process has a successor connected.
  */
@@ -509,6 +573,10 @@ iris_process_get_queue_length (IrisProcess *process) {
  *
  * Returns the previous process in the chain from @process, or %NULL.
  *
+ * Note: iris_process_connect() returns before the connection is actually
+ * made. You should not call this function outside of the work function, unless
+ * iris_process_is_executing() returns %TRUE. See above for more information.
+ *
  * Return value: a pointer to the an #IrisProcess, or %NULL
  */
 IrisProcess *
@@ -525,6 +593,10 @@ iris_process_get_predecessor (IrisProcess *process)
  *
  * Returns the next process in the chain from @process, or %NULL.
  *
+ * Note: iris_process_connect() returns before the connection is actually
+ * made. You should not call this function outside of the work function, unless
+ * iris_process_is_executing() returns %TRUE. See above for more information.
+ *
  * Return value: a pointer to the an #IrisProcess, or %NULL
  */
 IrisProcess *
@@ -539,7 +611,7 @@ iris_process_get_successor (IrisProcess *process)
  * iris_process_get_title:
  * @process: An #IrisProcess
  *
- * Returns the title of @process, as set by iris_process_set_title()/
+ * Returns the title of @process, as set by iris_process_set_title().
  *
  * Return value: a pointer to a string.
  */
@@ -610,8 +682,8 @@ iris_process_set_closure (IrisProcess *process,
  * @title: A user-visible string saying what @process does.
  *
  * Sets the title of @process. This should be a few words describing what the
- * processes is doing, and will be used in any status dialogs watching the
- * process.
+ * process is doing, and will be used in any status dialogs that are watching
+ * the process.
  */
 void
 iris_process_set_title (IrisProcess *process,
@@ -632,13 +704,13 @@ iris_process_set_title (IrisProcess *process,
 /**
  * iris_process_add_watch:
  * @process: An #IrisProcess
- * @port: An #IrisPort
+ * @watch_port: An #IrisPort
  *
- * @port will receive status updates from @process. The messages sent are of
- * #IrisProcessWatchMessageType.
+ * @watch_port will receive status updates from @process. The messages are
+ * of the type #IrisProgressMessageType.
  *
  * The #IrisProgressMonitor interface and its implementors provide a more
- * higher-level facility for progress monitoring.
+ * high-level facility for progress monitoring.
  */
 void
 iris_process_add_watch (IrisProcess               *process,

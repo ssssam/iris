@@ -420,6 +420,14 @@ iris_progress_info_bar_handle_message (IrisProgressMonitor *progress_monitor,
 };
 
 
+/**
+ * iris_progress_info_bar_new:
+ * @title: FIXME: document
+ *
+ * Creates a new #IrisProgressInfoBar
+ *
+ * Return value: a newly-created #IrisProgressInfoBar widget
+ */
 GtkWidget *
 iris_progress_info_bar_new (const gchar *title)
 {
