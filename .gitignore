@@ -64,6 +64,8 @@ tests/coordination-arbiter-1
 tests/coordination-arbiter-1.o
 tests/gmainscheduler-1
 tests/gmainscheduler-1.o
+tests/receiver-scheduler-1
+tests/process-1
 doc/reference/html-build.stamp
 doc/reference/html.stamp
 doc/reference/html/
@@ -90,6 +92,8 @@ build/autotools/shave
 build/autotools/shave-libtool
 examples/basic
 examples/basic.o
+examples/progress-tasks
+examples/progress-widgets
 examples/recursive
 examples/recursive.o
 examples/coordinator
