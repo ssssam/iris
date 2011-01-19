@@ -33,6 +33,13 @@ struct _IrisProgressWatch
 	guint cancelled: 1;
 	guint complete: 1;
 
+	/* Until the process is running, its connections can change. Rather than
+	 * monitor this, if all chained processes are to be watched we wait until
+	 * this process executes to add them so they cannot change. This flag marks
+	 * if we need to add watches for connected processes when this is possible.
+	 */
+	guint chain_flag: 1;
+
 	IrisProgressMonitorDisplayStyle display_style;
 
 	/* These three are set by the interface in

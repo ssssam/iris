@@ -236,6 +236,10 @@ recurse_1 (ProgressFixture *fixture,
 		g_main_context_iteration (NULL, FALSE);
 	}
 
+	/* Processing must have finished if _is_finished()==TRUE. In particular
+	 * IRIS_PROGRESS_MESSAGE_FINISH is always sent before the process is flagged as finished,
+	 * so the watch will not be left hanging.
+	 */
 	g_object_unref (recursive_process);
 }
 
@@ -389,9 +393,6 @@ recurse_2 (ProgressFixture *fixture,
 			//printf ("Done already\n");
 		}
 	}
-
-	// this does get called in the real version
-	//iris_task_add_callback (IRIS_TASK (SP->import_chain_tail), import_complete, self, NULL);
 }
 
 
@@ -419,7 +420,6 @@ add_tests_with_fixture (void (*setup) (ProgressFixture *, gconstpointer),
 
 	g_snprintf (buf, 255, "/progress-monitor/%s/recurse 2", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, recurse_2, teardown);
-
 
 	/*g_snprintf (buf, 255, "/process/%s/cancelling", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, cancelling, teardown);*/

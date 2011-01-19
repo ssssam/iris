@@ -34,6 +34,9 @@
  * An #IrisProgressMonitor listens for these messages to update its UI. It's
  * recommended you don't send status messages more than once every 250ms or so;
  * there's no point.
+ *
+ * The same message could be sent more than once; any listeners must be able to
+ * handle for example @IRIS_PROGRESS_MESSAGE_COMPLETE being received twice.
  **/
 typedef enum
 {

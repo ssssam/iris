@@ -262,7 +262,8 @@ iris_progress_monitor_set_close_delay (IrisProgressMonitor *progress_monitor,
 static IrisProgressWatch *
 watch_process_internal (IrisProgressMonitor             *progress_monitor,
                         IrisProcess                     *process,
-                        IrisProgressMonitorDisplayStyle  display_style)
+                        IrisProgressMonitorDisplayStyle  display_style,
+                        gboolean                         chain)
 {
 	IrisProgressMonitorInterface *iface;
 	IrisProgressWatch *watch;
@@ -283,6 +284,7 @@ watch_process_internal (IrisProgressMonitor             *progress_monitor,
 	           iris_process_get_title (process));
 
 	watch->display_style = display_style;
+	watch->chain_flag = chain;
 
 	iris_process_add_watch (process, watch->port);
 
@@ -305,7 +307,7 @@ iris_progress_monitor_watch_process (IrisProgressMonitor             *progress_m
                                      IrisProcess                     *process,
                                      IrisProgressMonitorDisplayStyle  display_style)
 {
-	watch_process_internal (progress_monitor, process, display_style);
+	watch_process_internal (progress_monitor, process, display_style, FALSE);
 }
 
 /**
@@ -324,21 +326,7 @@ iris_progress_monitor_watch_process_chain (IrisProgressMonitor             *prog
                                            IrisProcess                     *process,
                                            IrisProgressMonitorDisplayStyle  display_style)
 {
-	IrisProcess *head;
-
-	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
-	g_return_if_fail (IRIS_IS_PROCESS (process));
-
-	head = process;
-	while (iris_process_has_predecessor (head))
-		head = iris_process_get_predecessor (head);
-
-	process = head;
-	do {
-		watch_process_internal (progress_monitor,
-		                        process, 
-		                        display_style);
-	} while ((process = iris_process_get_successor (process)) != NULL);
+	watch_process_internal (progress_monitor, process, display_style, TRUE);
 }
 
 
@@ -377,6 +365,32 @@ _iris_progress_monitor_cancel (IrisProgressMonitor *progress_monitor,
 	}
 
 	g_signal_emit (progress_monitor, signals[CANCEL], 0);
+}
+
+/* Add watches for connected processes, called once we know the connections
+ * cannot change */
+static void
+watch_chain (IrisProgressMonitor             *progress_monitor,
+             IrisProcess                     *process,
+             IrisProgressMonitorDisplayStyle  display_style)
+{
+	IrisProcess *head;
+
+	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
+	g_return_if_fail (IRIS_IS_PROCESS (process));
+
+	head = process;
+	while (iris_process_has_predecessor (head))
+		head = iris_process_get_predecessor (head);
+
+	process = head;
+	do {
+		watch_process_internal (progress_monitor,
+		                        process, 
+		                        display_style,
+		                        FALSE);
+	} while ((process = iris_process_get_successor (process)) != NULL);
+
 }
 
 static void
@@ -444,6 +458,13 @@ _iris_progress_monitor_handle_message (IrisMessage  *message,
 
 	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
 
+	/* Any of these messages indicate that the connections cannot now change */
+	if (watch->chain_flag) {
+		watch->chain_flag = FALSE;
+		watch_chain (progress_monitor, IRIS_PROCESS (watch->task),
+		             watch->display_style);
+	}
+
 	switch (message->what) {
 		case IRIS_PROGRESS_MESSAGE_CANCELLED:
 			handle_cancelled (watch, message);
@@ -464,6 +485,7 @@ _iris_progress_monitor_handle_message (IrisMessage  *message,
 			g_warn_if_reached ();
 	}
 
+	/* Chain the message to implementation, after we have processed what we need */
 	iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
 	iface->handle_message (progress_monitor, watch, message);
 }

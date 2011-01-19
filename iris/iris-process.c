@@ -728,6 +728,56 @@ iris_process_add_watch (IrisProcess               *process,
 
 
 /**************************************************************************
+ *                      IrisProcess Internal Helpers                      *
+ *************************************************************************/
+
+static void
+post_progress_message (IrisProcess *process,
+                       IrisMessage *progress_message)
+{
+	GList    *node;
+	IrisPort *watch_port;
+	IrisProcessPrivate *priv;
+
+	priv = process->priv;
+
+	for (node=priv->watch_port_list; node; node=node->next) {
+		watch_port = IRIS_PORT (node->data);
+		iris_port_post (watch_port, progress_message);
+	}
+};
+
+static void
+update_status (IrisProcess *process)
+{
+	IrisProcessPrivate *priv;
+	IrisMessage        *message;
+	int                 total;
+
+	priv = process->priv;
+
+	/* Send total items first, so we don't risk processed_items > total_items */
+	total = g_atomic_int_get (&priv->total_items);
+
+	if (priv->total_items_pushed < total) {
+		priv->total_items_pushed = total;
+
+		message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS,
+	                                     G_TYPE_INT,
+	                                     total);
+		post_progress_message (process, message);
+		iris_message_unref (message);
+	}
+
+	/* Now send processed items */
+	message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS,
+	                                 G_TYPE_INT,
+	                                 g_atomic_int_get (&priv->processed_items));
+	post_progress_message (process, message);
+	iris_message_unref (message);
+}
+
+/**************************************************************************
  *                  IrisProcess Message Handling Methods                  *
  *************************************************************************/
 
@@ -776,6 +826,34 @@ handle_execute (IrisProcess *process,
 		if (!iris_task_is_executing (IRIS_TASK (priv->sink)))
 			iris_process_run (priv->sink);
 	}
+}
+
+static void
+handle_finish (IrisProcess *process,
+               IrisMessage *message)
+{
+	IrisProcessPrivate *priv;
+	IrisMessage        *progress_message;
+
+	g_return_if_fail (IRIS_IS_PROCESS (process));
+
+	priv = process->priv;
+
+	if (FLAG_IS_ON (IRIS_TASK (process), IRIS_TASK_FLAG_FINISHED))
+		return;
+
+	/* Send 'complete' to any watchers, now that iris_process_is_finished() will
+	 * return TRUE.
+	 */
+	if (priv->watch_port_list != NULL) {
+		progress_message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
+		post_progress_message (process, progress_message);
+		iris_message_unref (progress_message);
+	}
+
+	/* Chain up */
+	IRIS_TASK_CLASS (iris_process_parent_class)->handle_message
+	  (IRIS_TASK (process), message);
 }
 
 static void
@@ -851,6 +929,18 @@ handle_add_watch (IrisProcess *process,
 	g_object_ref (watch_port);
 	priv->watch_port_list = g_list_append (priv->watch_port_list,
 	                                       watch_port);
+
+	/* Send a status message now, it's possible that the process has actually
+	 * already completed and so this may be only status message that the watcher
+	 * receives.
+	 */
+	update_status (process);
+
+	if (iris_process_is_finished (process)) {
+		message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
+		post_progress_message (process, message);
+		iris_message_unref (message);
+	}
 }
 
 static void
@@ -871,6 +961,15 @@ iris_process_handle_message_real (IrisTask    *task,
 
 	case IRIS_TASK_MESSAGE_EXECUTE:
 		handle_execute (process, message);
+		break;
+
+	/* Note that COMPLETE means the work is done, while FINISH comes after when
+	 * all callbacks have executed as well. IRIS_TASK_FLAG_FINISHED is not set
+	 * (hence iris_process_is_finished will return FALSE) until this second
+	 * message is sent.
+	 */
+	case IRIS_TASK_MESSAGE_FINISH:
+		handle_finish (process, message);
 		break;
 
 	case IRIS_PROCESS_MESSAGE_NO_MORE_WORK:
@@ -907,53 +1006,6 @@ iris_task_post_work_item_real (IrisProcess *process,
 	priv = process->priv;
 
 	iris_queue_push (priv->work_queue, work_item);
-}
-
-/**************************************************************************
- *                      IrisProcess Internal Helpers                      *
- *************************************************************************/
-
-static void
-post_progress_message (IrisProcess *process,
-                       IrisMessage *progress_message)
-{
-	GList    *node;
-	IrisPort *watch_port;
-	IrisProcessPrivate *priv;
-
-	priv = process->priv;
-
-	for (node=priv->watch_port_list; node; node=node->next) {
-		watch_port = IRIS_PORT (node->data);
-		iris_port_post (watch_port, progress_message);
-	}
-};
-
-static void
-update_status (IrisProcess *process)
-{
-	IrisProcessPrivate *priv;
-	IrisMessage        *message;
-	int                 total;
-
-	priv = process->priv;
-
-	message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS,
-	                                 G_TYPE_INT,
-	                                 g_atomic_int_get (&priv->processed_items));
-	post_progress_message (process, message);
-	iris_message_unref (message);
-
-	total = g_atomic_int_get (&priv->total_items);
-	if (priv->total_items_pushed < total) {
-		priv->total_items_pushed = total;
-
-		message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS,
-	                                     G_TYPE_INT,
-	                                     total);
-		post_progress_message (process, message);
-		iris_message_unref (message);
-	}
 }
 
 /**************************************************************************
@@ -1055,17 +1107,21 @@ iris_process_execute_real (IrisTask *task)
 	if (priv->watch_port_list != NULL) {
 		update_status (process);
 
-		if (cancelled)
+		if (cancelled) {
 			message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
-		else
-			message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
-		post_progress_message (process, message);
-		iris_message_unref (message);
+			post_progress_message (process, message);
+			iris_message_unref (message);
+		}
 	}
 
 	if (!cancelled)
 		// Execute callbacks and then mark finished.
 		iris_task_complete (IRIS_TASK (process));
+
+	/* IRIS_PROGRESS_MESSAGE_COMPLETE will be sent when
+	 * IRIS_TASK_MESSAGE_FINISH is received; ie. when all callbacks have
+	 * executed.
+	 */
 }
 
 
