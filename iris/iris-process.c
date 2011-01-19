@@ -31,11 +31,11 @@
  * @title: IrisProcess
  * @short_description: A concurrent and asynchronous process abstraction
  *
- * #IrisProcess is a work queue that operates on atomic work items. An example
- * of this is reading information from every file in a directory, or
- * processing a complex calculation with a series of inputs. This is a special
- * case of #IrisTask, which would better suited you want to execute one long
- * task such as downloading a single file.
+ * #IrisProcess is a work queue that operates on atomic work items. A good
+ * example is the reading of information from each file in a directory.
+ * #IrisProcess is a special case of #IrisTask, which would better suited
+ * if you want to execute one long task such as downloading a single file,
+ * or have a few tasks which are dependendent on each other in some way.
  *
  * Once the #IrisProcess is created, you can give it work to do with
  * iris_process_enqueue(). You can start it processing the work at any point
@@ -47,11 +47,13 @@
  * each other, you will be better served by #IrisTask, or by breaking the
  * function up into a series of chained processes.
  *
+ *
  * The progress of an #IrisProcess can be monitored using some kind of
  * #IrisProgressMonitor, such as an #IrisProgressDialog. If you want to do this
  * you may want to call iris_process_set_title() to give the process a label.
  *
- * Internal note: because processes run asynchronously in their own threads,
+ * <note><para>
+ * Because processes run asynchronously in their own threads,
  * the controlling functions communicate through messages and will return
  * before the message has been received by the process. This means, for
  * example, that the following code has undefined behaviour:
@@ -82,6 +84,7 @@
  * ]|
  * Once the 'run' message has been executed, we know for sure that the
  * 'connect' message has also executed.
+ * </para></note>
  */
 
 /* How frequently the process checks for cancellation between try_pop calls. */

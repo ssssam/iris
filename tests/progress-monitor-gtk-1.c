@@ -372,26 +372,17 @@ recurse_2 (ProgressFixture *fixture,
 	// FILE IMPORT PROCESS
 	tail_process = iris_process_new_with_func (count_sheep_func, NULL, NULL);
 
-	printf ("Processes: %x, %x\n", (guint)head_process, (guint)tail_process); fflush (stdout);
-
 	iris_process_connect (head_process, tail_process);
 	iris_process_no_more_work (head_process);
 	iris_process_run (head_process);
-
-	printf ("finished before watch: %i, %i\n", iris_process_is_finished (head_process), iris_process_is_finished (tail_process));
 
 	iris_progress_monitor_watch_process_chain (IRIS_PROGRESS_MONITOR(fixture->monitor),
 	                                           head_process,
 	                                           IRIS_PROGRESS_MONITOR_ITEMS);
 
-	printf ("finished after watch: %i, %i\n", iris_process_is_finished (head_process), iris_process_is_finished (tail_process));
-
 	while (fixture->monitor != NULL) {
 		g_thread_yield ();
 		g_main_context_iteration (NULL, FALSE);
-		if (iris_process_is_finished (tail_process)) {
-			//printf ("Done already\n");
-		}
 	}
 }
 

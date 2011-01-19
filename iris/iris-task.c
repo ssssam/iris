@@ -219,6 +219,8 @@ iris_task_new_with_closure (GClosure *closure)
 
 	if (G_LIKELY (task->priv->closure))
 		g_closure_unref (task->priv->closure);
+
+	/* The closure is NOT leaked, it is unreferenced in iris_task_execute_real() */
 	task->priv->closure = g_closure_ref (closure);
 
 	return task;
@@ -1078,6 +1080,9 @@ handle_cancel (IrisTask    *task,
 	priv = task->priv;
 
 	if (!(ignore = IRIS_TASK_GET_CLASS (task)->cancel (task))) {
+		/* FIXME: is it necessary to set the flags before we execute the code below?
+		 * it makes it difficult (impossible, even) to know when we can free the object
+		 */
 		ENABLE_FLAG (task, IRIS_TASK_FLAG_CANCELED);
 		ENABLE_FLAG (task, IRIS_TASK_FLAG_FINISHED);
 
@@ -1182,6 +1187,7 @@ handle_finish (IrisTask    *task,
 		return;
 	}
 
+	/* FIXME: again, why set flag before? do we need another 'FINALIZE' flag? */
 	ENABLE_FLAG (task, IRIS_TASK_FLAG_FINISHED);
 
 	iris_task_notify_observers (task, FALSE);
@@ -1208,6 +1214,9 @@ handle_add_handler (IrisTask    *task,
 
 	priv->handlers = g_list_append (priv->handlers, handler);
 
+	/* FIXME: should this not be an error condition? why should you be able to
+	 * add a callback after execution has begun at all? if we free the object on
+	 * 'finished' this could cause big problems :( */
 	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED)) {
 		ENABLE_FLAG (task, IRIS_TASK_FLAG_CALLBACKS);
 		DISABLE_FLAG (task, IRIS_TASK_FLAG_FINISHED);
@@ -1284,6 +1293,7 @@ handle_add_dependency (IrisTask    *task,
 		/* we were already done, lets move back to the
 		 * callbacks phase and turn off the finished bit
 		 */
+		/* FIXME: why allow this??? */
 		ENABLE_FLAG (task, IRIS_TASK_FLAG_CALLBACKS);
 		DISABLE_FLAG (task, IRIS_TASK_FLAG_FINISHED);
 	}
