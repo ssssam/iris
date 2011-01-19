@@ -203,7 +203,8 @@ _iris_progress_watch_free (IrisProgressWatch *watch)
 /**
  * iris_progress_monitor_set_title:
  * @progress_monitor: An #IrisProgressMonitor
- * @title: String describing the overall activity the progress monitor watches.
+ * @title: String describing the overall activity the progress monitor watches,
+ *         or %NULL.
  *
  * This function sets a global title for the @progress_monitor. For example, in
  * #IrisProgressDialog this function sets the title of the window.

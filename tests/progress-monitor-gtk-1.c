@@ -187,9 +187,34 @@ simple (ProgressFixture *fixture,
 }
 
 
+/* titles: test that NULL titles don't break anything */
 static void
-recurse (ProgressFixture *fixture,
-         gconstpointer data)
+titles (ProgressFixture *fixture,
+        gconstpointer data)
+{
+	IrisProcess *process = iris_process_new_with_func (count_sheep_func, NULL,
+	                                                   NULL);
+	iris_progress_monitor_watch_process (fixture->monitor, process,
+	                                     IRIS_PROGRESS_MONITOR_ITEMS);
+	iris_progress_monitor_set_title (fixture->monitor, NULL);
+	iris_process_run (process);
+
+	IrisMessage *work_item = iris_message_new (0);
+	iris_process_enqueue (process, work_item);
+	iris_process_no_more_work (process);
+
+	while (!iris_process_is_finished (process)) {
+		g_thread_yield ();
+		g_main_context_iteration (NULL, FALSE);
+	}
+
+	g_object_unref (process);
+}
+
+
+static void
+recurse_1 (ProgressFixture *fixture,
+           gconstpointer data)
 {
 	int counter = 0;
 
@@ -311,6 +336,65 @@ completing_1 (ProgressFixture *fixture,
 	}
 }
 
+/* recurse_2: potentially recursive process with only 1 work item */
+static void
+recurse_2_head_callback (IrisProcess *process,
+                         IrisMessage *work_item,
+                         gpointer     user_data) {
+	IrisMessage *new_work_item;
+
+	g_assert (iris_process_has_successor (process));
+
+	new_work_item = iris_message_new (2);
+	iris_process_forward (process, new_work_item);
+}
+
+static void
+recurse_2 (ProgressFixture *fixture,
+           gconstpointer    data) {
+	IrisProcess *head_process, *tail_process;
+	IrisMessage *item;
+
+	g_object_add_weak_pointer (G_OBJECT (fixture->monitor),
+	                           (gpointer *) &fixture->monitor);
+	iris_progress_monitor_set_close_delay (fixture->monitor, 500);
+
+	// MUSIC_SEARCH_PROCESS
+	head_process = iris_process_new_with_func (recurse_2_head_callback, NULL, NULL);
+
+	item = iris_message_new (1);
+	iris_process_enqueue (head_process, item);
+
+	// FILE IMPORT PROCESS
+	tail_process = iris_process_new_with_func (count_sheep_func, NULL, NULL);
+
+	printf ("Processes: %x, %x\n", (guint)head_process, (guint)tail_process); fflush (stdout);
+
+	iris_process_connect (head_process, tail_process);
+	iris_process_no_more_work (head_process);
+	iris_process_run (head_process);
+
+	printf ("finished before watch: %i, %i\n", iris_process_is_finished (head_process), iris_process_is_finished (tail_process));
+
+	iris_progress_monitor_watch_process_chain (IRIS_PROGRESS_MONITOR(fixture->monitor),
+	                                           head_process,
+	                                           IRIS_PROGRESS_MONITOR_ITEMS);
+
+	printf ("finished after watch: %i, %i\n", iris_process_is_finished (head_process), iris_process_is_finished (tail_process));
+
+	while (fixture->monitor != NULL) {
+		g_thread_yield ();
+		g_main_context_iteration (NULL, FALSE);
+		if (iris_process_is_finished (tail_process)) {
+			//printf ("Done already\n");
+		}
+	}
+
+	// this does get called in the real version
+	//iris_task_add_callback (IRIS_TASK (SP->import_chain_tail), import_complete, self, NULL);
+}
+
+
 static void
 add_tests_with_fixture (void (*setup) (ProgressFixture *, gconstpointer),
                         void (*teardown) (ProgressFixture *, gconstpointer),
@@ -321,14 +405,21 @@ add_tests_with_fixture (void (*setup) (ProgressFixture *, gconstpointer),
 	g_snprintf (buf, 255, "/progress-monitor/%s/simple", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, simple, teardown);
 
-	g_snprintf (buf, 255, "/progress-monitor/%s/recurse", name);
-	g_test_add (buf, ProgressFixture, NULL, setup, recurse, teardown);
+	g_snprintf (buf, 255, "/progress-monitor/%s/titles", name);
+	g_test_add (buf, ProgressFixture, NULL, setup, titles, teardown);
+
+	g_snprintf (buf, 255, "/progress-monitor/%s/recurse 1", name);
+	g_test_add (buf, ProgressFixture, NULL, setup, recurse_1, teardown);
 
 	g_snprintf (buf, 255, "/progress-monitor/%s/chaining 1", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, chaining_1, teardown);
 
 	g_snprintf (buf, 255, "/progress-monitor/%s/completing 1", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, completing_1, teardown);
+
+	g_snprintf (buf, 255, "/progress-monitor/%s/recurse 2", name);
+	g_test_add (buf, ProgressFixture, NULL, setup, recurse_2, teardown);
+
 
 	/*g_snprintf (buf, 255, "/process/%s/cancelling", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, cancelling, teardown);*/

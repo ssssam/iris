@@ -257,7 +257,7 @@ iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 
 	if (watch->title != NULL)
 		gtk_table_attach (GTK_TABLE (priv->watch_table), title_label,
-						  1, 2, row_n, row_n + 1, GTK_FILL, GTK_FILL, 4, 4);
+	                      1, 2, row_n, row_n + 1, GTK_FILL, GTK_FILL, 4, 4);
 	gtk_table_attach (GTK_TABLE (priv->watch_table), progress_bar,
 	                  2, 3, row_n, row_n + 1, 
 	                  GTK_EXPAND | GTK_FILL, GTK_FILL, 4, 4);
@@ -422,9 +422,13 @@ iris_progress_info_bar_handle_message (IrisProgressMonitor *progress_monitor,
 
 /**
  * iris_progress_info_bar_new:
- * @title: FIXME: document
+ * @title: string to describe the group of processes being watched, or %NULL
  *
- * Creates a new #IrisProgressInfoBar
+ * Creates a new #IrisProgressInfoBar. If only one process is being watched,
+ * its progress is shown in the info bar. If more than one is being watched,
+ * an overall progress bar will be shown with an expander hiding the
+ * individual processes. @title is used as the label for the main progress bar;
+ * if it is %NULL, no label is shown.
  *
  * Return value: a newly-created #IrisProgressInfoBar widget
  */
@@ -452,11 +456,17 @@ iris_progress_info_bar_set_title (IrisProgressMonitor *progress_monitor,
 	info_bar = IRIS_PROGRESS_INFO_BAR (progress_monitor);
 	title_label = info_bar->priv->title_label;
 
-	title_format = g_strdup_printf ("<b>%s</b>:", title);
-	gtk_label_set_markup (GTK_LABEL (title_label), title_format);
-	gtk_label_set_use_markup (GTK_LABEL (title_label), TRUE);
-	gtk_misc_set_alignment (GTK_MISC (title_label), 0.0, 0.5);
-	g_free (title_format);
+	if (title == NULL)
+		gtk_label_set_text (GTK_LABEL (title_label), NULL);
+		/* FIXME: is it necessary to remove/add the label from the box
+		 * when it is null?? */
+	else {
+		title_format = g_strdup_printf ("<b>%s</b>:", title);
+		gtk_label_set_markup (GTK_LABEL (title_label), title_format);
+		gtk_label_set_use_markup (GTK_LABEL (title_label), TRUE);
+		gtk_misc_set_alignment (GTK_MISC (title_label), 0.0, 0.5);
+		g_free (title_format);
+	}
 }
 
 static void

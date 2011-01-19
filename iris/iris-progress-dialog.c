@@ -369,7 +369,12 @@ iris_progress_dialog_handle_message (IrisProgressMonitor *progress_monitor,
  * @title: string to put in window title bar
  * @parent: window to act as the parent of this dialog, or %NULL
  *
- * Creates a new #IrisProgressDialog
+ * Creates a new #IrisProgressDialog. @title is shown in the title bar of the
+ * window, while each progress bar will bear the title of the process it
+ * represents if one has been set with iris_process_set_title().
+ *
+ * Because a #GtkWindow must not have a %NULL title, if no title is given then
+ * the title of the parent window (if any), or a generic title will be used.
  *
  * Return value: a newly-created #IrisProgressDialog widget
  */
@@ -393,10 +398,19 @@ iris_progress_dialog_set_title (IrisProgressMonitor *progress_monitor,
                                 const gchar         *title)
 {
 	IrisProgressDialog *progress_dialog;
+	GtkWindow          *parent;
 
 	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_monitor));
 
 	progress_dialog = IRIS_PROGRESS_DIALOG (progress_monitor);
+
+	if (title == NULL) {
+		parent = gtk_window_get_transient_for (GTK_WINDOW (progress_monitor));
+		if (parent != NULL)
+			title = gtk_window_get_title (parent);
+		else
+			title = _("Progress");
+	}
 
 	gtk_window_set_title (GTK_WINDOW (progress_dialog), title);
 }

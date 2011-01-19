@@ -30,7 +30,8 @@
 #include <iris/iris-gtk.h>
 
 GtkWidget *demo_window = NULL,
-          *progress_info_bar = NULL;
+          *progress_widget = NULL;
+GtkWidget *show_info_bar = NULL;
 
 static void
 create_progress_monitor () {
@@ -38,16 +39,20 @@ create_progress_monitor () {
 
 	g_return_if_fail (demo_window != NULL);
 
-	progress_info_bar = iris_progress_info_bar_new ("Contemplating ...");
-	vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
-	gtk_box_pack_end (GTK_BOX (vbox), progress_info_bar, TRUE, FALSE, 0);
+	if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (show_info_bar))) {
+		progress_widget = iris_progress_info_bar_new ("Contemplating ...");
+		vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
+		gtk_box_pack_end (GTK_BOX (vbox), progress_widget, TRUE, FALSE, 0);
+	}
+	else
+		progress_widget = iris_progress_dialog_new ("Contemplating ...", GTK_WINDOW (demo_window));
 
-	gtk_widget_show (progress_info_bar);
+	gtk_widget_show (progress_widget);
 
 	iris_progress_monitor_set_close_delay
-	  (IRIS_PROGRESS_MONITOR (progress_info_bar), 500);
-	g_object_add_weak_pointer (G_OBJECT (progress_info_bar),
-	                           (gpointer *)&progress_info_bar);
+	  (IRIS_PROGRESS_MONITOR (progress_widget), 500);
+	g_object_add_weak_pointer (G_OBJECT (progress_widget),
+	                           (gpointer *)&progress_widget);
 }
 
 static void
@@ -95,11 +100,11 @@ trigger_task (GtkButton *trigger,
 
 	task = iris_task_new_with_func (thinking_task_func, user_data, NULL);
 
-	if (progress_info_bar == NULL)
+	if (progress_widget == NULL)
 		create_progress_monitor ();
 
 	watch_port = iris_progress_monitor_add_watch
-	               (IRIS_PROGRESS_MONITOR (progress_info_bar),
+	               (IRIS_PROGRESS_MONITOR (progress_widget),
 	                task,
 	                IRIS_PROGRESS_MONITOR_PERCENTAGE,
 	                "Thinking");
@@ -126,7 +131,11 @@ create_demo_dialog (void)
 	g_signal_connect (button, "clicked", G_CALLBACK (trigger_task),
 	                  GINT_TO_POINTER (100));
 
+	show_info_bar = gtk_check_button_new_with_label ("Show as info bar");
+	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (show_info_bar), TRUE);
+
 	gtk_box_pack_start (GTK_BOX (vbox), button, TRUE, TRUE, 8);
+	gtk_box_pack_start (GTK_BOX (vbox), show_info_bar, FALSE, TRUE, 8);
 }
 
 gint
