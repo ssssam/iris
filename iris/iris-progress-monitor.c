@@ -228,11 +228,11 @@ iris_progress_monitor_set_title (IrisProgressMonitor *progress_monitor,
  * @milliseconds: Time to wait before @progress_monitor destroys itself
  *
  * #IrisProgressDialog and #IrisProgressInfoBar will call gtk_widget_destroy()
- * on themselves when all of their watches complete. By default they will wait
- * for 0.5 seconds before doing so, mainly because the values they display are
- * often slightly behind the actual processes being watched and so they can
- * appear to have stopped without finishing. This function allows you to tweak
- * the behaviour.
+ * on themselves when all of their watches complete or are cancelled. By default
+ * they will wait for 0.5 seconds before doing so, mainly because the values
+ * they display are often slightly behind the actual processes being watched
+ * and so they can appear to have stopped without finishing. This function
+ * allows you to tweak the behaviour.
  *
  * A timeout of 0 seconds will cause @progress_monitor to disappear as soon as
  * the process completes. A timeout < 0 will stop #IrisProgressDialog and

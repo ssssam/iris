@@ -789,6 +789,7 @@ handle_cancel (IrisProcess *process,
                IrisMessage *message)
 {
 	IrisProcessPrivate *priv;
+	IrisMessage        *progress_message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 
@@ -808,6 +809,14 @@ handle_cancel (IrisProcess *process,
 		if (!iris_process_is_finished (priv->source) &&
 		    !iris_process_is_canceled (priv->source))
 			iris_process_cancel (priv->source);
+	}
+
+	/* Notify watchers; even if one triggered the cancel it will be waiting for
+	 * a message before it updates the UI.
+	 */
+	if (priv->watch_port_list != NULL) {
+		progress_message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
+		post_progress_message (process, progress_message);
 	}
 }
 
