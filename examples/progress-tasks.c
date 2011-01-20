@@ -30,7 +30,8 @@
 #include <iris/iris-gtk.h>
 
 GtkWidget *demo_window = NULL,
-          *progress_widget = NULL;
+          *progress_widget = NULL,
+          *title_entry = NULL;
 GtkWidget *show_info_bar = NULL;
 
 static void
@@ -42,7 +43,7 @@ create_progress_monitor () {
 	if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (show_info_bar))) {
 		progress_widget = iris_progress_info_bar_new ("Contemplating ...");
 		vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
-		gtk_box_pack_end (GTK_BOX (vbox), progress_widget, TRUE, FALSE, 0);
+		gtk_box_pack_end (GTK_BOX (vbox), progress_widget, FALSE, FALSE, 0);
 	}
 	else
 		progress_widget = iris_progress_dialog_new ("Contemplating ...", GTK_WINDOW (demo_window));
@@ -124,6 +125,7 @@ create_demo_dialog (void)
 	                ("Iris progress widgets demo", NULL, 0,
 	                 GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE,
 	                 NULL);
+	gtk_window_set_default_size (GTK_WINDOW (demo_window), 480, 240);
 
 	vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
 
@@ -134,7 +136,7 @@ create_demo_dialog (void)
 	show_info_bar = gtk_check_button_new_with_label ("Show as info bar");
 	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (show_info_bar), TRUE);
 
-	gtk_box_pack_start (GTK_BOX (vbox), button, TRUE, TRUE, 8);
+	gtk_box_pack_start (GTK_BOX (vbox), button, FALSE, TRUE, 8);
 	gtk_box_pack_start (GTK_BOX (vbox), show_info_bar, FALSE, TRUE, 8);
 }
 
