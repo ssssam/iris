@@ -769,7 +769,7 @@ post_progress_message (IrisProcess *process,
 };
 
 static void
-update_status (IrisProcess *process)
+update_status (IrisProcess *process, gboolean force)
 {
 	IrisProcessPrivate *priv;
 	IrisMessage        *message;
@@ -780,7 +780,7 @@ update_status (IrisProcess *process)
 	/* Send total items first, so we don't risk processed_items > total_items */
 	total = g_atomic_int_get (&priv->total_items);
 
-	if (priv->total_items_pushed < total) {
+	if (force || priv->total_items_pushed < total) {
 		priv->total_items_pushed = total;
 
 		message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS,
@@ -973,9 +973,10 @@ handle_add_watch (IrisProcess *process,
 
 	/* Send a status message now, it's possible that the process has actually
 	 * already completed and so this may be only status message that the watcher
-	 * receives.
+	 * receives. Force==TRUE because total_items may have been lost in the same
+	 * way as title mentioned above.
 	 */
-	update_status (process);
+	update_status (process, TRUE);
 
 	if (iris_process_is_finished (process)) {
 		progress_message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
@@ -1096,7 +1097,7 @@ iris_process_execute_real (IrisTask *task)
 		if (priv->watch_port_list != NULL &&
 		    g_timer_elapsed (priv->watch_timer, NULL) >= 0.250) {
 			g_timer_reset (priv->watch_timer);
-			update_status (process);
+			update_status (process, FALSE);
 		}
 
 		if (cancelled)
@@ -1146,7 +1147,7 @@ iris_process_execute_real (IrisTask *task)
 	g_value_unset (&params[0]);
 
 	if (priv->watch_port_list != NULL) {
-		update_status (process);
+		update_status (process, TRUE);
 
 		if (cancelled) {
 			message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
