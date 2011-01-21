@@ -231,6 +231,9 @@ static void
 titles (ProgressFixture *fixture,
         gconstpointer data)
 {
+	gint counter = 0,
+	     i;
+
 	IrisProcess *process = iris_process_new_with_func (count_sheep_func, NULL,
 	                                                   NULL);
 	iris_progress_monitor_watch_process (fixture->monitor, process,
@@ -238,8 +241,16 @@ titles (ProgressFixture *fixture,
 	iris_progress_monitor_set_title (fixture->monitor, NULL);
 	iris_process_run (process);
 
-	IrisMessage *work_item = iris_message_new (0);
-	iris_process_enqueue (process, work_item);
+	for (i=0; i < 50; i++) {
+		IrisMessage *work_item = iris_message_new (0);
+		iris_message_set_pointer (work_item, "counter", &counter);
+		iris_process_enqueue (process, work_item);
+	}
+
+	/* Check the title change message doesn't crash .. we don't test if the
+	 * change is reflected in the UI (but it should be obvious in the examples)
+	 */
+	iris_process_set_title (process, "Test title");
 	iris_process_no_more_work (process);
 
 	while (!iris_process_is_finished (process)) {

@@ -57,6 +57,9 @@ static void     iris_progress_dialog_handle_message  (IrisProgressMonitor *progr
 static gboolean iris_progress_dialog_is_watching_task (IrisProgressMonitor *progress_monitor,
                                                        IrisTask            *task);
 
+static void     format_watch_title                   (GtkWidget *label,
+                                                      const gchar *title);
+ 
 static void     iris_progress_dialog_set_title       (IrisProgressMonitor *progress_monitor,
                                                       const gchar         *title);
 static void     iris_progress_dialog_set_close_delay (IrisProgressMonitor *progress_monitor,
@@ -65,7 +68,7 @@ static void     iris_progress_dialog_set_close_delay (IrisProgressMonitor *progr
 static void     iris_progress_dialog_response        (GtkDialog           *dialog, 
                                                       int                  response_id,
                                                       gpointer             user_data);
- 
+
 G_DEFINE_TYPE_WITH_CODE (IrisProgressDialog, iris_progress_dialog, GTK_TYPE_DIALOG,
                          G_IMPLEMENT_INTERFACE (IRIS_TYPE_PROGRESS_MONITOR,
                                                 iris_progress_monitor_interface_init))
@@ -191,7 +194,6 @@ iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 	          *title,
 	          *hbox, *vbox_inner,
 	          *progress_label, *progress_bar;
-	gchar     *title_formatted;
 
 
 	progress_dialog = IRIS_PROGRESS_DIALOG (progress_monitor);
@@ -216,13 +218,10 @@ iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 	vbox_outer = gtk_vbox_new (FALSE, 4);
 	gtk_container_set_border_width (GTK_CONTAINER (vbox_outer), 4);
 
-	if (watch->title != NULL) {
-		title_formatted = g_strdup_printf ("<b>%s</b>", watch->title);
-		title = gtk_label_new (title_formatted);
-		gtk_label_set_use_markup (GTK_LABEL (title), TRUE);
-		gtk_misc_set_alignment (GTK_MISC (title), 0.0, 0.5);
-		g_free (title_formatted);
-	}
+	title = gtk_label_new ("");
+	gtk_label_set_use_markup (GTK_LABEL (title), TRUE);
+	gtk_misc_set_alignment (GTK_MISC (title), 0.0, 0.5);
+	format_watch_title (title, watch->title);
 
 	hbox = gtk_hbox_new(FALSE, 0);
 	vbox_inner = gtk_vbox_new(FALSE, 0);
@@ -244,6 +243,7 @@ iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 
 	watch->user_data = progress_bar;
 	watch->user_data2 = progress_label;
+	watch->user_data3 = title;
 }
 
 static gboolean
@@ -260,10 +260,26 @@ iris_progress_dialog_is_watching_task (IrisProgressMonitor *progress_monitor,
 	                            find_watch_by_task)     != NULL);
 }
 
+static void
+format_watch_title (GtkWidget   *label,
+                    const gchar *title)
+{
+	gchar *title_formatted;
+	
+	if (title == NULL)
+		gtk_label_set_text (GTK_LABEL (label), "");
+	else {
+		title_formatted = g_strdup_printf ("<b>%s</b>", title);
+		gtk_label_set_markup (GTK_LABEL (label), title_formatted);
+		g_free (title_formatted);
+	}
+}
 
 /**************************************************************************
  *                        Message processing                              *
  *************************************************************************/
+
+/* No need to worry about locking here, remember these messages are processed in the main loop */
 
 static gboolean
 _delayed_close (gpointer data)
@@ -323,12 +339,9 @@ handle_update (IrisProgressMonitor *progress_monitor,
                IrisMessage         *message)
 {
 	char                 progress_text[256];
-	IrisProgressDialog  *dialog;
 	GtkWidget           *progress_bar, *progress_label;
 
 	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_monitor));
-
-	dialog = IRIS_PROGRESS_DIALOG (progress_monitor);
 
 	progress_bar = GTK_WIDGET (watch->user_data);
 	progress_label = GTK_WIDGET (watch->user_data2);
@@ -340,6 +353,24 @@ handle_update (IrisProgressMonitor *progress_monitor,
 	gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (progress_bar),
 	                               watch->fraction);
 }
+
+static void
+handle_title (IrisProgressMonitor *progress_monitor,
+              IrisProgressWatch   *watch,
+              IrisMessage         *message)
+{
+	const char         *title;
+
+	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_monitor));
+
+	title = g_value_get_string (iris_message_get_data (message));
+
+	g_free (watch->title);
+	watch->title = g_strdup (title);
+
+	format_watch_title (GTK_WIDGET (watch->user_data3), title);
+}
+
 
 static void
 iris_progress_dialog_handle_message (IrisProgressMonitor *progress_monitor,
@@ -357,6 +388,9 @@ iris_progress_dialog_handle_message (IrisProgressMonitor *progress_monitor,
 		case IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS:
 		case IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS:
 			handle_update (progress_monitor, watch, message);
+			break;
+		case IRIS_PROGRESS_MESSAGE_TITLE:
+			handle_title (progress_monitor, watch, message);
 			break;
 		default:
 			g_warn_if_reached ();

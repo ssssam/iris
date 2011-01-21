@@ -242,10 +242,8 @@ iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 
 	indent = gtk_label_new ("    ");
 
-	if (watch->title != NULL) {
-		title_label = gtk_label_new (watch->title);
-		gtk_misc_set_alignment (GTK_MISC (title_label), 1.0, 0.5);
-	}
+	title_label = gtk_label_new (watch->title);
+	gtk_misc_set_alignment (GTK_MISC (title_label), 1.0, 0.5);
 
 	progress_bar = gtk_progress_bar_new ();
 
@@ -255,9 +253,8 @@ iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 	gtk_table_attach (GTK_TABLE (priv->watch_table), indent,
 	                  0, 1, row_n, row_n + 1, GTK_FILL, GTK_FILL, 4, 4);
 
-	if (watch->title != NULL)
-		gtk_table_attach (GTK_TABLE (priv->watch_table), title_label,
-	                      1, 2, row_n, row_n + 1, GTK_FILL, GTK_FILL, 4, 4);
+	gtk_table_attach (GTK_TABLE (priv->watch_table), title_label,
+	                  1, 2, row_n, row_n + 1, GTK_FILL, GTK_FILL, 4, 4);
 	gtk_table_attach (GTK_TABLE (priv->watch_table), progress_bar,
 	                  2, 3, row_n, row_n + 1, 
 	                  GTK_EXPAND | GTK_FILL, GTK_FILL, 4, 4);
@@ -268,6 +265,7 @@ iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 
 	watch->user_data = progress_bar;
 	watch->user_data2 = progress_label;
+	watch->user_data3 = title_label;
 }
 
 static gboolean
@@ -395,6 +393,22 @@ handle_update (IrisProgressMonitor *progress_monitor,
 	update_total_progress (info_bar);
 };
 
+static void
+handle_title (IrisProgressMonitor *progress_monitor,
+              IrisProgressWatch   *watch,
+              IrisMessage         *message)
+{
+	const char *title;
+
+	g_return_if_fail (IRIS_IS_PROGRESS_INFO_BAR (progress_monitor));
+
+	title = g_value_get_string (iris_message_get_data (message));
+
+	g_free (watch->title);
+	watch->title = g_strdup (title);
+
+	gtk_label_set_text (GTK_LABEL (watch->user_data3), title);
+}
 
 
 static void
@@ -413,6 +427,9 @@ iris_progress_info_bar_handle_message (IrisProgressMonitor *progress_monitor,
 		case IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS:
 		case IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS:
 			handle_update (progress_monitor, watch, message);
+			break;
+		case IRIS_PROGRESS_MESSAGE_TITLE:
+			handle_title (progress_monitor, watch, message);
 			break;
 		default:
 			g_warn_if_reached ();

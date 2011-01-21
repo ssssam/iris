@@ -477,6 +477,9 @@ _iris_progress_monitor_handle_message (IrisMessage  *message,
 		case IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS:
 			handle_total_items (watch, message);
 			break;
+		case IRIS_PROGRESS_MESSAGE_TITLE:
+			/* This is one to just pass to the implementations */
+			break;
 		default:
 			g_warn_if_reached ();
 	}

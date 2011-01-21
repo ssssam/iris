@@ -28,15 +28,27 @@
 #include <iris/iris.h>
 #include <iris/iris-gtk.h>
 
-GtkWidget *demo_window = NULL;
+GtkWidget *demo_window = NULL,
+          *title_entry = NULL;
 
-/* Global list of IrisProgressMonitor widgets .. */
-GList *monitors = NULL;
+GList *monitor_list = NULL,
+      *process_list = NULL;
 
 static void
-remove_link (GtkWidget *caller,
-             gpointer   user_data) {
-	monitors = g_list_remove (monitors, user_data);
+remove_monitor_from_list (GtkWidget *caller,
+                          gpointer   user_data) {
+	/* Called on 'destroy' signal for each progress monitor */
+	g_assert (caller == user_data);
+	monitor_list = g_list_remove (monitor_list, user_data);
+}
+
+static void
+remove_process_from_list (IrisTask *task,
+                          gpointer  user_data)
+{
+	/* Called from callback/errback of IrisProcess */
+	g_assert (task == user_data);
+	process_list = g_list_remove (process_list, user_data);
 }
 
 static void
@@ -46,22 +58,24 @@ create_progress_monitors () {
 
 	g_return_if_fail (demo_window != NULL);
 
+	/* The dialog */
 	dialog = iris_progress_dialog_new ("Demo progress dialog",
 	                                   GTK_WINDOW (demo_window));
 	gtk_widget_show (dialog);
 	iris_progress_monitor_set_close_delay (IRIS_PROGRESS_MONITOR (dialog),
 	                                       500);
-	g_signal_connect (dialog, "destroy", G_CALLBACK (remove_link), dialog);
-	monitors = g_list_prepend (monitors, dialog);
+	g_signal_connect (dialog, "destroy", G_CALLBACK (remove_monitor_from_list), dialog);
+	monitor_list = g_list_prepend (monitor_list, dialog);
 
+	/* The info bar */
 	info_bar = iris_progress_info_bar_new ("Counting some sheep");
 	vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
 	gtk_box_pack_end (GTK_BOX (vbox), info_bar, FALSE, TRUE, 0);
 	gtk_widget_show (info_bar);
 	iris_progress_monitor_set_close_delay (IRIS_PROGRESS_MONITOR (info_bar),
 	                                       500);
-	g_signal_connect (info_bar, "destroy", G_CALLBACK (remove_link), info_bar);
-	monitors = g_list_prepend (monitors, info_bar);
+	g_signal_connect (info_bar, "destroy", G_CALLBACK (remove_monitor_from_list), info_bar);
+	monitor_list = g_list_prepend (monitor_list, info_bar);
 }
 
 static void
@@ -82,13 +96,22 @@ trigger_process (GtkButton *trigger,
 	const gint   count = GPOINTER_TO_INT (user_data);
 
 	process = iris_process_new_with_func (count_sheep_func, NULL, NULL);
+	iris_process_set_title (process, gtk_entry_get_text (GTK_ENTRY (title_entry)));
+
+	iris_task_add_both (IRIS_TASK (process),
+	                    remove_process_from_list,
+	                    remove_process_from_list,
+	                    process,
+	                    NULL);
+
+	process_list = g_list_prepend (process_list, process);
 
 	/* We add to the existing progress monitors if they exist, or create some
 	 * more if they don't. */
-	if (monitors == NULL)
+	if (monitor_list == NULL)
 		create_progress_monitors ();
 
-	for (node=monitors; node; node=node->next) {
+	for (node=monitor_list; node; node=node->next) {
 		IrisProgressMonitor *widget = IRIS_PROGRESS_MONITOR (node->data);
 		iris_progress_monitor_watch_process (widget, process,
 		                                     IRIS_PROGRESS_MONITOR_ITEMS);
@@ -101,12 +124,31 @@ trigger_process (GtkButton *trigger,
 	iris_process_run (process);
 }
 
+static void
+title_entry_notify (GObject    *title_entry_object,
+                    GParamSpec *pspec,
+                    gpointer    user_data)
+{
+	GList       *node;
+	IrisProcess *process;
+	const char  *title;
+
+	title = gtk_entry_get_text (GTK_ENTRY (title_entry_object));
+
+	for (node=process_list; node; node=node->next) {
+		process = IRIS_PROCESS (node->data);
+		iris_process_set_title (process, title);
+	}
+}
+
 static GtkWidget *
 create_demo_dialog (void)
 {
 	GtkWidget *vbox,
+	          *hbox,
 	          *triggers_box,
-	          *button;
+	          *button,
+	          *label;
 
 	demo_window = gtk_dialog_new_with_buttons
 	                ("Iris progress widgets demo", NULL, 0,
@@ -134,7 +176,18 @@ create_demo_dialog (void)
 	                  GINT_TO_POINTER (1000));
 	gtk_box_pack_start (GTK_BOX (triggers_box), button, TRUE, TRUE, 0);
 
+	hbox = gtk_hbox_new (FALSE, 0);
+	label = gtk_label_new ("Process title: ");
+
+	title_entry = gtk_entry_new ();
+	gtk_widget_set_size_request (title_entry, 200, -1);
+	g_signal_connect (title_entry, "notify::text", G_CALLBACK (title_entry_notify), NULL);
+
+	gtk_box_pack_start (GTK_BOX (hbox), label, FALSE, FALSE, 4);
+	gtk_box_pack_start (GTK_BOX (hbox), title_entry, FALSE, TRUE, 4);
+
 	gtk_box_pack_start (GTK_BOX (vbox), triggers_box, FALSE, TRUE, 4);
+	gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, TRUE, 4);
 }
 
 gint

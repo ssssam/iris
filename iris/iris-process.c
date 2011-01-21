@@ -102,6 +102,9 @@ enum {
 	PROP_TITLE
 };
 
+static void             post_progress_message      (IrisProcess *process,
+                                                    IrisMessage *progress_message);
+
 static void             iris_process_dummy         (IrisProcess *task,
                                                     IrisMessage *work_item,
                                                     gpointer user_data);
@@ -698,6 +701,7 @@ iris_process_set_title (IrisProcess *process,
                         const gchar *title)
 {
 	IrisProcessPrivate *priv;
+	IrisMessage        *message;
 	gchar              *old_title;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
@@ -707,6 +711,14 @@ iris_process_set_title (IrisProcess *process,
 	old_title = priv->title;
 	g_atomic_pointer_set (&priv->title, g_strdup (title));
 	g_free (old_title);
+
+	if (priv->watch_port_list != NULL) {
+		message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_TITLE,
+		                                 G_TYPE_STRING,
+		                                 title);
+		post_progress_message (process, message);
+		iris_message_unref (message);
+	}
 }
 
 
