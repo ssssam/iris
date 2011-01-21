@@ -124,18 +124,11 @@ iris_progress_monitor_add_watch_internal (IrisProgressMonitor             *progr
 	IrisProgressMonitorInterface *iface;
 	IrisProgressWatch *watch;
 
-	watch = g_slice_new (IrisProgressWatch);
+	watch = g_slice_new0 (IrisProgressWatch);
 	watch->monitor = progress_monitor;
 	watch->port = iris_port_new ();
 
-	watch->cancelled = FALSE;
-	watch->complete  = FALSE;
-
 	watch->display_style = display_style;
-
-	watch->processed_items = 0;
-	watch->total_items     = 0;
-	watch->fraction        = 0;
 
 	watch->title = g_strdup (title);
 
@@ -458,7 +451,10 @@ _iris_progress_monitor_handle_message (IrisMessage  *message,
 
 	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
 
-	/* Any of these messages indicate that the connections cannot now change */
+	/* Any of these messages indicate that the connections cannot now change. Note that for
+	 * watch->chain_flag to be TRUE if watch->task is not of type IrisProcess is an error. 
+	 * Normally you must be aware that watch->task could be an IrisTask.
+	 */
 	if (watch->chain_flag) {
 		watch->chain_flag = FALSE;
 		watch_chain (progress_monitor, IRIS_PROCESS (watch->task),
