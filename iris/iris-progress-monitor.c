@@ -441,6 +441,16 @@ handle_total_items (IrisProgressWatch *watch,
 	watch->fraction = calculate_fraction (watch);
 }
 
+static void
+handle_title (IrisProgressWatch *watch,
+              IrisMessage       *message)
+{
+	const char *title = g_value_get_string (iris_message_get_data (message));
+
+	g_free (watch->title);
+	watch->title = g_strdup (title);
+}
+
 void
 _iris_progress_monitor_handle_message (IrisMessage  *message,
                                        gpointer      user_data)
@@ -478,7 +488,7 @@ _iris_progress_monitor_handle_message (IrisMessage  *message,
 			handle_total_items (watch, message);
 			break;
 		case IRIS_PROGRESS_MESSAGE_TITLE:
-			/* This is one to just pass to the implementations */
+			handle_title (watch, message);
 			break;
 		default:
 			g_warn_if_reached ();

@@ -947,6 +947,7 @@ handle_add_watch (IrisProcess *process,
 	IrisProcessPrivate *priv;
 	const GValue       *data;
 	IrisPort           *watch_port;
+	IrisMessage        *progress_message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (message != NULL);
@@ -960,6 +961,16 @@ handle_add_watch (IrisProcess *process,
 	priv->watch_port_list = g_list_append (priv->watch_port_list,
 	                                       watch_port);
 
+	/* Send the title. The progress monitor does call iris_process_get_title(),
+	 * but it could have changed between iris_progress_monitor_watch_process
+	 * and us receiving the ADD_WATCH message
+	 */
+	progress_message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_TITLE,
+	                                          G_TYPE_STRING,
+	                                          priv->title);
+	post_progress_message (process, progress_message);
+	iris_message_unref (progress_message);
+
 	/* Send a status message now, it's possible that the process has actually
 	 * already completed and so this may be only status message that the watcher
 	 * receives.
@@ -967,9 +978,9 @@ handle_add_watch (IrisProcess *process,
 	update_status (process);
 
 	if (iris_process_is_finished (process)) {
-		message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
-		post_progress_message (process, message);
-		iris_message_unref (message);
+		progress_message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
+		post_progress_message (process, progress_message);
+		iris_message_unref (progress_message);
 	}
 }
 

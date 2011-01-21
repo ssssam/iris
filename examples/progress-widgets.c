@@ -18,7 +18,13 @@
  * 02110-1301 USA
  */
 
-/* progress-widgets: demonstrates IrisProgressDialog and IrisProgressInfoBar. */
+/* progress-widgets: demonstrates IrisProgressDialog and IrisProgressInfoBar.
+ * 
+ *   Note that the 'title' entry only affects the processes which are active;
+ *   any that have finished but are still displayed will not have the titles
+ *   updated. This is not considered a bug; titles are intended to be static,
+ *   changes are only supported because setting a process title on construct
+ *   is sometimes slightly too limiting. */
 
 #include <stdlib.h>
 #include <stdio.h>

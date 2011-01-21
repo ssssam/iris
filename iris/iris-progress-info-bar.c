@@ -278,10 +278,26 @@ iris_progress_info_bar_is_watching_task (IrisProgressMonitor *progress_monitor,
 
 	priv = IRIS_PROGRESS_INFO_BAR (progress_monitor)->priv;
 
-	return (g_list_find_custom (priv->watch_list, task,
-	                            find_watch_by_task)     != NULL);
+	return (_iris_progress_info_bar_get_watch (IRIS_PROGRESS_INFO_BAR (progress_monitor),
+	                                           task) != NULL);
 }
 
+/* Private, for tests */
+IrisProgressWatch *
+_iris_progress_info_bar_get_watch (IrisProgressInfoBar *progress_info_bar,
+                                   IrisTask           *task)
+{
+	IrisProgressInfoBarPrivate *priv;
+	GList                      *node;
+
+	g_return_val_if_fail (IRIS_IS_PROGRESS_INFO_BAR (progress_info_bar), NULL);
+
+	priv = progress_info_bar->priv;
+
+	node = g_list_find_custom (priv->watch_list, task, find_watch_by_task);
+
+	return node? node->data: NULL;
+}
 
 /**************************************************************************
  *                        Message processing                              *
@@ -301,8 +317,7 @@ _delayed_close (gpointer data)
  * and if they are all done, we self destruct. */
 static void
 handle_stopped (IrisProgressMonitor *progress_monitor,
-                IrisProgressWatch   *watch,
-                IrisMessage         *message)
+                IrisProgressWatch   *watch)
 {
 	IrisProgressInfoBarPrivate *priv;
 
@@ -369,8 +384,7 @@ update_total_progress (IrisProgressInfoBar *info_bar)
 
 static void
 handle_update (IrisProgressMonitor *progress_monitor,
-               IrisProgressWatch   *watch,
-               IrisMessage         *message)
+               IrisProgressWatch   *watch)
 {
 	char                 progress_text[256];
 	IrisProgressInfoBar *info_bar;
@@ -395,19 +409,11 @@ handle_update (IrisProgressMonitor *progress_monitor,
 
 static void
 handle_title (IrisProgressMonitor *progress_monitor,
-              IrisProgressWatch   *watch,
-              IrisMessage         *message)
+              IrisProgressWatch   *watch)
 {
-	const char *title;
-
 	g_return_if_fail (IRIS_IS_PROGRESS_INFO_BAR (progress_monitor));
 
-	title = g_value_get_string (iris_message_get_data (message));
-
-	g_free (watch->title);
-	watch->title = g_strdup (title);
-
-	gtk_label_set_text (GTK_LABEL (watch->user_data3), title);
+	gtk_label_set_text (GTK_LABEL (watch->user_data3), watch->title);
 }
 
 
@@ -418,18 +424,20 @@ iris_progress_info_bar_handle_message (IrisProgressMonitor *progress_monitor,
 {
 	g_return_if_fail (IRIS_IS_PROGRESS_INFO_BAR(progress_monitor));
 
+	/* Message has already been parsed by interface and 'watch' updated */
+
 	switch (message->what) {
 		case IRIS_PROGRESS_MESSAGE_COMPLETE:
 		case IRIS_PROGRESS_MESSAGE_CANCELLED:
-			handle_stopped (progress_monitor, watch, message);
+			handle_stopped (progress_monitor, watch);
 			break;
 		case IRIS_PROGRESS_MESSAGE_FRACTION:
 		case IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS:
 		case IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS:
-			handle_update (progress_monitor, watch, message);
+			handle_update (progress_monitor, watch);
 			break;
 		case IRIS_PROGRESS_MESSAGE_TITLE:
-			handle_title (progress_monitor, watch, message);
+			handle_title (progress_monitor, watch);
 			break;
 		default:
 			g_warn_if_reached ();

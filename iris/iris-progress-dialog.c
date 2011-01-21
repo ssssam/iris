@@ -195,7 +195,6 @@ iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 	          *hbox, *vbox_inner,
 	          *progress_label, *progress_bar;
 
-
 	progress_dialog = IRIS_PROGRESS_DIALOG (progress_monitor);
 	priv = progress_dialog->priv;
 
@@ -256,8 +255,8 @@ iris_progress_dialog_is_watching_task (IrisProgressMonitor *progress_monitor,
 
 	priv = IRIS_PROGRESS_DIALOG (progress_monitor)->priv;
 
-	return (g_list_find_custom (priv->watch_list, task,
-	                            find_watch_by_task)     != NULL);
+	return (_iris_progress_dialog_get_watch (IRIS_PROGRESS_DIALOG (progress_monitor),
+	                                         task) != NULL);
 }
 
 static void
@@ -274,6 +273,24 @@ format_watch_title (GtkWidget   *label,
 		g_free (title_formatted);
 	}
 }
+
+/* Private, for tests */
+IrisProgressWatch *
+_iris_progress_dialog_get_watch (IrisProgressDialog *progress_dialog,
+                                 IrisTask           *task)
+{
+	IrisProgressDialogPrivate *priv;
+	GList                     *node;
+
+	g_return_val_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_dialog), NULL);
+
+	priv = progress_dialog->priv;
+
+	node = g_list_find_custom (priv->watch_list, task, find_watch_by_task);
+
+	return node? node->data: NULL;
+}
+
 
 /**************************************************************************
  *                        Message processing                              *
@@ -294,8 +311,7 @@ _delayed_close (gpointer data)
 /* Cancelled or complete */
 static void
 handle_stopped (IrisProgressMonitor *progress_monitor,
-                IrisProgressWatch   *watch,
-                IrisMessage         *message)
+                IrisProgressWatch   *watch)
 {
 	IrisProgressDialogPrivate *priv;
 
@@ -335,8 +351,7 @@ handle_stopped (IrisProgressMonitor *progress_monitor,
 
 static void
 handle_update (IrisProgressMonitor *progress_monitor,
-               IrisProgressWatch   *watch,
-               IrisMessage         *message)
+               IrisProgressWatch   *watch)
 {
 	char                 progress_text[256];
 	GtkWidget           *progress_bar, *progress_label;
@@ -356,19 +371,11 @@ handle_update (IrisProgressMonitor *progress_monitor,
 
 static void
 handle_title (IrisProgressMonitor *progress_monitor,
-              IrisProgressWatch   *watch,
-              IrisMessage         *message)
+              IrisProgressWatch   *watch)
 {
-	const char         *title;
-
 	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_monitor));
 
-	title = g_value_get_string (iris_message_get_data (message));
-
-	g_free (watch->title);
-	watch->title = g_strdup (title);
-
-	format_watch_title (GTK_WIDGET (watch->user_data3), title);
+	format_watch_title (GTK_WIDGET (watch->user_data3), watch->title);
 }
 
 
@@ -379,18 +386,20 @@ iris_progress_dialog_handle_message (IrisProgressMonitor *progress_monitor,
 {
 	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_monitor));
 
+	/* Message has already been parsed by interface and 'watch' updated */
+
 	switch (message->what) {
 		case IRIS_PROGRESS_MESSAGE_COMPLETE:
 		case IRIS_PROGRESS_MESSAGE_CANCELLED:
-			handle_stopped (progress_monitor, watch, message);
+			handle_stopped (progress_monitor, watch);
 			break;
 		case IRIS_PROGRESS_MESSAGE_FRACTION:
 		case IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS:
 		case IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS:
-			handle_update (progress_monitor, watch, message);
+			handle_update (progress_monitor, watch);
 			break;
 		case IRIS_PROGRESS_MESSAGE_TITLE:
-			handle_title (progress_monitor, watch, message);
+			handle_title (progress_monitor, watch);
 			break;
 		default:
 			g_warn_if_reached ();

@@ -60,7 +60,7 @@ struct _IrisProgressWatch
 	         user_data3;
 };
 
-void     _iris_progress_watch_free                  (IrisProgressWatch *watch);
+void               _iris_progress_watch_free        (IrisProgressWatch *watch);
 
 /* Return TRUE if a progress monitor implementation can close, based on the
  * list of activities it is watching.

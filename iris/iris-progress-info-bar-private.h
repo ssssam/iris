@@ -46,6 +46,10 @@ struct _IrisProgressInfoBarPrivate
 	gint    destroy_timer_id;
 };
 
+/* For testing */
+IrisProgressWatch *_iris_progress_info_bar_get_watch (IrisProgressInfoBar *progress_info_bar,
+                                                      IrisTask            *task);
+
 G_END_DECLS
 
 #endif /* __IRIS_PROGRESS_INFO_BAR_PRIVATE_H__ */

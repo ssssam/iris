@@ -24,6 +24,7 @@
 G_BEGIN_DECLS
 
 #include "iris-scheduler.h"
+#include "iris-progress-monitor-private.h"
 
 #define IRIS_PROGRESS_DIALOG_GET_PRIVATE(object)                  \
           (G_TYPE_INSTANCE_GET_PRIVATE((object),                  \
@@ -45,6 +46,10 @@ struct _IrisProgressDialogPrivate
 	                               dialog, to ensure we only try to close
 	                               once */
 };
+
+/* For testing */
+IrisProgressWatch *_iris_progress_dialog_get_watch (IrisProgressDialog *progress_dialog,
+                                                    IrisTask           *task);
 
 G_END_DECLS
 
