@@ -54,36 +54,40 @@ struct _IrisProgressWatch
 	 * is not watched multiple times. */
 	IrisTask *task;
 
-	/* For use by implementations */
-	gpointer user_data,
-	         user_data2,
-	         user_data3;
+	/* For implementations to store g_source that will hide the watch. */
+	gint finish_timeout_id;
+
+	/* For use by implementations to store widget pointers etc. */
+	gpointer container,
+	         title_label,
+	         progress_bar,
+	         progress_label,
+	         cancel_button;
 };
 
-void               _iris_progress_watch_free        (IrisProgressWatch *watch);
 
-/* Return TRUE if a progress monitor implementation can close, based on the
- * list of activities it is watching.
- */
-gboolean _iris_progress_monitor_watch_list_finished (GList *watch_list);
+void _iris_progress_watch_free             (IrisProgressWatch *watch);
 
 /* Called when cancel button pressed on widget - will cancel every process in 
  * watch_list and emit 'cancel' signal.
  */
-void     _iris_progress_monitor_cancel              (IrisProgressMonitor *progress_monitor,
-                                                     GList               *watch_list);
+//void _iris_progress_monitor_cancel         (IrisProgressMonitor *progress_monitor,
+//                                            GList               *watch_list);
+
+/* Emit IrisProgressMonitor::finished */
+void _iris_progress_monitor_finished       (IrisProgressMonitor *progress_monitor);
 
 /* Format status of watch into 'progress_text', as for example x% or a/b items.
  * progress_text must point to a character array of 256 bytes or more. */
-void     _iris_progress_monitor_format_watch        (IrisProgressMonitor *progress_monitor,
-                                                     IrisProgressWatch   *watch,
-                                                     gchar               *progress_text);
+void _iris_progress_monitor_format_watch   (IrisProgressMonitor *progress_monitor,
+                                            IrisProgressWatch   *watch,
+                                            gchar               *progress_text);
 
 /* This function should be the handler for the watch's progress messages.
  * It invokes the class handler after updating the watch object.
  */
-void     _iris_progress_monitor_handle_message      (IrisMessage       *message,
-                                                     gpointer           user_data);
+void _iris_progress_monitor_handle_message (IrisMessage       *message,
+                                            gpointer           user_data);
 
 G_END_DECLS
 

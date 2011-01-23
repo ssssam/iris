@@ -40,13 +40,6 @@ GtkWidget *demo_window = NULL,
 GList *monitor_list = NULL,
       *process_list = NULL;
 
-static void
-remove_monitor_from_list (GtkWidget *caller,
-                          gpointer   user_data) {
-	/* Called on 'destroy' signal for each progress monitor */
-	g_assert (caller == user_data);
-	monitor_list = g_list_remove (monitor_list, user_data);
-}
 
 static void
 remove_process_from_list (IrisTask *task,
@@ -55,33 +48,6 @@ remove_process_from_list (IrisTask *task,
 	/* Called from callback/errback of IrisProcess */
 	g_assert (task == user_data);
 	process_list = g_list_remove (process_list, user_data);
-}
-
-static void
-create_progress_monitors () {
-	GtkWidget *dialog, *info_bar,
-	          *vbox;
-
-	g_return_if_fail (demo_window != NULL);
-
-	/* The dialog */
-	dialog = iris_progress_dialog_new ("Demo progress dialog",
-	                                   GTK_WINDOW (demo_window));
-	gtk_widget_show (dialog);
-	iris_progress_monitor_set_close_delay (IRIS_PROGRESS_MONITOR (dialog),
-	                                       500);
-	g_signal_connect (dialog, "destroy", G_CALLBACK (remove_monitor_from_list), dialog);
-	monitor_list = g_list_prepend (monitor_list, dialog);
-
-	/* The info bar */
-	info_bar = iris_progress_info_bar_new ("Counting some sheep");
-	vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
-	gtk_box_pack_end (GTK_BOX (vbox), info_bar, FALSE, TRUE, 0);
-	gtk_widget_show (info_bar);
-	iris_progress_monitor_set_close_delay (IRIS_PROGRESS_MONITOR (info_bar),
-	                                       500);
-	g_signal_connect (info_bar, "destroy", G_CALLBACK (remove_monitor_from_list), info_bar);
-	monitor_list = g_list_prepend (monitor_list, info_bar);
 }
 
 static void
@@ -111,11 +77,6 @@ trigger_process (GtkButton *trigger,
 	                    NULL);
 
 	process_list = g_list_prepend (process_list, process);
-
-	/* We add to the existing progress monitors if they exist, or create some
-	 * more if they don't. */
-	if (monitor_list == NULL)
-		create_progress_monitors ();
 
 	for (node=monitor_list; node; node=node->next) {
 		IrisProgressMonitor *widget = IRIS_PROGRESS_MONITOR (node->data);
@@ -196,9 +157,38 @@ create_demo_dialog (void)
 	gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, TRUE, 4);
 }
 
+static GtkWidget *
+create_progress_monitors (void)
+{
+	GtkWidget *dialog, *info_bar,
+	          *vbox;
+
+	g_return_if_fail (demo_window != NULL);
+
+	/* The dialog */
+	dialog = iris_progress_dialog_new ("Demo progress dialog",
+	                                   GTK_WINDOW (demo_window));
+	iris_progress_monitor_set_permanent_mode (IRIS_PROGRESS_MONITOR (dialog),
+	                                          TRUE);
+	monitor_list = g_list_prepend (monitor_list, dialog);
+
+	/* The info bar */
+	info_bar = iris_progress_info_bar_new ("Counting some sheep");
+
+	vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
+	gtk_box_pack_end (GTK_BOX (vbox), info_bar, FALSE, TRUE, 0);
+	gtk_widget_hide (info_bar);
+
+	iris_progress_monitor_set_permanent_mode (IRIS_PROGRESS_MONITOR (info_bar),
+	                                          TRUE);
+	monitor_list = g_list_prepend (monitor_list, info_bar);
+}
+
 gint
 main (gint argc, char *argv[])
 {
+	GList *node;
+
 	g_thread_init (NULL);
 	gtk_init (&argc, &argv);
 
@@ -206,5 +196,16 @@ main (gint argc, char *argv[])
 	g_signal_connect (demo_window, "response", gtk_main_quit, NULL);
 	gtk_widget_show_all (demo_window);
 
+	create_progress_monitors ();
+
+	/* Main loop */
 	gtk_main ();
+
+	for (node=monitor_list; node; node=node->next) {
+		g_assert_cmpint (G_OBJECT (node->data)->ref_count, ==, 1);
+		gtk_widget_destroy (GTK_WIDGET (node->data));
+	}
+
+	/* Clean up */
+	//gtk_widget_destroy (demo_window);
 }

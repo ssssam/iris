@@ -24,6 +24,7 @@
 G_BEGIN_DECLS
 
 #include "iris-scheduler.h"
+#include "iris-progress-monitor-private.h"
 
 #define IRIS_PROGRESS_INFO_BAR_GET_PRIVATE(object)                  \
           (G_TYPE_INSTANCE_GET_PRIVATE((object),                  \
@@ -37,13 +38,12 @@ struct _IrisProgressInfoBarPrivate
 
 	GtkWidget *title_label,
 	          *total_progress_bar,
-	          *watch_table,
-	          *button;
+	          *watch_vbox;
 
-	gboolean completed;
+	guint      in_finished : 1;
+	guint      permanent_mode : 1;
 
-	gint    close_delay;
-	gint    destroy_timer_id;
+	gint       watch_hide_delay;
 };
 
 /* For testing */

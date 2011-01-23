@@ -36,15 +36,10 @@ struct _IrisProgressDialogPrivate
 
 	GList         *watch_list;
 
-	GtkWidget *button;
+	guint          in_finished : 1;    /* TRUE when emitting ::finished */
+	guint          permanent_mode : 1;
 
-	gboolean completed;
-
-	gint    close_delay;        /* millisecs to wait befor closing after the
-	                               last watch completes */
-	gint    destroy_timer_id;   /* source tag for the timeout to close the
-	                               dialog, to ensure we only try to close
-	                               once */
+	gint           watch_hide_delay;
 };
 
 /* For testing */

@@ -32,29 +32,8 @@
 GtkWidget *demo_window = NULL,
           *progress_widget = NULL,
           *title_entry = NULL;
+
 GtkWidget *show_info_bar = NULL;
-
-static void
-create_progress_monitor () {
-	GtkWidget *vbox;
-
-	g_return_if_fail (demo_window != NULL);
-
-	if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (show_info_bar))) {
-		progress_widget = iris_progress_info_bar_new ("Contemplating ...");
-		vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
-		gtk_box_pack_end (GTK_BOX (vbox), progress_widget, FALSE, FALSE, 0);
-	}
-	else
-		progress_widget = iris_progress_dialog_new ("Contemplating ...", GTK_WINDOW (demo_window));
-
-	gtk_widget_show (progress_widget);
-
-	iris_progress_monitor_set_close_delay
-	  (IRIS_PROGRESS_MONITOR (progress_widget), 500);
-	g_object_add_weak_pointer (G_OBJECT (progress_widget),
-	                           (gpointer *)&progress_widget);
-}
 
 static void
 thinking_task_func (IrisTask *task,
@@ -101,9 +80,6 @@ trigger_task (GtkButton *trigger,
 
 	task = iris_task_new_with_func (thinking_task_func, user_data, NULL);
 
-	if (progress_widget == NULL)
-		create_progress_monitor ();
-
 	watch_port = iris_progress_monitor_add_watch
 	               (IRIS_PROGRESS_MONITOR (progress_widget),
 	                task,
@@ -140,6 +116,25 @@ create_demo_dialog (void)
 	gtk_box_pack_start (GTK_BOX (vbox), show_info_bar, FALSE, TRUE, 8);
 }
 
+static void
+create_progress_monitor () {
+	GtkWidget *vbox;
+
+	g_return_if_fail (demo_window != NULL);
+
+	if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (show_info_bar))) {
+		progress_widget = iris_progress_info_bar_new ("Contemplating ...");
+		vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
+		gtk_box_pack_end (GTK_BOX (vbox), progress_widget, FALSE, FALSE, 0);
+	}
+	else
+		progress_widget = iris_progress_dialog_new ("Contemplating ...",
+		                                            GTK_WINDOW (demo_window));
+
+	iris_progress_monitor_set_permanent_mode (IRIS_PROGRESS_MONITOR (progress_widget),
+	                                          TRUE);
+}
+
 gint
 main (gint argc, char *argv[])
 {
@@ -147,10 +142,15 @@ main (gint argc, char *argv[])
 	gtk_init (&argc, &argv);
 
 	create_demo_dialog ();
+
 	g_signal_connect (demo_window, "response", gtk_main_quit, NULL);
 	gtk_widget_show_all (demo_window);
 
+	create_progress_monitor ();
+
 	gtk_main ();
+
+	gtk_widget_destroy (progress_widget);
 }
 
 

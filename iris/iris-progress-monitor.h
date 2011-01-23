@@ -40,6 +40,21 @@ typedef struct _IrisProgressMonitorInterface   IrisProgressMonitorInterface;
 
 typedef struct _IrisProgressWatch              IrisProgressWatch;
 
+/**
+ * IrisProgressMonitorDisplayStyle:
+ * @IRIS_PROGRESS_MONITOR_ITEMS: display "x items of y"
+ * @IRIS_PROGRESS_MONITOR_PERCENTAGE: display "x% complete"
+ *
+ * These values instruct progress monitor widgets to display the progress of a
+ * watch in a specific format.
+ *
+ **/
+typedef enum {
+	IRIS_PROGRESS_MONITOR_ITEMS,
+	IRIS_PROGRESS_MONITOR_PERCENTAGE
+} IrisProgressMonitorDisplayStyle;
+
+
 struct _IrisProgressMonitorInterface
 {
 	GTypeInterface parent_iface;
@@ -57,28 +72,17 @@ struct _IrisProgressMonitorInterface
 	void     (*set_title)            (IrisProgressMonitor *progress_monitor,
 	                                  const gchar         *title);
 
-	void     (*set_close_delay)      (IrisProgressMonitor *progress_monitor,
-	                                  int                  milliseconds);
+	void     (*set_permanent_mode)   (IrisProgressMonitor *progress_monitor,
+	                                  gboolean             enable);
+
+	void     (*set_watch_hide_delay) (IrisProgressMonitor *progress_monitor,
+	                                  gint                 millisecs);
 
 	void     (*reserved1)            (void);
 	void     (*reserved2)            (void);
 	void     (*reserved3)            (void);
 	void     (*reserved4)            (void);
 };
-
-/**
- * IrisProgressMonitorDisplayStyle:
- * @IRIS_PROGRESS_MONITOR_ITEMS: display "x items of y"
- * @IRIS_PROGRESS_MONITOR_PERCENTAGE: display "x% complete"
- *
- * These values instruct progress monitor widgets to display the progress of a
- * watch in a specific format.
- *
- **/
-typedef enum {
-	IRIS_PROGRESS_MONITOR_ITEMS,
-	IRIS_PROGRESS_MONITOR_PERCENTAGE
-} IrisProgressMonitorDisplayStyle;
 
 GType         iris_progress_monitor_get_type             (void) G_GNUC_CONST;
 
@@ -88,12 +92,14 @@ IrisPort     *iris_progress_monitor_add_watch            (IrisProgressMonitor   
                                                           IrisProgressMonitorDisplayStyle  display_style,
                                                           const gchar                     *title);
 
-void          iris_progress_monitor_set_title            (IrisProgressMonitor *progress_monitor,
-                                                          const gchar *title);
+void          iris_progress_monitor_set_title            (IrisProgressMonitor             *progress_monitor,
+                                                          const gchar                     *title);
 
-void          iris_progress_monitor_set_close_delay      (IrisProgressMonitor *progress_monitor,
-                                                          gint                 milliseconds);
+void          iris_progress_monitor_set_permanent_mode   (IrisProgressMonitor             *progress_monitor,
+                                                          gboolean                         enable);
 
+void          iris_progress_monitor_set_watch_hide_delay (IrisProgressMonitor             *progress_monitor,
+                                                          gint                             milliseconds);
 
 /* IrisProcess-specific API */
 void          iris_progress_monitor_watch_process        (IrisProgressMonitor             *progress_monitor,

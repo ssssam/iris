@@ -44,12 +44,37 @@
  * To do this you must first call iris_progress_monitor_add_watch(). This
  * returns an #IrisPort object where you should then send messages of
  * #IrisProgressMessageType. The progress monitor will watch the task until it
- * receives @IRIS_PROGRESS_MESSAGE_CANCELLED or @IRIS_PROGRESS_MESSAGE_COMPLETE.
+ * receives #IRIS_PROGRESS_MESSAGE_CANCELLED or #IRIS_PROGRESS_MESSAGE_COMPLETE.
+ *
+ * <refsect2 id="lifecycle">
+ * <title>Lifecycle</title>
+ * <para>
+ * The typical use-case for #IrisProgressMonitor is that you want for example
+ * an #IrisProgressInfoBar in your application's main window that displays any
+ * slow processes that are currently in progress. If no processes are running
+ * the #IrisProgressInfoBar should be hidden. The recommended way to achieve
+ * this is by creating one #IrisProgressInfoBar object during the initialization
+ * of your program and then showing and hiding this one widget appropriately.
+ * You can get the widget to handle this automatically, by calling
+ * iris_progress_monitor_set_permanent_mode(). The widget will then make sure it
+ * is visible (using gtk_widget_show() in the case of the Gtk+ progress
+ * monitors) whenever it has any watches active, and will hide itself again
+ * when the last process it is watching finishes.
+ *
+ * A more powerful mechanism exists if you want to go beyond this behaviour:
+ * when all of the watches have completed, the #IrisProgressMonitor::finished
+ * signal is emitted. For example, you could connect this signal to
+ * gtk_widget_destroy() to make the widget finalize itself when it has no more
+ * active processes to watch.
+ * </para>
+ * </refsect2>
  *
  */
 
+/* Signal id's */
 enum {
 	CANCEL,
+	FINISHED,
 	LAST_SIGNAL
 };
 
@@ -98,6 +123,7 @@ iris_progress_monitor_base_init (gpointer g_class)
 
 	/**
 	* IrisProgressMonitor::cancel:
+	* @progress_monitor: the #IrisProgressMonitor that received the signal
 	*
 	* Emitted when a 'cancel' button is pressed on a progress widget. Any
 	* #IrisProcess objects being watched are cancelled automatically, but if
@@ -106,6 +132,22 @@ iris_progress_monitor_base_init (gpointer g_class)
 	*/
 	signals[CANCEL] =
 	  g_signal_new (("cancel"),
+	                G_OBJECT_CLASS_TYPE (g_class),
+	                G_SIGNAL_RUN_FIRST,
+	                0,
+	                NULL, NULL,
+	                g_cclosure_marshal_VOID__VOID,
+	                G_TYPE_NONE, 0);
+
+	/**
+	* IrisProgressMonitor::finished:
+	* @progress_monitor: the #IrisProgressMonitor that received the signal
+	*
+	* Emitted when all watches being monitored have completed. It is not
+	* to add new watches during emission of this signal.
+	*/
+	signals[FINISHED] =
+	  g_signal_new (("finished"),
 	                G_OBJECT_CLASS_TYPE (g_class),
 	                G_SIGNAL_RUN_FIRST,
 	                0,
@@ -155,7 +197,7 @@ iris_progress_monitor_add_watch_internal (IrisProgressMonitor             *progr
  * a progress bar) for a task, which needs to update it by posting messages on
  * the #IrisPort that is returned. These messages should be from
  * #IrisProgressMessageType. The watch will be removed when the port receives
- * @IRIS_PROGRESS_MESSAGE_CANCELLED or @IRIS_PROGRESS_MESSAGE_COMPLETE.
+ * #IRIS_PROGRESS_MESSAGE_CANCELLED or #IRIS_PROGRESS_MESSAGE_COMPLETE.
  *
  * Returns: an #IrisPort, listening for progress messages.
  *          
@@ -195,8 +237,8 @@ _iris_progress_watch_free (IrisProgressWatch *watch)
 
 /**
  * iris_progress_monitor_set_title:
- * @progress_monitor: An #IrisProgressMonitor
- * @title: String describing the overall activity the progress monitor watches,
+ * @progress_monitor: an #IrisProgressMonitor
+ * @title: string describing the overall activity the progress monitor watches,
  *         or %NULL.
  *
  * This function sets a global title for the @progress_monitor. For example, in
@@ -215,25 +257,25 @@ iris_progress_monitor_set_title (IrisProgressMonitor *progress_monitor,
 	interface->set_title (progress_monitor, title);
 };
 
+
 /**
- * iris_progress_monitor_set_close_delay:
- * @progress_monitor: An #IrisProgressMonitor
- * @milliseconds: Time to wait before @progress_monitor destroys itself
+ * iris_progress_monitor_set_permanent_mode:
+ * @progress_monitor: an #IrisProgressMonitor
+ * @enable: whether to enable permanent mode
  *
- * #IrisProgressDialog and #IrisProgressInfoBar will call gtk_widget_destroy()
- * on themselves when all of their watches complete or are cancelled. By default
- * they will wait for 0.5 seconds before doing so, mainly because the values
- * they display are often slightly behind the actual processes being watched
- * and so they can appear to have stopped without finishing. This function
- * allows you to tweak the behaviour.
+ * Permanent mode causes the progress monitor to automatically show itself when
+ * any watches are added, and hide itself again when all of them have finished.
+ * Using this feature it is simple to create one #IrisProgressMonitor instance
+ * at the start of your application and use it to display progress of every
+ * #IrisTask and #IrisProcess you create.
  *
- * A timeout of 0 seconds will cause @progress_monitor to disappear as soon as
- * the process completes. A timeout < 0 will stop #IrisProgressDialog and
- * #IrisProgressInfoBar from destroying themselves at all.
- **/
+ * #IrisProgressMonitor::finished is still emitted when permanent mode is
+ * enabled, and the callbacks run <emphasis>before</emphasis> the progress
+ * monitor is hidden.
+ */
 void
-iris_progress_monitor_set_close_delay (IrisProgressMonitor *progress_monitor,
-                                       gint                 milliseconds)
+iris_progress_monitor_set_permanent_mode (IrisProgressMonitor *progress_monitor,
+                                          gboolean             enable)
 {
 	IrisProgressMonitorInterface *interface;
 
@@ -241,7 +283,38 @@ iris_progress_monitor_set_close_delay (IrisProgressMonitor *progress_monitor,
 
 	interface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
 
-	interface->set_close_delay (progress_monitor, milliseconds);
+	interface->set_permanent_mode (progress_monitor, enable);
+}
+
+/**
+ * iris_progress_monitor_set_watch_hide_delay:
+ * @progress_monitor: an #IrisProgressMonitor
+ * @milliseconds: time in milliseconds to display progress information for a task
+ *             or process after it has completed or been cancelled. Default
+ *             value: 500 ms.
+ *
+ * It is slightly visually jarring for a process or group of processes that are
+ * being watched to disappear instantly when they complete or the cancel button
+ * is clicked. You should not normally need to change the default value of
+ * 500ms, which allows time for the UI to catch up with the process and the
+ * user to catch up with the UI.
+ **/
+/* If milliseconds == -1 the watches will never be cleared. This is not
+ * documented because for it to be useful there would probably need to be a way
+ * to manually clear the watches. It is used for unit tests to check what is
+ * being displayed in the UI.
+ */
+void
+iris_progress_monitor_set_watch_hide_delay (IrisProgressMonitor *progress_monitor,
+                                            int                  milliseconds)
+{
+	IrisProgressMonitorInterface *interface;
+
+	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
+
+	interface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
+
+	interface->set_watch_hide_delay (progress_monitor, milliseconds);
 }
 
 
@@ -327,37 +400,27 @@ iris_progress_monitor_watch_process_chain (IrisProgressMonitor             *prog
  *                    Widget implementation helpers                       *
  *************************************************************************/
 
-/* Return TRUE if a progress monitor implementation can close, based on the
- * list of activities it is watching.
- */
-gboolean
-_iris_progress_monitor_watch_list_finished (GList *watch_list)
-{
-	GList *node;
-
-	for (node=watch_list; node; node=node->next) {
-		IrisProgressWatch *watch = node->data;
-
-		if ((!watch->complete) && (!watch->cancelled))
-			return FALSE;
-	}
-
-	return TRUE;
-};
-
-void
+/*void
 _iris_progress_monitor_cancel (IrisProgressMonitor *progress_monitor,
                                GList               *watch_list)
 {
 	GList *node;
 
-	/* Cancel every process being watched */
+	* Cancel every process being watched *
 	for (node=watch_list; node; node=node->next) {
 		IrisProgressWatch *watch = node->data;
 		iris_task_cancel (IRIS_TASK (watch->task));
 	}
 
 	g_signal_emit (progress_monitor, signals[CANCEL], 0);
+}*/
+
+void
+_iris_progress_monitor_finished (IrisProgressMonitor *progress_monitor)
+{
+	g_return_if_fail (IRIS_PROGRESS_MONITOR (progress_monitor));
+
+	g_signal_emit (progress_monitor, signals[FINISHED], 0);
 }
 
 /* Add watches for connected processes, called once we know the connections

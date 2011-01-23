@@ -39,35 +39,33 @@
  * windows. Use the #IrisProgressMonitor interface to control it.
  */
 
-static void     iris_progress_dialog_class_init      (IrisProgressDialogClass *progress_dialog_class);
-static void     iris_progress_dialog_init            (IrisProgressDialog *progress_dialog);
-static void     iris_progress_monitor_interface_init (IrisProgressMonitorInterface *interface);
+static void     iris_progress_dialog_class_init           (IrisProgressDialogClass  *progress_dialog_class);
+static void     iris_progress_dialog_init                 (IrisProgressDialog *progress_dialog);
+static void     iris_progress_monitor_interface_init      (IrisProgressMonitorInterface *interface);
 
-static GObject *iris_progress_dialog_constructor     (GType type,
-                                                      guint n_construct_properties,
-                                                      GObjectConstructParam *construct_params);
-static void     iris_progress_dialog_finalize        (GObject *object);
+static GObject *iris_progress_dialog_constructor          (GType type,
+                                                           guint n_construct_properties,
+                                                           GObjectConstructParam *construct_params);
+static void     iris_progress_dialog_finalize             (GObject *object);
 
-static void     iris_progress_dialog_add_watch       (IrisProgressMonitor *progress_monitor,
-                                                      IrisProgressWatch   *watch);
-static void     iris_progress_dialog_handle_message  (IrisProgressMonitor *progress_monitor,
-                                                      IrisProgressWatch   *watch,
-                                                      IrisMessage         *message);
+static void     iris_progress_dialog_add_watch            (IrisProgressMonitor *progress_monitor,
+                                                           IrisProgressWatch   *watch);
+static void     iris_progress_dialog_handle_message       (IrisProgressMonitor *progress_monitor,
+                                                           IrisProgressWatch   *watch,
+                                                           IrisMessage         *message);
 
-static gboolean iris_progress_dialog_is_watching_task (IrisProgressMonitor *progress_monitor,
-                                                       IrisTask            *task);
+static gboolean iris_progress_dialog_is_watching_task     (IrisProgressMonitor *progress_monitor,
+                                                           IrisTask            *task);
 
-static void     format_watch_title                   (GtkWidget *label,
-                                                      const gchar *title);
- 
-static void     iris_progress_dialog_set_title       (IrisProgressMonitor *progress_monitor,
-                                                      const gchar         *title);
-static void     iris_progress_dialog_set_close_delay (IrisProgressMonitor *progress_monitor,
-                                                      gint                 seconds);
+static void     format_watch_title                        (GtkWidget   *label,
+                                                           const gchar *title);
 
-static void     iris_progress_dialog_response        (GtkDialog           *dialog, 
-                                                      int                  response_id,
-                                                      gpointer             user_data);
+static void     iris_progress_dialog_set_title            (IrisProgressMonitor *progress_monitor,
+                                                           const gchar         *title);
+static void     iris_progress_dialog_set_permanent_mode   (IrisProgressMonitor *progress_monitor,
+                                                           gboolean             enable);
+static void     iris_progress_dialog_set_watch_hide_delay (IrisProgressMonitor *progress_monitor,
+                                                           gint                 millisecpnds);
 
 G_DEFINE_TYPE_WITH_CODE (IrisProgressDialog, iris_progress_dialog, GTK_TYPE_DIALOG,
                          G_IMPLEMENT_INTERFACE (IRIS_TYPE_PROGRESS_MONITOR,
@@ -103,9 +101,10 @@ iris_progress_dialog_init (IrisProgressDialog *progress_dialog)
 
 	priv->watch_list = NULL;
 
-	priv->completed = FALSE;
+	priv->in_finished = FALSE;
+	priv->permanent_mode = FALSE;
 
-	priv->close_delay = 500;
+	priv->watch_hide_delay = 500;
 }
 
 static void
@@ -115,13 +114,19 @@ iris_progress_dialog_finalize (GObject *object)
 	IrisProgressDialog        *dialog = IRIS_PROGRESS_DIALOG (object);
 	IrisProgressDialogPrivate *priv   = dialog->priv;
 
+	/* Closing a progress monitor with active watches is not recommended but it
+	 * should still work.
+	 */
 	for (node=priv->watch_list; node; node=node->next) {
 		IrisProgressWatch *watch = node->data;
 
-		iris_port_set_receiver (watch->port, NULL);
+		if (watch->finish_timeout_id != 0)
+			g_source_remove (watch->finish_timeout_id);
 
 		/* Receiver must be freed, or we will get messages after we have
 		 * been freed .. */
+		iris_port_set_receiver (watch->port, NULL);
+
 		g_warn_if_fail (G_OBJECT (watch->receiver)->ref_count == 1);
 
 		g_object_unref (watch->receiver);
@@ -135,11 +140,12 @@ iris_progress_dialog_finalize (GObject *object)
 static void
 iris_progress_monitor_interface_init (IrisProgressMonitorInterface *interface)
 {
-	interface->add_watch        = iris_progress_dialog_add_watch;
-	interface->handle_message   = iris_progress_dialog_handle_message;
-	interface->is_watching_task = iris_progress_dialog_is_watching_task;
-	interface->set_title        = iris_progress_dialog_set_title;
-	interface->set_close_delay  = iris_progress_dialog_set_close_delay;
+	interface->add_watch            = iris_progress_dialog_add_watch;
+	interface->handle_message       = iris_progress_dialog_handle_message;
+	interface->is_watching_task     = iris_progress_dialog_is_watching_task;
+	interface->set_title            = iris_progress_dialog_set_title;
+	interface->set_permanent_mode   = iris_progress_dialog_set_permanent_mode;
+	interface->set_watch_hide_delay = iris_progress_dialog_set_watch_hide_delay;
 }
 
 static GObject *
@@ -151,21 +157,12 @@ iris_progress_dialog_constructor (GType type,
 	                    (type, n_construct_properties, construct_params);
 	GtkDialog *dialog = GTK_DIALOG (object);
 
-	IrisProgressDialog *progress_dialog = IRIS_PROGRESS_DIALOG (dialog);
-	IrisProgressDialogPrivate *priv = progress_dialog->priv;
-
 	/* FIXME: dialog should not take focus, unless explicitly clicked on. */
 
 	gtk_dialog_set_has_separator (dialog, FALSE);
-	priv->button = gtk_dialog_add_button (dialog, GTK_STOCK_CANCEL,
-	                                      GTK_RESPONSE_CANCEL);
 
 	gtk_container_set_border_width (GTK_CONTAINER (dialog->vbox), 8);
 	gtk_window_set_resizable (GTK_WINDOW (dialog), FALSE);
-
-	g_signal_connect_swapped (dialog, "response",
-	                          G_CALLBACK (iris_progress_dialog_response),
-	                          object);
 
 	return object;
 }
@@ -201,6 +198,13 @@ iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_monitor));
 
 	dialog = GTK_DIALOG (progress_dialog);
+
+	/* There is no technical reason not to add watches in the finish handler,
+	 * but also no reason to want to do it. If you want to spawn a process when
+	 * another finishes, that should be triggered by the process object and not
+	 * the progress monitor.
+	 */
+	g_return_if_fail (!priv->in_finished);
 
 	/* Set up receiver. Messages are passed to the superclass first, which
 	 * does prelimary processing before we take them. */
@@ -240,9 +244,15 @@ iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 
 	gtk_container_add (GTK_CONTAINER (dialog->vbox), vbox_outer);
 
-	watch->user_data = progress_bar;
-	watch->user_data2 = progress_label;
-	watch->user_data3 = title;
+	watch->container = vbox_outer;
+	watch->title_label = title;
+	watch->progress_bar = progress_bar;
+	watch->progress_label = progress_label;
+	watch->cancel_button = NULL;
+
+	if (priv->permanent_mode == TRUE)
+		/* Ensure we are visible; quicker just to call than to check */
+		gtk_widget_show (GTK_WIDGET (dialog));
 }
 
 static gboolean
@@ -274,6 +284,24 @@ format_watch_title (GtkWidget   *label,
 	}
 }
 
+/*static void
+set_completed (IrisProgressDialog *progress_dialog,
+               gboolean            completed)
+{
+	IrisProgressDialogPrivate *priv;
+
+	priv = progress_dialog->priv;
+
+	priv->completed = completed;
+
+	if (completed)
+		gtk_button_set_label (GTK_BUTTON (priv->button),
+		                      _("Close"));
+	else
+		gtk_button_set_label (GTK_BUTTON (priv->button),
+		                      _("Close"));
+};*/
+
 /* Private, for tests */
 IrisProgressWatch *
 _iris_progress_dialog_get_watch (IrisProgressDialog *progress_dialog,
@@ -298,12 +326,47 @@ _iris_progress_dialog_get_watch (IrisProgressDialog *progress_dialog,
 
 /* No need to worry about locking here, remember these messages are processed in the main loop */
 
-static gboolean
-_delayed_close (gpointer data)
+static void
+dialog_finish (IrisProgressDialog *progress_dialog)
 {
-	GtkWidget *dialog = GTK_WIDGET (data);
+	IrisProgressDialogPrivate *priv;
 
-	gtk_widget_destroy (dialog);
+	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_dialog));
+
+	priv = progress_dialog->priv;
+
+	/* Emit IrisProgressMonitor::finished */
+	_iris_progress_monitor_finished (IRIS_PROGRESS_MONITOR (progress_dialog));
+
+	if (priv->permanent_mode) {
+		/* Check the 'finished' handler didn't destroy the dialog */
+		g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_dialog));
+
+		gtk_widget_hide (GTK_WIDGET (progress_dialog));
+	}
+}
+
+/* Called by watch hide timeout */
+static gboolean
+watch_delayed_finish (gpointer data)
+{
+	IrisProgressWatch         *watch = data;
+	IrisProgressDialog        *progress_dialog;
+	IrisProgressDialogPrivate *priv;
+
+	g_return_val_if_fail (IRIS_IS_PROGRESS_DIALOG (watch->monitor), FALSE);
+
+	progress_dialog = IRIS_PROGRESS_DIALOG (watch->monitor);
+	priv = progress_dialog->priv;
+
+	gtk_widget_destroy (GTK_WIDGET (watch->container));
+
+	/* Remove self from watch list */
+	priv->watch_list = g_list_remove (priv->watch_list, watch);
+
+	/* If no watches left, hide dialog */
+	if (priv->watch_list == NULL)
+		dialog_finish (progress_dialog);
 
 	return FALSE;
 }
@@ -319,33 +382,14 @@ handle_stopped (IrisProgressMonitor *progress_monitor,
 
 	priv = IRIS_PROGRESS_DIALOG (progress_monitor)->priv;
 
-	/* If any watches are still running, keep working .. */
-	if (!_iris_progress_monitor_watch_list_finished (priv->watch_list))
-		return;
-
-	/* Check if we've already stopped (this can happen when two processes end
-	 * at the same time)
-	 */
-	if (priv->destroy_timer_id != 0)
-		return;
-
-	/* We can delay the close to give the display time to update, and also so
-	 * we can disable it for eg. tests
-	 */
-	if (priv->close_delay == 0)
-		_delayed_close (progress_monitor);
+	if (priv->watch_hide_delay == 0)
+		watch_delayed_finish (watch);
+	else if (priv->watch_hide_delay == -1);
+		/* Never hide watch; for debugging purposes */
 	else {
-		/* Make the 'cancel' button into a 'close' button */
-		gtk_button_set_label (GTK_BUTTON (priv->button),
-		                      _("Close"));
-		priv->completed = TRUE;
-
-		if (priv->close_delay > 0)
-			priv->destroy_timer_id = g_timeout_add (priv->close_delay,
-			                                        _delayed_close,
-			                                        progress_monitor);
-		else
-			priv->destroy_timer_id = 0;
+		watch->finish_timeout_id = g_timeout_add (priv->watch_hide_delay,
+		                                          watch_delayed_finish,
+		                                          watch);
 	}
 }
 
@@ -358,8 +402,8 @@ handle_update (IrisProgressMonitor *progress_monitor,
 
 	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_monitor));
 
-	progress_bar = GTK_WIDGET (watch->user_data);
-	progress_label = GTK_WIDGET (watch->user_data2);
+	progress_bar = GTK_WIDGET (watch->progress_bar);
+	progress_label = GTK_WIDGET (watch->progress_label);
 
 	_iris_progress_monitor_format_watch (progress_monitor, watch,
 	                                     progress_text);
@@ -375,7 +419,7 @@ handle_title (IrisProgressMonitor *progress_monitor,
 {
 	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_monitor));
 
-	format_watch_title (GTK_WIDGET (watch->user_data3), watch->title);
+	format_watch_title (GTK_WIDGET (watch->title_label), watch->title);
 }
 
 
@@ -459,8 +503,8 @@ iris_progress_dialog_set_title (IrisProgressMonitor *progress_monitor,
 }
 
 void
-iris_progress_dialog_set_close_delay (IrisProgressMonitor *progress_monitor,
-                                      gint                 milliseconds)
+iris_progress_dialog_set_permanent_mode (IrisProgressMonitor *progress_monitor,
+                                         gboolean             enable)
 {
 	IrisProgressDialog *progress_dialog;
 
@@ -468,27 +512,18 @@ iris_progress_dialog_set_close_delay (IrisProgressMonitor *progress_monitor,
 
 	progress_dialog = IRIS_PROGRESS_DIALOG (progress_monitor);
 
-	progress_dialog->priv->close_delay = milliseconds;
+	progress_dialog->priv->permanent_mode = enable;
 }
 
-
-/* Handler for cancel button */
-static void
-iris_progress_dialog_response (GtkDialog *dialog,
-                               int        response_id,
-                               gpointer   user_data)
+void
+iris_progress_dialog_set_watch_hide_delay (IrisProgressMonitor *progress_monitor,
+                                           gint                 milliseconds)
 {
-	IrisProgressDialog *progress_dialog = IRIS_PROGRESS_DIALOG (dialog);
-	IrisProgressDialogPrivate *priv = progress_dialog->priv;
+	IrisProgressDialog *progress_dialog;
 
-	if (priv->completed) {
-		/* We're done - the button must be a close button now. */
+	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_monitor));
 
-		if (priv->destroy_timer_id != 0)
-			g_source_remove (priv->destroy_timer_id);
+	progress_dialog = IRIS_PROGRESS_DIALOG (progress_monitor);
 
-		_delayed_close (progress_dialog);
-	} else
-		_iris_progress_monitor_cancel (IRIS_PROGRESS_MONITOR (dialog),
-		                               progress_dialog->priv->watch_list);
+	progress_dialog->priv->watch_hide_delay = milliseconds;
 }
