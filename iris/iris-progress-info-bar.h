@@ -61,7 +61,7 @@ struct _IrisProgressInfoBarClass
 
 GType               iris_progress_info_bar_get_type             (void) G_GNUC_CONST;
 
-GtkWidget          *iris_progress_info_bar_new                  (const gchar *title);
+GtkWidget          *iris_progress_info_bar_new                  ();
 
 G_END_DECLS
 

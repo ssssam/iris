@@ -61,8 +61,6 @@ static void     iris_progress_info_bar_handle_message       (IrisProgressMonitor
 static gboolean iris_progress_info_bar_is_watching_task     (IrisProgressMonitor *progress_monitor,
                                                              IrisTask            *task);
 
-static void     iris_progress_info_bar_set_title            (IrisProgressMonitor *progress_monitor,
-                                                             const gchar         *title);
 static void     iris_progress_info_bar_set_permanent_mode   (IrisProgressMonitor *progress_monitor,
                                                              gboolean             enable);
 static void     iris_progress_info_bar_set_watch_hide_delay (IrisProgressMonitor *progress_monitor,
@@ -136,7 +134,6 @@ iris_progress_monitor_interface_init (IrisProgressMonitorInterface *interface)
 	interface->add_watch            = iris_progress_info_bar_add_watch;
 	interface->handle_message       = iris_progress_info_bar_handle_message;
 	interface->is_watching_task     = iris_progress_info_bar_is_watching_task;
-	interface->set_title            = iris_progress_info_bar_set_title;
 	interface->set_permanent_mode   = iris_progress_info_bar_set_permanent_mode;
 	interface->set_watch_hide_delay = iris_progress_info_bar_set_watch_hide_delay;
 }
@@ -274,7 +271,7 @@ iris_progress_info_bar_is_watching_task (IrisProgressMonitor *progress_monitor,
 /* Private, for tests */
 IrisProgressWatch *
 _iris_progress_info_bar_get_watch (IrisProgressInfoBar *progress_info_bar,
-                                   IrisTask           *task)
+                                   IrisTask            *task)
 {
 	IrisProgressInfoBarPrivate *priv;
 	GList                      *node;
@@ -452,28 +449,23 @@ iris_progress_info_bar_handle_message (IrisProgressMonitor *progress_monitor,
 
 /**
  * iris_progress_info_bar_new:
- * @title: string to describe the group of processes being watched, or %NULL
  *
  * Creates a new #IrisProgressInfoBar. If only one process is being watched,
  * its progress is shown in the info bar. If more than one is being watched,
  * an overall progress bar will be shown with an expander hiding the
- * individual processes. @title is used as the label for the main progress bar;
- * if it is %NULL, no label is shown.
+ * individual processes.
  *
  * Return value: a newly-created #IrisProgressInfoBar widget
  */
 GtkWidget *
-iris_progress_info_bar_new (const gchar *title)
+iris_progress_info_bar_new ()
 {
 	GtkWidget *progress_info_bar = g_object_new (IRIS_TYPE_PROGRESS_INFO_BAR, NULL);
-
-	iris_progress_info_bar_set_title (IRIS_PROGRESS_MONITOR (progress_info_bar),
-	                                  title);
 
 	return progress_info_bar;
 }
 
-static void
+/*static void
 iris_progress_info_bar_set_title (IrisProgressMonitor *progress_monitor,
                                   const gchar         *title)
 {
@@ -488,8 +480,8 @@ iris_progress_info_bar_set_title (IrisProgressMonitor *progress_monitor,
 
 	if (title == NULL)
 		gtk_label_set_text (GTK_LABEL (title_label), NULL);
-		/* FIXME: is it necessary to remove/add the label from the box
-		 * when it is null?? */
+		* FIXME: is it necessary to remove/add the label from the box
+		 * when it is null?? *
 	else {
 		title_format = g_strdup_printf ("<b>%s</b>:", title);
 		gtk_label_set_markup (GTK_LABEL (title_label), title_format);
@@ -498,7 +490,7 @@ iris_progress_info_bar_set_title (IrisProgressMonitor *progress_monitor,
 		g_free (title_format);
 	}
 }
-
+*/
 static void
 iris_progress_info_bar_set_permanent_mode (IrisProgressMonitor *progress_monitor,
                                            gboolean             enable)

@@ -59,10 +59,12 @@ struct _IrisProgressDialogClass
 	void     (*reserved4)           (void);
 };
 
-GType               iris_progress_dialog_get_type             (void) G_GNUC_CONST;
+GType      iris_progress_dialog_get_type  (void) G_GNUC_CONST;
 
-GtkWidget          *iris_progress_dialog_new                  (const gchar *title,
-                                                               GtkWindow   *parent);
+GtkWidget *iris_progress_dialog_new       (GtkWindow          *parent);
+
+void       iris_progress_dialog_set_title (IrisProgressDialog *progress_dialog,
+                                           const gchar        *title_format);
 
 G_END_DECLS
 

@@ -36,10 +36,14 @@ struct _IrisProgressDialogPrivate
 
 	GList         *watch_list;
 
-	guint          in_finished : 1;    /* TRUE when emitting ::finished */
+	gchar         *title_format;        /* NULL if default title to be used */
+
 	guint          permanent_mode : 1;
 
 	gint           watch_hide_delay;
+
+	guint          in_finished : 1;     /* TRUE when emitting ::finished */
+	guint          title_is_static : 1; /* TRUE if title_format does not include '%s' */
 };
 
 /* For testing */

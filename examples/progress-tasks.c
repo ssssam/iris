@@ -128,8 +128,7 @@ create_progress_monitor () {
 		gtk_box_pack_end (GTK_BOX (vbox), progress_widget, FALSE, FALSE, 0);
 	}
 	else
-		progress_widget = iris_progress_dialog_new ("Contemplating ...",
-		                                            GTK_WINDOW (demo_window));
+		progress_widget = iris_progress_dialog_new (GTK_WINDOW (demo_window));
 
 	iris_progress_monitor_set_permanent_mode (IRIS_PROGRESS_MONITOR (progress_widget),
 	                                          TRUE);

@@ -47,8 +47,13 @@ TEST_PROGS +=			\
 	ws-queue-1
 
 if ENABLE_GTK
-noinst_PROGRAMS += progress-monitor-gtk-1
-TEST_PROGS += progress-monitor-gtk-1
+noinst_PROGRAMS +=		\
+	progress-dialog-gtk-1	\
+	progress-monitor-gtk-1
+
+TEST_PROGS += 		\
+	progress-dialog-gtk-1	\
+	progress-monitor-gtk-1
 endif
 
 noinst_PROGRAMS += $(NULL)
@@ -82,6 +87,7 @@ gmainscheduler_1_sources = gmainscheduler-1.c
 receiver_scheduler_1_sources = receiver-scheduler-1.c
 
 progress_monitor_gtk_1_sources = progress-monitor-gtk-1.c
+progress_dialog_gtk_1_sources = progress-dialog-gtk-1.c
 
 EXTRA_DIST +=					\
 	mocks/mock-callback-receiver.c		\

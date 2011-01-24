@@ -236,29 +236,6 @@ _iris_progress_watch_free (IrisProgressWatch *watch)
 
 
 /**
- * iris_progress_monitor_set_title:
- * @progress_monitor: an #IrisProgressMonitor
- * @title: string describing the overall activity the progress monitor watches,
- *         or %NULL.
- *
- * This function sets a global title for the @progress_monitor. For example, in
- * #IrisProgressDialog this function sets the title of the window.
- **/
-void
-iris_progress_monitor_set_title (IrisProgressMonitor *progress_monitor,
-                                 const gchar *title)
-{
-	IrisProgressMonitorInterface *interface;
-
-	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
-
-	interface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
-
-	interface->set_title (progress_monitor, title);
-};
-
-
-/**
  * iris_progress_monitor_set_permanent_mode:
  * @progress_monitor: an #IrisProgressMonitor
  * @enable: whether to enable permanent mode

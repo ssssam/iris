@@ -1,6 +1,6 @@
 /* progress-monitor-gtk-1.c
  *
- * Copyright (C) 2009 Sam Thursfield <ssssam@gmail.com>
+ * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -90,6 +90,7 @@ count_sheep_func (IrisProcess *process,
                   IrisMessage *work_item,
                   gpointer     user_data)
 {
+	/* There's one! */
 	g_usleep (10000);
 }
 
@@ -161,7 +162,7 @@ iris_progress_dialog_fixture_setup (ProgressFixture *fixture,
 	fixture->main_loop = g_main_loop_new (NULL, TRUE);
 	fixture->container = NULL;
 
-	dialog = iris_progress_dialog_new ("Test Process", NULL);
+	dialog = iris_progress_dialog_new (NULL);
 
 	g_assert (IRIS_IS_PROGRESS_DIALOG (dialog));
 
@@ -193,7 +194,7 @@ iris_progress_info_bar_fixture_setup (ProgressFixture *fixture,
 	 */
 	fixture->container = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 
-	info_bar = iris_progress_info_bar_new ("Test Process");
+	info_bar = iris_progress_info_bar_new ();
 
 	g_assert (IRIS_IS_PROGRESS_INFO_BAR (info_bar));
 
@@ -242,18 +243,20 @@ simple (ProgressFixture *fixture,
 }
 
 
-/* titles 1: test that NULL titles and title updates don't break anything */
+/* process titles 1: test that NULL titles and title updates don't break
+ *                   anything
+ */
 static void
-titles_1 (ProgressFixture *fixture,
-          gconstpointer data)
+process_titles_1 (ProgressFixture *fixture,
+                  gconstpointer data)
 {
 	gint counter = 0;
 
+	/* A process with no title */
 	IrisProcess *process = iris_process_new_with_func (count_sheep_func,
 	                                                   NULL, NULL);
 	iris_progress_monitor_watch_process (fixture->monitor, process,
 	                                     IRIS_PROGRESS_MONITOR_ITEMS);
-	iris_progress_monitor_set_title (fixture->monitor, NULL);
 	iris_process_run (process);
 
 	counter_enqueue (process, &counter, 50);
@@ -271,10 +274,10 @@ titles_1 (ProgressFixture *fixture,
 }
 
 
-/* titles 2: test that UI is updated on changes */
+/* process titles 2: test that UI is updated on changes */
 static void
-titles_2 (ProgressFixture *fixture,
-          gconstpointer    data)
+process_titles_2 (ProgressFixture *fixture,
+                  gconstpointer    data)
 {
 	gint               counter = 0,
 	                   i;
@@ -613,11 +616,11 @@ add_tests_with_fixture (void (*setup) (ProgressFixture *, gconstpointer),
 	g_snprintf (buf, 255, "/progress-monitor/%s/simple", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, simple, teardown);
 
-	g_snprintf (buf, 255, "/progress-monitor/%s/titles 1", name);
-	g_test_add (buf, ProgressFixture, NULL, setup, titles_1, teardown);
+	g_snprintf (buf, 255, "/progress-monitor/%s/process titles 1", name);
+	g_test_add (buf, ProgressFixture, NULL, setup, process_titles_1, teardown);
 
-	g_snprintf (buf, 255, "/progress-monitor/%s/titles 2", name);
-	g_test_add (buf, ProgressFixture, NULL, setup, titles_2, teardown);
+	g_snprintf (buf, 255, "/progress-monitor/%s/process titles 2", name);
+	g_test_add (buf, ProgressFixture, NULL, setup, process_titles_2, teardown);
 
 	g_snprintf (buf, 255, "/progress-monitor/%s/recurse 1", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, recurse_1, teardown);
@@ -652,5 +655,5 @@ int main(int argc, char *argv[]) {
 	                        iris_progress_info_bar_fixture_teardown,
 	                        "info-bar");
 
-  	return g_test_run();
+	return g_test_run();
 }

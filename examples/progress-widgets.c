@@ -166,14 +166,15 @@ create_progress_monitors (void)
 	g_return_if_fail (demo_window != NULL);
 
 	/* The dialog */
-	dialog = iris_progress_dialog_new ("Demo progress dialog",
-	                                   GTK_WINDOW (demo_window));
+	dialog = iris_progress_dialog_new (GTK_WINDOW (demo_window));
+	iris_progress_dialog_set_title (IRIS_PROGRESS_DIALOG (dialog),
+	                                "%s - Sheep counter");
 	iris_progress_monitor_set_permanent_mode (IRIS_PROGRESS_MONITOR (dialog),
 	                                          TRUE);
 	monitor_list = g_list_prepend (monitor_list, dialog);
 
 	/* The info bar */
-	info_bar = iris_progress_info_bar_new ("Counting some sheep");
+	info_bar = iris_progress_info_bar_new ();
 
 	vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
 	gtk_box_pack_end (GTK_BOX (vbox), info_bar, FALSE, TRUE, 0);

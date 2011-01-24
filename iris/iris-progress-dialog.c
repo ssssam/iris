@@ -57,11 +57,11 @@ static void     iris_progress_dialog_handle_message       (IrisProgressMonitor *
 static gboolean iris_progress_dialog_is_watching_task     (IrisProgressMonitor *progress_monitor,
                                                            IrisTask            *task);
 
-static void     format_watch_title                        (GtkWidget   *label,
-                                                           const gchar *title);
-
-static void     iris_progress_dialog_set_title            (IrisProgressMonitor *progress_monitor,
+static void     format_watch_title                        (GtkWidget           *label,
                                                            const gchar         *title);
+static void     update_title                              (IrisProgressDialog  *progress_dialog,
+                                                           gchar               *progress_text_precalculated);
+
 static void     iris_progress_dialog_set_permanent_mode   (IrisProgressMonitor *progress_monitor,
                                                            gboolean             enable);
 static void     iris_progress_dialog_set_watch_hide_delay (IrisProgressMonitor *progress_monitor,
@@ -101,10 +101,17 @@ iris_progress_dialog_init (IrisProgressDialog *progress_dialog)
 
 	priv->watch_list = NULL;
 
-	priv->in_finished = FALSE;
+	priv->title_format = NULL;
+
 	priv->permanent_mode = FALSE;
 
 	priv->watch_hide_delay = 500;
+
+	priv->in_finished = FALSE;
+	priv->title_is_static = FALSE;
+
+	/* A window with no title is never allowed! */
+	update_title (IRIS_PROGRESS_DIALOG (progress_dialog), NULL);
 }
 
 static void
@@ -143,7 +150,6 @@ iris_progress_monitor_interface_init (IrisProgressMonitorInterface *interface)
 	interface->add_watch            = iris_progress_dialog_add_watch;
 	interface->handle_message       = iris_progress_dialog_handle_message;
 	interface->is_watching_task     = iris_progress_dialog_is_watching_task;
-	interface->set_title            = iris_progress_dialog_set_title;
 	interface->set_permanent_mode   = iris_progress_dialog_set_permanent_mode;
 	interface->set_watch_hide_delay = iris_progress_dialog_set_watch_hide_delay;
 }
@@ -327,6 +333,60 @@ _iris_progress_dialog_get_watch (IrisProgressDialog *progress_dialog,
 /* No need to worry about locking here, remember these messages are processed in the main loop */
 
 static void
+update_title (IrisProgressDialog *progress_dialog,
+              gchar              *progress_text_precalculated)
+{
+	IrisProgressDialogPrivate *priv;
+	IrisProgressWatch         *head_watch;
+	GString                   *string;
+	char                       progress_text[256];
+
+	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_dialog));
+
+	priv = progress_dialog->priv;
+
+	if (priv->title_is_static) {
+		gtk_window_set_title (GTK_WINDOW (progress_dialog),
+		                      priv->title_format);
+		return;
+	}
+
+	string = g_string_new (NULL);
+
+	if (priv->watch_list == NULL)
+		g_string_append (string, _("Progress Monitor"));
+	else {
+		head_watch = priv->watch_list->data;
+
+		if (head_watch->title != NULL && head_watch->title[0] != '\0') {
+			g_string_append (string, head_watch->title);
+			g_string_append (string, " - ");
+		}
+
+		if (progress_text_precalculated == NULL) {
+			_iris_progress_monitor_format_watch (IRIS_PROGRESS_MONITOR (progress_dialog),
+			                                     head_watch,
+			                                     progress_text);
+			g_string_append (string, progress_text);
+		}
+		else
+			g_string_append (string, progress_text_precalculated);
+	}
+
+	if (priv->title_format) {
+		char *temp = g_string_free (string, FALSE);
+		string = g_string_new (NULL);
+		g_string_printf (string, priv->title_format, temp);
+		g_free (temp);
+	}
+
+	gtk_window_set_title (GTK_WINDOW (progress_dialog),
+	                      string->str);
+
+	g_string_free (string, TRUE);
+}
+
+static void
 dialog_finish (IrisProgressDialog *progress_dialog)
 {
 	IrisProgressDialogPrivate *priv;
@@ -343,6 +403,7 @@ dialog_finish (IrisProgressDialog *progress_dialog)
 		g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_dialog));
 
 		gtk_widget_hide (GTK_WIDGET (progress_dialog));
+		update_title (progress_dialog, NULL);
 	}
 }
 
@@ -363,6 +424,8 @@ watch_delayed_finish (gpointer data)
 
 	/* Remove self from watch list */
 	priv->watch_list = g_list_remove (priv->watch_list, watch);
+
+	update_title (progress_dialog, NULL);
 
 	/* If no watches left, hide dialog */
 	if (priv->watch_list == NULL)
@@ -397,10 +460,13 @@ static void
 handle_update (IrisProgressMonitor *progress_monitor,
                IrisProgressWatch   *watch)
 {
-	char                 progress_text[256];
-	GtkWidget           *progress_bar, *progress_label;
+	IrisProgressDialogPrivate *priv;
+	char                       progress_text[256];
+	GtkWidget                 *progress_bar, *progress_label;
 
 	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_monitor));
+
+	priv = IRIS_PROGRESS_DIALOG (progress_monitor)->priv;
 
 	progress_bar = GTK_WIDGET (watch->progress_bar);
 	progress_label = GTK_WIDGET (watch->progress_label);
@@ -411,15 +477,25 @@ handle_update (IrisProgressMonitor *progress_monitor,
 	gtk_label_set_text (GTK_LABEL (progress_label), progress_text);
 	gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (progress_bar),
 	                               watch->fraction);
+
+	if (priv->watch_list->data == watch)
+		update_title (IRIS_PROGRESS_DIALOG (progress_monitor), progress_text);
 }
 
 static void
 handle_title (IrisProgressMonitor *progress_monitor,
               IrisProgressWatch   *watch)
 {
+	IrisProgressDialogPrivate *priv;
+
 	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_monitor));
 
+	priv = IRIS_PROGRESS_DIALOG (progress_monitor)->priv;
+
 	format_watch_title (GTK_WIDGET (watch->title_label), watch->title);
+
+	if (priv->watch_list->data == watch)
+		update_title (IRIS_PROGRESS_DIALOG (progress_monitor), NULL);
 }
 
 
@@ -453,26 +529,21 @@ iris_progress_dialog_handle_message (IrisProgressMonitor *progress_monitor,
 
 /**
  * iris_progress_dialog_new:
- * @title: string to put in window title bar
  * @parent: window to act as the parent of this dialog, or %NULL
  *
- * Creates a new #IrisProgressDialog. @title is shown in the title bar of the
- * window, while each progress bar will bear the title of the process it
- * represents if one has been set with iris_process_set_title().
- *
- * Because a #GtkWindow must not have a %NULL title, if no title is given then
- * the title of the parent window (if any), or a generic title will be used.
+ * Creates a new #IrisProgressDialog. By default, the title of the dialog will
+ * be the title and status of the uppermost process or process group being
+ * watched, in the following format: "Checking Data - 46% complete". You may
+ * set a different window title using iris_progress_dialog_set_title(); do not
+ * use gtk_window_set_title() or your title will be overwritten by status
+ * updates.
  *
  * Return value: a newly-created #IrisProgressDialog widget
  */
 GtkWidget *
-iris_progress_dialog_new (const gchar *title,
-                          GtkWindow   *parent)
+iris_progress_dialog_new (GtkWindow   *parent)
 {
 	GtkWidget *progress_dialog = g_object_new (IRIS_TYPE_PROGRESS_DIALOG, NULL);
-
-	iris_progress_monitor_set_title (IRIS_PROGRESS_MONITOR (progress_dialog),
-	                                 title);
 
 	gtk_window_set_transient_for (GTK_WINDOW (progress_dialog), parent);
 
@@ -480,27 +551,68 @@ iris_progress_dialog_new (const gchar *title,
 }
 
 
+/**
+ * iris_progress_dialog_set_title:
+ * @progress_dialog: an #IrisProgressDialog
+ * @title_format: string to set as the window title for @progress_dialog
+ *
+ * This function sets the window title of @progress_dialog. By default the
+ * dialog title is the status of the first process or process group that is
+ * being watched, and you may include this in @title_format using the marker
+ * <literal>%%s</literal>. For example, the following call:
+ * |[
+ *   iris_progress_monitor_set_title (progress_monitor, "%s - My Application");
+ * ]|
+ * will result in a title such as
+ * <literal>"Processing Data - 4 items of 50 - My Application"</literal>.
+ *
+ * If the current watch does not have a title, only its progress is displayed.
+ * If there is currently nothing being watched, the title defaults to
+ * <literal>"Progress Monitor"</literal>.
+ *
+ * <warning>
+ * <para>
+ * You cannot use gtk_window_set_title() to set the dialog's title, because the
+ * title will be overwritten when the progress changes.
+ * </para>
+ * </warning>
+ **/
 void
-iris_progress_dialog_set_title (IrisProgressMonitor *progress_monitor,
-                                const gchar         *title)
+iris_progress_dialog_set_title (IrisProgressDialog *progress_dialog,
+                                const gchar        *title_format)
 {
-	IrisProgressDialog *progress_dialog;
-	GtkWindow          *parent;
+	IrisProgressDialogPrivate *priv;
 
-	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_monitor));
+	g_return_if_fail (IRIS_IS_PROGRESS_DIALOG (progress_dialog));
 
-	progress_dialog = IRIS_PROGRESS_DIALOG (progress_monitor);
+	priv = progress_dialog->priv;
 
-	if (title == NULL) {
-		parent = gtk_window_get_transient_for (GTK_WINDOW (progress_monitor));
-		if (parent != NULL)
-			title = gtk_window_get_title (parent);
-		else
-			title = _("Progress");
+	g_free (priv->title_format);
+
+	if (title_format == NULL) {
+		priv->title_format = NULL;
+		priv->title_is_static = FALSE;
+	}
+	else {
+		/* Search for '%s' in title_format to see if we need to keep it updated
+		 * with progress info
+		 */
+		const gchar *c = title_format;
+		priv->title_is_static = TRUE;
+		while ((c = strchr (c, '%')) != NULL) {
+			g_return_if_fail ((*c) != 0);
+
+			if (*(c+1) == 's') {
+				priv->title_is_static = FALSE;
+				break;
+			}
+		}
+
+		priv->title_format = g_strdup (title_format);
 	}
 
-	gtk_window_set_title (GTK_WINDOW (progress_dialog), title);
-}
+	update_title (progress_dialog, NULL);
+};
 
 void
 iris_progress_dialog_set_permanent_mode (IrisProgressMonitor *progress_monitor,

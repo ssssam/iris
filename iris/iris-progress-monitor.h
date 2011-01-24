@@ -69,9 +69,6 @@ struct _IrisProgressMonitorInterface
 	gboolean (*is_watching_task)     (IrisProgressMonitor *progress_monitor,
 	                                  IrisTask            *task);
 
-	void     (*set_title)            (IrisProgressMonitor *progress_monitor,
-	                                  const gchar         *title);
-
 	void     (*set_permanent_mode)   (IrisProgressMonitor *progress_monitor,
 	                                  gboolean             enable);
 
@@ -90,9 +87,6 @@ GType         iris_progress_monitor_get_type             (void) G_GNUC_CONST;
 IrisPort     *iris_progress_monitor_add_watch            (IrisProgressMonitor             *progress_monitor,
                                                           IrisTask                        *task,
                                                           IrisProgressMonitorDisplayStyle  display_style,
-                                                          const gchar                     *title);
-
-void          iris_progress_monitor_set_title            (IrisProgressMonitor             *progress_monitor,
                                                           const gchar                     *title);
 
 void          iris_progress_monitor_set_permanent_mode   (IrisProgressMonitor             *progress_monitor,

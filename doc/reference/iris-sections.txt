@@ -494,7 +494,6 @@ IrisProgressMonitor
 IrisProgressMonitorDisplayStyle
 iris_progress_monitor_watch_process
 iris_progress_monitor_watch_process_chain
-iris_progress_monitor_set_title
 iris_progress_monitor_set_permanent_mode
 iris_progress_monitor_set_watch_hide_delay
 iris_progress_monitor_add_watch
@@ -511,6 +510,7 @@ IRIS_PROGRESS_MONITOR_GET_INTERFACE
 <TITLE>IrisProgressDialog</TITLE>
 IrisProgressDialog
 iris_progress_dialog_new
+iris_progress_dialog_set_title
 <SUBSECTION Standard>
 IRIS_PROGRESS_DIALOG
 IRIS_PROGRESS_DIALOG_CONST
