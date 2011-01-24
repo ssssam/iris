@@ -171,6 +171,8 @@ IrisThreadWork* iris_thread_work_new           (IrisCallback callback, gpointer 
 void            iris_thread_work_free          (IrisThreadWork *thread_work);
 void            iris_thread_work_run           (IrisThreadWork *thread_work);
 
+guint           iris_scheduler_get_n_cpu       ();
+
 G_END_DECLS
 
 #endif /* __IRIS_SCHEDULER_H__ */

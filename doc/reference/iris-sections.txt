@@ -70,7 +70,8 @@ iris_task_is_canceled
 iris_task_is_finished
 iris_task_set_main_context
 iris_task_get_main_context
-iris_task_set_scheduler
+iris_task_set_control_scheduler
+iris_task_set_work_scheduler
 iris_task_has_error
 iris_task_get_error
 iris_task_set_error
@@ -196,6 +197,7 @@ iris_thread_print_stat
 iris_thread_work_new
 iris_thread_work_free
 iris_thread_work_run
+iris_scheduler_get_n_cpu
 <SUBSECTION Standard>
 IRIS_SCHEDULER
 IRIS_IS_SCHEDULER

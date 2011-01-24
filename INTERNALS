@@ -1,0 +1,102 @@
+Here is my understanding of some of Iris' internals:
+
+
+Message passing
+---------------
+
+  calling thread:    port_post() -> receiver_deliver() -> scheduler_queue()
+  scheduler thread:  receiver_worker() -> actual message handler
+
+This is the simplest workflow, when CoordinationArbiter is involved it becomes
+more complex:
+
+* IrisReceiver:
+
+  - this is the core of message processing. At its heart, the calling thread
+    queues a work item in the receiver's scheduler to execute the receiver's
+    handle message function. iris_receiver_worker() executes in the receiver's
+    scheduler and calls the message handler.
+
+  - a connected port calls iris_receiver_deliver(). The following can happen:
+
+     > if the receiver has no arbiter, the message is posted to the scheduler
+       straight away.
+     > otherwise the arbiter may decide to post now, later or never.
+     > the receiver can queue one item for posting later, then it tells the
+       port to pause.
+
+* IrisPort:
+
+  - port has two modes, normal and paused. Paused is set by the receiver, and
+    in this state iris_receiver_deliver doesn't even get called, messages are
+    queued up inside the port.
+
+* IrisArbiter:
+
+  - you coordinate receivers in this way:
+      iris_arbiter_coordinate(exclusive, concurrent, teardown)
+    where each paramater is a receiver or NULL.
+  
+  - Which mode you put a receiver in affects how many active messages it can
+    have at once, ie. how many threads can be running iris_receiver_worker()
+    (and therefore the actual processing callback) at once. If you are sending
+    work items to a process, these may be processed as fast as possible. If you
+    are sending control messages such as start, stop or cancel you only want
+    one being processed at a time to prevent needless contention and confusion.
+
+     > exclusive: only 1 message will be processed at once; when
+       iris_arbiter_can_deliver() is called receiver->active:=1 and no more
+       messages will be allowed until after iris_receiver_worker() has called
+       the message callback, at which point it calls
+       iris_arbiter_receive_complete()
+
+   - iris_arbiter_receive_complete() will --receiver->active and call
+     iris_receiver_resume() on one of the receivers, this flushes all the
+     queues so more messages can be processed !
+
+  
+
+Scheduler
+---------
+
+* IrisSchedulerManager:
+
+  - first call to iris_scheduler_queue() calls iris_scheduler_manager_prepare()
+    to initialise the scheduler.
+  - iris_scheduler_manager_prepare() initialises the global scheduler manager
+    on first call.
+
+* IrisScheduler:
+
+  - in iris_scheduler_manager_prepare(), scheduler->min_threads are acquired
+    and attached to the scheduler.
+  - by default, min_threads==1 and max_threads==MAX(2, n_cpus). max_threads is
+    a hard limit, calls to iris_scheduler_add_thread() when already at max will
+    fail.
+
+  - each thread has its own work queue and each queue is tracked in an
+    IrisRRobin structure.
+  - iris_scheduler_add_thread() handles this and also calls iris_thread_manage()
+    to activate the thread and pass it the work queue
+
+  - in iris_scheduler_queue(), work is pushed to the next queue in the rrobin.
+
+* IrisThread:
+
+  - each thread also has its own message queue. When started,
+    iris_thread_worker() runs waiting for a message.
+  - threads have 3 normal states: waiting for a message, and 'transient' and
+    'exclusive' modes.
+
+  - when the manage message is received, transient or exclusive mode is entered
+    and the thread begins running through the work queue.
+  - note the message queue is thread->queue, work queue is thread->active
+
+
+Useful stuff
+------------
+
+* To find the message at the top of a thread's work queue from the thread work
+  function, in gdb:
+
+print *(IrisMessage *)(((IrisWorkerData *)((IrisThreadWork *)queue->priv->q->queue->head->data)->data)->message)

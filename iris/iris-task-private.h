@@ -67,27 +67,30 @@ typedef struct
 
 struct _IrisTaskPrivate
 {
-	IrisPort     *port;          /* Message delivery port */
-	IrisReceiver *receiver;      /* Receiver for port */
-	GMutex       *mutex;         /* Mutex for result/error */
-	GValue        result;        /* Current task result */
-	GError       *error;         /* Current task error */
-	GClosure     *closure;       /* Our execution closure. */
-	GList        *handlers;      /* A list of callback/errback handlers.
-	                              */
-	GList        *dependencies;  /* Tasks we are depending on. */
-	GList        *observers;     /* Tasks observing our state changes */
-	glong         flags;
-	GMainContext *context;       /* A main-context to execute our
-	                              * callbacks and async_result within.
-	                              */
+	IrisPort      *port;          /* Message delivery port */
+	IrisReceiver  *receiver;      /* Receiver for port */
+
+	IrisScheduler *work_scheduler;
+
+	GMutex        *mutex;         /* Mutex for result/error */
+	GValue         result;        /* Current task result */
+	GError        *error;         /* Current task error */
+	GClosure      *closure;       /* Our execution closure. */
+	GList         *handlers;      /* A list of callback/errback handlers.
+	                               */
+	GList         *dependencies;  /* Tasks we are depending on. */
+	GList         *observers;     /* Tasks observing our state changes */
+	glong          flags;
+	GMainContext  *context;       /* A main-context to execute our
+	                               * callbacks and async_result within.
+	                               */
 	IrisGMainScheduler
-	             *context_sched; /* An IrisGMainScheduler used to perform
-	                              * work items within a main-contenxt.
-	                              */
-	GAsyncResult *async_result;  /* GAsyncResult to execute after our
-	                              * execution/callbacks have completed.
-	                              */
+	              *context_sched; /* An IrisGMainScheduler used to perform
+	                               * work items within a main-contenxt.
+	                               */
+	GAsyncResult  *async_result;  /* GAsyncResult to execute after our
+	                               * execution/callbacks have completed.
+	                               */
 };
 
 void iris_task_remove_dependency_sync (IrisTask *task, IrisTask *dep);

@@ -110,6 +110,19 @@ static void             iris_process_dummy         (IrisProcess *task,
                                                     gpointer user_data);
 
 
+/* The process subsystem runs tasks in its own scheduler, because
+ *  a) we don't always benefit from the default scheduler's policy of one
+ *     thread per core because the processing is often IO-bound, and
+ *  b) work items could execute very slowly or block altogether, if this is
+ *     happening in the default scheduler then it can delay or even prevent
+ *     message delivery. This is especially bad when the message pending is a
+ *     cancel for the slow process.
+ */
+static IrisScheduler *process_scheduler = NULL;
+
+G_LOCK_DEFINE (process_scheduler);
+
+
 /**************************************************************************
  *                          IrisProcess Public API                       *
  *************************************************************************/
@@ -1075,6 +1088,7 @@ iris_process_execute_real (IrisTask *task)
 	IrisProcess        *process;
 	IrisProcessPrivate *priv;
 	IrisMessage        *message;
+	IrisScheduler      *work_scheduler;
 
 	g_return_if_fail (IRIS_IS_PROCESS (task));
 
@@ -1124,7 +1138,8 @@ iris_process_execute_real (IrisTask *task)
 			 * FIXME: would be nice if we could tell the scheduler "don't execute this for at least
 			 * 20ms" or something so we don't waste quite as much power waiting for work.
 			 */
-			iris_scheduler_queue (iris_scheduler_default (),
+			work_scheduler = g_atomic_pointer_get (&IRIS_TASK (process)->priv->work_scheduler);
+			iris_scheduler_queue (work_scheduler,
 			                      (IrisCallback)iris_process_execute_real,
 			                      process,
 			                      NULL);
@@ -1263,17 +1278,40 @@ static void
 iris_process_init (IrisProcess *process)
 {
 	IrisProcessPrivate *priv;
+	int                 max_threads;
 
 	priv = process->priv = IRIS_PROCESS_GET_PRIVATE (process);
 
+	/* FIXME: This probably needs all sorts of tweaking. The basic idea is one
+	 * thread per process at the moment, does that make sense? */
+	if (G_UNLIKELY (!process_scheduler)) {
+		G_LOCK (process_scheduler);
+		if (G_LIKELY (!process_scheduler)) {
+			max_threads = iris_scheduler_get_n_cpu() * 4;
+			process_scheduler = iris_scheduler_new_full (1, max_threads);
+		}
+		G_UNLOCK (process_scheduler);
+	}
+
 	/* FIXME: Leaked? "We should have a teardown port for dispose" */
+
+	/* Default scheduler is used to pass work items, the only real reason is
+	 * maybe one work item will take a lot longer than the others, and if that
+	 * item blocks the quicker ones being received it prevents them being
+	 * processed by other cores ...
+	 * FIXME: not sure even this is a compelling rationale ..
+	 */
 	priv->work_port = iris_port_new ();
-	priv->work_receiver = iris_arbiter_receive (NULL,
+	priv->work_receiver = iris_arbiter_receive (/*g_atomic_pointer_get (&process_scheduler),*/
+	                                            iris_scheduler_default (),
 	                                            priv->work_port,
 	                                            iris_process_post_work_item,
 	                                            g_object_ref (process),
 	                                            (GDestroyNotify)g_object_unref);
 	iris_arbiter_coordinate (priv->work_receiver, NULL, NULL);
+
+	iris_task_set_work_scheduler (IRIS_TASK (process),
+	                              g_atomic_pointer_get (&process_scheduler));
 
 	priv->work_queue = iris_queue_new ();
 
@@ -1288,12 +1326,6 @@ iris_process_init (IrisProcess *process)
 
 	priv->watch_port_list = NULL;
 	priv->watch_timer = g_timer_new ();
-
-	/* FIXME: very, very simplistic implementation .. */
-	IrisScheduler *scheduler = iris_scheduler_default ();
-	if (scheduler->maxed)
-		g_warning ("Scheduler maxed.\n");
-	iris_scheduler_add_thread (scheduler, iris_thread_new (TRUE));
 }
 
 static void

@@ -166,31 +166,6 @@ iris_scheduler_foreach_real (IrisScheduler            *scheduler,
 	                     &closure);
 };
 
-static guint
-iris_scheduler_get_n_cpu (void)
-{
-	static gint n_cpu = 0;
-	if (G_UNLIKELY (!n_cpu)) {
-		if (g_getenv ("IRIS_SCHED_MAX") != NULL)
-			n_cpu = atoi (g_getenv ("IRIS_SCHED_MAX"));
-#ifdef LINUX
-		if (n_cpu == 0)
-			n_cpu = get_nprocs ();
-#elif DARWIN
-		size_t size = sizeof (n_cpu);
-		if (sysctlbyname ("hw.ncpu", &n_cpu, &size, NULL, 0))
-			n_cpu = 1;
-#elif defined(WIN32)
-		SYSTEM_INFO info;
-		GetSystemInfo (&info);
-		n_cpu = info.dwNumberOfProcessors;
-#else
-		n_cpu = 1;
-#endif
-	}
-	return n_cpu;
-}
-
 static gint
 iris_scheduler_get_min_threads_real (IrisScheduler *scheduler)
 {
@@ -458,9 +433,7 @@ void iris_scheduler_foreach (IrisScheduler            *scheduler,
  * The default is equal to the number of cpus unless there is only a single
  * cpu, in which case the default is 2.
  *
- * Currently, only Linux is supported for the number of cpus.  If you
- * would like another OS supported, please send an email with the method
- * to retreive the number of cpus (get_nprocs() on Linux).
+ * See iris_scheduler_get_n_cpu() for more information.
  *
  * Return value: the maximum number of threads to allocate.
  */
@@ -525,4 +498,39 @@ iris_scheduler_remove_thread (IrisScheduler *scheduler,
 
 	thread->scheduler = NULL;
 	g_object_unref (scheduler);
+}
+
+/**
+ * iris_scheduler_get_n_cpu:
+ *
+ * Returns the number of processor cores identified by the system.
+ * This operation is currently supported on Linux, Mac OS X and MS Windows.
+ * If you would like another OS supported, please send an email with the
+ * method to retreive the number of cpus (get_nprocs() on Linux).
+ *
+ * Return value: number of processor cores identified by the system.
+ */
+guint
+iris_scheduler_get_n_cpu (void)
+{
+	static gint n_cpu = 0;
+	if (G_UNLIKELY (!n_cpu)) {
+		if (g_getenv ("IRIS_SCHED_MAX") != NULL)
+			n_cpu = atoi (g_getenv ("IRIS_SCHED_MAX"));
+#ifdef LINUX
+		if (n_cpu == 0)
+			n_cpu = get_nprocs ();
+#elif DARWIN
+		size_t size = sizeof (n_cpu);
+		if (sysctlbyname ("hw.ncpu", &n_cpu, &size, NULL, 0))
+			n_cpu = 1;
+#elif defined(WIN32)
+		SYSTEM_INFO info;
+		GetSystemInfo (&info);
+		n_cpu = info.dwNumberOfProcessors;
+#else
+		n_cpu = 1;
+#endif
+	}
+	return n_cpu;
 }
