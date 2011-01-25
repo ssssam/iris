@@ -28,7 +28,30 @@ G_BEGIN_DECLS
 #define IRIS_TYPE_RROBIN (iris_rrobin_get_type())
 
 typedef struct _IrisRRobin IrisRRobin;
-typedef void     (*IrisRRobinFunc)        (gpointer data, gpointer user_data);
+
+/**
+ * IrisRRobinFunc:
+ * @data: the item selected by iris_rrobin_apply()
+ * @user_data: user specified data
+ *
+ * Callback for iris_rrobin_apply().
+ * 
+ * Return value: %FALSE to be called again with the next object in the
+ *               round-robin or %TRUE.
+ */
+
+typedef gboolean (*IrisRRobinFunc)        (gpointer data, gpointer user_data);
+
+/**
+ * IrisRRobinForeachFunc:
+ * @rrobin: an #IrisRRobin
+ * @data: an item from the round-robin
+ * @user_data: user specified data
+ *
+ * Callback for iris_rrobin_foreach()
+ *
+ * Return value: %FALSE to stop the foreach search or %TRUE to continue
+ */
 typedef gboolean (*IrisRRobinForeachFunc) (IrisRRobin *rrobin, gpointer data, gpointer user_data);
 
 struct _IrisRRobin

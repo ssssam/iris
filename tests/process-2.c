@@ -68,14 +68,16 @@ hospital_handler (IrisMessage *message,
 	g_atomic_int_inc (ambulance_received);
 }
 
-/* blocking 1: work function blocks indefinitely, while important messages are
- *             sent that must be received.
+/* blocking: work function blocks indefinitely, while important messages are
+ *           sent that must be received.
  * 
- *  In real life usage, the 'cancel' message is the most obvious parallel. This
- *  test requires control and work messages to be separated, or wait_func()
- *  will block one of the scheduler threads thus preventing any of the
- *  'ambulance' messages that get queued for delivery in the same thread from
- *  ever processing.
+ *  This test requires that in the process subsystem, message processing and
+ *  work function execution must be to be separated, or wait_func() will block
+ *  one of the scheduler threads thus preventing any of the 'ambulance'
+ *  messages that get queued for delivery in the same thread from ever
+ *  processing.
+ *
+ *  In real life usage, the 'cancel' message is the most obvious parallel.
  */
 static void
 blocking_1 ()
@@ -94,7 +96,7 @@ blocking_1 ()
 	iris_scheduler_set_default (scheduler);
 
 	/* Test is executed 100 times to further try to make it fail */
-	for (ii=0; ii<100; ii++) {
+	for (ii=0; ii<10; ii++) {
 		wait_state = 0;
 		ambulance_received = 0;
 
@@ -154,5 +156,5 @@ int main(int argc, char *argv[]) {
 
 	g_test_add_func ("/scheduler 2/blocking 1", blocking_1);
 
-	return g_test_run();
+	return g_test_run ();
 }

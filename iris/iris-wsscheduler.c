@@ -193,7 +193,8 @@ iris_wsscheduler_remove_thread_real (IrisScheduler *scheduler,
 
 static void
 iris_wsscheduler_add_thread_real (IrisScheduler  *scheduler,
-                                  IrisThread     *thread)
+                                  IrisThread     *thread,
+                                  gboolean        exclusive)
 {
 	IrisWSSchedulerPrivate *priv;
 	gboolean                leader;
@@ -214,7 +215,7 @@ iris_wsscheduler_add_thread_real (IrisScheduler  *scheduler,
 	/* check if this thread is the leader */
 	leader = g_atomic_int_compare_and_exchange (&priv->has_leader, FALSE, TRUE);
 
-	iris_thread_manage (thread, queue, leader);
+	iris_thread_manage (thread, queue, exclusive, leader);
 
 	return;
 

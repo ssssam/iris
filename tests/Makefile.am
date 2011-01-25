@@ -19,6 +19,7 @@ noinst_PROGRAMS =		\
 	rrobin-1		\
 	scheduler-manager-1	\
 	scheduler-1		\
+	scheduler-2		\
 	service-1		\
 	stack-1			\
 	task-1			\
@@ -42,6 +43,7 @@ TEST_PROGS +=			\
 	rrobin-1		\
 	scheduler-manager-1	\
 	scheduler-1		\
+	scheduler-2		\
 	service-1		\
 	stack-1			\
 	task-1			\

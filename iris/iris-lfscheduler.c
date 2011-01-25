@@ -46,20 +46,22 @@ struct _IrisLFSchedulerPrivate
 
 G_DEFINE_TYPE (IrisLFScheduler, iris_lfscheduler, IRIS_TYPE_SCHEDULER)
 
-static void
+static gboolean
 iris_lfscheduler_queue_real_cb (gpointer data,
                                 gpointer user_data)
 {
 	IrisQueue      *queue;
 	IrisThreadWork *thread_work;
 
-	g_return_if_fail (data != NULL);
-	g_return_if_fail (user_data != NULL);
+	g_return_val_if_fail (data != NULL, FALSE);
+	g_return_val_if_fail (user_data != NULL, FALSE);
 
 	queue = data;
 	thread_work = user_data;
 
 	iris_queue_push (queue, thread_work);
+
+	return TRUE;
 }
 
 static void
@@ -151,7 +153,8 @@ iris_lfscheduler_foreach_real (IrisScheduler            *scheduler,
 
 static void
 iris_lfscheduler_add_thread_real (IrisScheduler  *scheduler,
-                                  IrisThread     *thread)
+                                  IrisThread     *thread,
+                                  gboolean        exclusive)
 {
 	IrisLFSchedulerPrivate *priv;
 	gboolean                leader;
@@ -172,7 +175,7 @@ iris_lfscheduler_add_thread_real (IrisScheduler  *scheduler,
 	leader = g_atomic_int_compare_and_exchange (&priv->has_leader, FALSE, TRUE);
 
 	/* tell the thread to watch this queue */
-	iris_thread_manage (thread, queue, leader);
+	iris_thread_manage (thread, queue, exclusive, leader);
 
 	return;
 
