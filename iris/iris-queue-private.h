@@ -28,6 +28,12 @@ G_BEGIN_DECLS
 struct _IrisQueuePrivate
 {
 	GAsyncQueue *q;
+
+	/* 'open' should be accessed using g_atomic_int_* methods, because although
+	 * it is only set inside the GAsyncQueue mutex it is also read in
+	 * iris_queue_is_open().
+	 */
+	gint         open;
 };
 
 G_END_DECLS
