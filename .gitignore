@@ -66,7 +66,10 @@ tests/gmainscheduler-1
 tests/gmainscheduler-1.o
 tests/receiver-scheduler-1
 tests/process-1
+tests/process-2
 tests/progress-monitor-gtk-1
+tests/progress-dialog-gtk-1
+tests/scheduler-2
 doc/reference/html-build.stamp
 doc/reference/html.stamp
 doc/reference/html/
@@ -112,3 +115,5 @@ debian
 *.exe
 *.o
 perf.data
+diff
+

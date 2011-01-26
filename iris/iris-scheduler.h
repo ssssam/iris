@@ -107,7 +107,8 @@ struct _IrisSchedulerClass
 	                          gpointer                  user_data);
 
 	void (*add_thread)       (IrisScheduler  *scheduler,
-	                          IrisThread     *thread);
+	                          IrisThread     *thread,
+	                          gboolean        exclusive);
 	void (*remove_thread)    (IrisScheduler  *scheduler,
 	                          IrisThread     *thread);
 };
@@ -157,19 +158,26 @@ void            iris_scheduler_foreach         (IrisScheduler            *schedu
                                                 gpointer                  user_data);
 
 void            iris_scheduler_add_thread      (IrisScheduler  *scheduler,
-                                                IrisThread     *thread);
+                                                IrisThread     *thread,
+                                                gboolean        exclusive);
 void            iris_scheduler_remove_thread   (IrisScheduler  *scheduler,
                                                 IrisThread     *thread);
 
 IrisThread*     iris_thread_new                (gboolean exclusive);
 IrisThread*     iris_thread_get                (void);
 gboolean        iris_thread_is_working         (IrisThread *thread);
-void            iris_thread_manage             (IrisThread *thread, IrisQueue *queue, gboolean leader);
+void            iris_thread_manage             (IrisThread *thread,
+                                                IrisQueue  *queue,
+                                                gboolean    exclusive,
+                                                gboolean    leader);
 void            iris_thread_shutdown           (IrisThread *thread);
 void            iris_thread_print_stat         (IrisThread *thread);
-IrisThreadWork* iris_thread_work_new           (IrisCallback callback, gpointer data);
+IrisThreadWork* iris_thread_work_new           (IrisCallback callback,
+                                                gpointer data);
 void            iris_thread_work_free          (IrisThreadWork *thread_work);
 void            iris_thread_work_run           (IrisThreadWork *thread_work);
+
+guint           iris_scheduler_get_n_cpu       ();
 
 G_END_DECLS
 

@@ -32,7 +32,8 @@ test3 (void)
 {
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	g_assert (task != NULL);
-	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_set_work_scheduler (task, mock_scheduler_new ());
+	iris_task_set_control_scheduler (task, mock_scheduler_new ()); 
 	g_object_unref (task);
 }
 
@@ -44,7 +45,8 @@ test4 (void)
 	GError *error = g_error_new (1, 1, "Something %s", "blah");
 	IrisScheduler *sched = mock_scheduler_new ();
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, sched);
+	iris_task_set_control_scheduler (task, sched);
+	iris_task_set_work_scheduler (task, sched);
 	iris_task_take_error (task, error);
 	iris_task_get_error (task, &error2);
 	g_assert (g_error_matches (error2, error->domain, error->code));
@@ -58,7 +60,8 @@ test5 (void)
 	GError *error = g_error_new (1, 1, "Something %s", "blah");
 	IrisScheduler *sched = mock_scheduler_new ();
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, sched);
+	iris_task_set_control_scheduler (task, sched);
+	iris_task_set_work_scheduler (task, sched);
 	iris_task_set_error (task, error);
 	GError *error2 = NULL;
 	iris_task_get_error (task, &error2);
@@ -72,7 +75,8 @@ test6 (void)
 {
 	SETUP();
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_set_control_scheduler (task, mock_scheduler_new ());
+	iris_task_set_work_scheduler (task, mock_scheduler_new ());
 	GError *error = NULL;
 	iris_task_get_error (task, &error);
 	g_assert (error == NULL);
@@ -86,7 +90,8 @@ test7 (void)
 {
 	SETUP();
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_set_control_scheduler (task, mock_scheduler_new ());
+	iris_task_set_work_scheduler (task, mock_scheduler_new ());
 	GError *error = NULL;
 	iris_task_get_error (task, &error);
 	g_assert (error == NULL);
@@ -106,7 +111,8 @@ test8 (void)
 	SETUP();
 
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_set_control_scheduler (task, mock_scheduler_new ());
+	iris_task_set_work_scheduler (task, mock_scheduler_new ());
 	GError *error = NULL;
 	iris_task_get_error (task, &error);
 	g_assert (error == NULL);
@@ -132,7 +138,8 @@ test9 (void)
 	GValue value = {0,};
 
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_set_control_scheduler (task, mock_scheduler_new ());
+	iris_task_set_work_scheduler (task, mock_scheduler_new ());
 	iris_task_get_result (task, &value);
 	g_assert_cmpint (G_VALUE_TYPE (&value),==,G_TYPE_INVALID);
 
@@ -150,7 +157,8 @@ test10 (void)
 	GValue value = {0,};
 
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_set_control_scheduler (task, mock_scheduler_new ());
+	iris_task_set_work_scheduler (task, mock_scheduler_new ());
 
 	iris_task_get_result (task, &value);
 	g_assert_cmpint (G_VALUE_TYPE (&value),==,G_TYPE_INVALID);
@@ -171,7 +179,8 @@ test11 (void)
 {
 	SETUP();
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_set_control_scheduler (task, mock_scheduler_new ());
+	iris_task_set_work_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_is_canceled (task) == FALSE);
 	iris_task_cancel (task);
 	g_assert (iris_task_is_canceled (task) == TRUE);
@@ -182,7 +191,8 @@ test12 (void)
 {
 	SETUP();
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_set_control_scheduler (task, mock_scheduler_new ());
+	iris_task_set_work_scheduler (task, mock_scheduler_new ());
 	iris_task_set_main_context (task, g_main_context_default ());
 	g_assert (iris_task_get_main_context (task) == g_main_context_default ());
 }
@@ -208,8 +218,9 @@ static void
 test15 (void)
 {
 	IrisScheduler *sched = mock_scheduler_new ();
-	IrisTask *task = iris_task_new_full (NULL, NULL, NULL, TRUE, sched, NULL);
+	IrisTask *task = iris_task_new_full (NULL, NULL, NULL, TRUE, NULL, NULL);
 	g_assert (task != NULL);
+	iris_task_set_control_scheduler (task, sched);
 	g_assert (task->priv->receiver->priv->scheduler == sched);
 }
 
@@ -256,7 +267,8 @@ test17 (void)
 {
 	gint count = 0;
 	IrisTask *task = iris_task_new_with_func (test17_cb, &count, NULL);
-	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_set_control_scheduler (task, mock_scheduler_new ());
+	iris_task_set_work_scheduler (task, mock_scheduler_new ());
 	/* run should complete synchronously because of our scheduler */
 	iris_task_run_async (task, test17_notify, &count);
 	g_assert_cmpint (count, ==, 2);
@@ -275,7 +287,8 @@ test18 (void)
 {
 	gboolean success = FALSE;
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_set_control_scheduler (task, mock_scheduler_new ());
+	iris_task_set_work_scheduler (task, mock_scheduler_new ());
 	iris_task_add_callback (task, test18_cb, &success, NULL);
 	iris_task_run (task);
 	g_assert (success == TRUE);
@@ -376,7 +389,8 @@ test20 (void)
 	gboolean cb4 = FALSE;
 	gboolean skip = FALSE;
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, mock_scheduler_new ());
+	iris_task_set_control_scheduler (task, mock_scheduler_new ());
+	iris_task_set_work_scheduler (task, mock_scheduler_new ());
 	iris_task_add_callback (task, test20_cb1, &cb1, NULL);
 	iris_task_add_errback (task, test20_cb2, &cb2, NULL);
 	iris_task_add_errback (task, test20_cb2, &cb2, NULL);
@@ -448,7 +462,8 @@ test24 (void)
 {
 	IrisScheduler *sched = mock_scheduler_new ();
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	iris_task_set_scheduler (task, sched);
+	iris_task_set_control_scheduler (task, mock_scheduler_new ());
+	iris_task_set_work_scheduler (task, mock_scheduler_new ());
 	g_assert (iris_task_is_finished (task) == FALSE);
 	iris_task_run (task);
 	g_assert (iris_task_is_finished (task) == TRUE);

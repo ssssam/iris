@@ -1,6 +1,6 @@
 /* iris-process-info-bar.h
  *
- * Copyright (C) 2009 Sam Thursfield <ssssam@gmail.com>
+ * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -61,7 +61,7 @@ struct _IrisProgressInfoBarClass
 
 GType               iris_progress_info_bar_get_type             (void) G_GNUC_CONST;
 
-GtkWidget          *iris_progress_info_bar_new                  (const gchar *title);
+GtkWidget          *iris_progress_info_bar_new                  ();
 
 G_END_DECLS
 

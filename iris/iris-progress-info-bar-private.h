@@ -1,6 +1,6 @@
 /* iris-progress-info-bar-private.h
  *
- * Copyright (C) 2009 Sam Thursfield <ssssam@gmail.com>
+ * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,6 +24,7 @@
 G_BEGIN_DECLS
 
 #include "iris-scheduler.h"
+#include "iris-progress-monitor-private.h"
 
 #define IRIS_PROGRESS_INFO_BAR_GET_PRIVATE(object)                  \
           (G_TYPE_INSTANCE_GET_PRIVATE((object),                  \
@@ -37,14 +38,17 @@ struct _IrisProgressInfoBarPrivate
 
 	GtkWidget *title_label,
 	          *total_progress_bar,
-	          *watch_table,
-	          *button;
+	          *watch_vbox;
 
-	gboolean completed;
+	guint      in_finished : 1;
+	guint      permanent_mode : 1;
 
-	gint    close_delay;
-	gint    destroy_timer_id;
+	gint       watch_hide_delay;
 };
+
+/* For testing */
+IrisProgressWatch *_iris_progress_info_bar_get_watch (IrisProgressInfoBar *progress_info_bar,
+                                                      IrisTask            *task);
 
 G_END_DECLS
 

@@ -23,8 +23,10 @@
 
 G_BEGIN_DECLS
 
-void iris_scheduler_manager_yield   (IrisThread *thread);
-void iris_scheduler_manager_destroy (IrisThread *thread);
+void     iris_scheduler_manager_yield   (IrisThread *thread);
+
+/* Returns TRUE if thread may stop, FALSE if it is still needed */
+gboolean iris_scheduler_manager_destroy (IrisThread *thread);
 
 G_END_DECLS
 

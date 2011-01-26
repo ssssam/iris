@@ -1,6 +1,74 @@
 ---------------------------------------------------------------------------
+To do now
+---------------------------------------------------------------------------
+
+Grouping, & titles ...
+  * watch groups can be created, and a watch shown under a group. Or a chain can be
+    classified as a group. These have their own titles.
+    group_id = iris_progress_monitor_add_group (self, title, plural)
+    iris_progress_monitor_watch_process (self, process, style, group_id)
+    iris_progress_monitor_watch_process_chain (self, process, style, title, plural)
+    iris_progress_monitor_watch_process_chain_in_group (self, process, style, group_id)
+    iris_progress_monitor_add_watch (self, task, style, title, group_id)
+
+  * cancel button, reimplement this! Make it work in progress-tasks too!!
+
+  * groups examples:
+      - one where there are 3 buttons to launch a task, each one launches it into a different group
+
+Fix progress-tasks, current bugs include:
+ - progress-tasks actually sometimes misses tasks or does 2 at once
+ - the type of progress monitor should change as soon as the toggle box changes :)
+ - cancelling does not work (probably not implemented :)
+-> remember to write unit tests for any bugs identified!!
+
+Since STATUS_COMPLETE is sent when the task receives 'finish', why not rename it to 'finish'
+also???
+
+* Should anything be allowed to happen after execution begins? Seems like a recipe for races.
+  Currently on tasks you can: add callbacks/errbacks and dependencies; add watches; and
+  it also seems like you can execute tasks again once they are finished :/
+  Surely all this should be dealt with but not allowed, using an assertion or two
+  .. actually for processes it seems you should be allowed to do stuff until _no_more_work.
+  Make sure the docs reflect this!!!! 
+  -> put in assertions and tests for all this
+  -> what about chaining together processes that are being cancelled? is this possible?
+     it could be cancelled before it is run. I guess. We should make sure that does not break anything.
+
+* Finalisation: 
+    - make sure nothing can be finalized while it still has messages to process
+      maybe add a new flag 'finalizable?'. or move 'finished' to after the observers and
+      async result is handled.
+
+    Thoughts on ref counting:
+      - object unrefs itself after finished; if nothing else is holding on to it there it goes ..
+        could ref itself too, so that the object doesn't magically disappear unless the user
+        explicitly dropped their ref too ..
+      - there could be a 'task garbage collector' where the scheduler or someone
+        periodically checks tasks to see if they have completed and can be freed
+
+   -> Put in a bunch of finalisation tests, including cancellation etc.
+
+How much of tests/progress-monitor-gtk-1 could use wait-func instead of count-sheep-func???
+
+Note in docs that irisprocess will not send any progress messages until it is running,
+and that probably won't change (too difficult)
+
+Separate libiris from gtk, ie. create a libiris-gtk
+  --> stress the point that all of libiris is MT-safe and all of libiris-gtk is not
+  --> also don't forget you need gtk+-2.18 or better for gtkinfobar
+
+Tests should always use a fresh scheduler, no?
+
+Bump version to 0.3, and maybe give Iris a blog post :)
+
+---------------------------------------------------------------------------
 Missing or Incompleteness
 ---------------------------------------------------------------------------
+
+When I added the 'closed' API I broke IrisLFQueue and IrisWSQueue :( While
+there, they each have their own unit tests which duplicate some code, we
+could make a shared test.
 
 We are not currently destroying threads ever. After they are created they
 stay created until the end of the process. We need to find a way to
@@ -14,6 +82,15 @@ IrisScheduler
 	iris_scheduler_foreach () is a big bunch of code that should be a lot
 	neater.
 
+	Scheduler finalization: doesn't really work at the moment. We need:
+	  - it not to destroy itself until all of its work queues are done,
+	    *or* it to give up its work queues ..
+
+	I once got this error on finalize.
+	GThread-ERROR **: file /build/buildd/glib2.0-2.24.1/gthread/gthread-posix.c: line 171 (g_mutex_free_posix_impl): error 'Device or resource busy' during 'pthread_mutex_destroy ((pthread_mutex_t *) mutex)'
+	aborting...
+	Aborted
+
 IrisMessage
 
 	We should make the ref-counting for messages use the sink concept
@@ -22,32 +99,94 @@ IrisMessage
 
 IrisProcess
 
-	Be more clever about threading. Right now each process is one thread,
-	which is executed continually to check if there is no work.
-	It would be better if the IrisScheduler was more integrated, so that
-	the work was spread between its threads and no CPU was used when the
-	process' queue was empty.
+	Currently IrisProcess is really, really dumb and inefficient (especially when
+	idle). The current system is to see if there is any work using try_pop() and if
+	not, re-enqueue the process back into the scheduler to check again immediately.
+	This is good for now because the scheduler does not get as blocked up but is
+	very wasteful when processes are waiting around.
 
-IrisProgressMonitor
+	Things to consider:
+	  - we could create an IrisProcessScheduler, which could peek into queues
+	    and not execute a work function for processes with no work, saving on
+	    having a thread blocking on the queue.  This falls down on the fact
+	    that only Windows can block on multiple conds at once in one thread, I
+	    think. Unless we create a special queue where they all signal one cond
+	    to wake up the scheduler's main thread, this might be a no go
 
-	the errback and callback attached by IrisProgressMonitor aren't removed
-	when the progress monitor gets destroyed, so removing the monitor early
-	will cause a crash when the process is finished. Fixing this requires
-	the implementation of iris_task_remove_callback of some sort.
+	  - is one thread per process a reasonable assumption? if the process runs
+	    IO-bound non-interdependent items, it really wants as many threads as
+	    are available within reason, and certainly sharing threads would not
+	    make sense. For CPU bound processes there is no reason to run more
+	    threads than there are cores, but a dedicated thread is still good
+	    perhaps to improve multitasking. The only time a process
+	    would not need its own dedicated thread is if it spends most of it's
+	    time waiting for work, but is that a valid use-case? The whole point
+	    of process is that it's stuff that takes a long time to process, if
+	    we have more occasional single-shot work then IrisTask is a better fit.
+	
+	So the possible models:
+	  1. no dedicated threads, work items pulled from the process and scheduled
+	     by IrisProcessScheduler => silly for IO-bound processes
+	  2. one dedicated thread which passes work off into others when need be
+	     (exactly how IrisThread works in fact - can we not take advantage of
+	     that?) => good for CPU and IO-bound processes
+	  3. multiple dedicated threads all running through the work queue
+	     => good for IO bound processes
+
+	It seems like 2 is the most flexible and most suited to IrisProcess. How
+	to implement it?
+	  - customise IrisThread and run it as IrisProcessThread? In which case
+	    each IrisProcess would act like a subclass of IrisScheduler.
+	  - create IrisProcessScheduler which handles all processes, but still runs
+	    each one in its own IrisProcessThread. I like this option better because
+	    the scheduler can then distribute threads etc. But this becomes just a
+	    needless deputy of IrisSchedulerManager.
+	  - IrisSchedulerManager could be extended to sensibly manage IrisProcessScheduler
+	    and IrisScheduler together. The former is expected to be running
+	    full-throttle, although the scheduler needs to know if it is waiting on
+	    CPU time (in which case threads > cores is pointless) or IO (in which
+	    case more threads = better, to a point). Either the user could tell it,
+	    or it could experiment by adding one extra thread and seeing if work
+	    goes 2x as fast or the same speed.
+
+	Should we use IrisWSScheduler? I guess it can't hurt, although it shouldn't
+	be too much of an improvement just because process threads should mostly
+	have their own work to do. Not a priority.
+
+	Is it possible to maintain IrisProcess as a subclass of IrisTask in all
+	this ?
+
+	Also, I don't think there is any need to use a coordination arbiter on the
+	process work ports, the messages can be processed in O(1) time. In fact, we
+    could perhaps use iris_arbiter_coordinate() properly, so that control
+    messages (cancel, etc.) go on the exclusive receiver and block work items
+    until the message is processed. Status messages of course are sent & not
+    received so they would be unaffected.
 
 Progress widgets
 
-	Add option to 'unwatch' completed processes after a time
+	The progress monitor widgets should make sure that they do not expand to
+	comical sizes, groups should be collapsed and scroll bars added etc.
 
-	For when you don't do that, make the widgets handle lists that are 
-	stupidly long.
+	The 'plural' parameter, which currently does nothing, is intended to merge
+	similar groups to save space, eg. importing 6 directories could each have
+	the plural "Importing files" so on their own they display as "Importing
+	/home/foo/bar" but when space becomes short they are collapsed to "Importing
+	files" rather than showing 6 collapsed processes/groups
+
+	It would be faster to only update progress monitor labels/title bars
+	when the string has changed; only relevent with %-ages and even then
+	probably not a massive improvement
 
 Alex added warnings for GSimpleAsyncResult when not used from main thread.
 We need to implement our own now since this isn't reusable.
 
+
 ---------------------------------------------------------------------------
 Optimization TODO's
 ---------------------------------------------------------------------------
+
+Using waf would speed up compile time :)
 
 iris_message_unref()
 
@@ -69,6 +208,12 @@ iris_receiver_deliver_real()
 	both from the atomic operations as well as the locks incurred.
 	How can we reduce the potential for lock in these situations?
 
+Valgrind everything to check for leaks
+
+In iris-progress-monitor.c I recommend keeping an IrisProgressMonitor object
+around but hidden throughout the running of the program rather than creating
+and then destroying one again. Is this actually the best way? I imagine that
+it is, that was why I recommended it.
 
 ---------------------------------------------------------------------------
 Niceties
@@ -83,15 +228,29 @@ iris_process_notify_future_work_item (B) .. but can be overridden by
 subclassing. Or maybe it should be a signal so the user does not need to
 subclass.
 
-IrisProgressMonitor should watch for the process changing its title.
-
 Processes should be throttleable - for example, say we are indexing the entire
 file system. A directory crawler process searches the FS for files recursively,
 but it may as well read the first 100 files, count the number of files in
 subdirectories not yet touched (to give the user better info) and then wait for
 the next processes to start working.
 
-tests/process/cancelling 2 is very slow ..
-
 Make branches of some GNOME apps to use Iris!
-For example: Nautilus, Banshee, Epiphany or Tracker.
+For example: Nautilus, .. who else uses progress bars so much?
+
+This is a GTK+ theme bug, but the 'expander in an infobar' is pretty ugly on hover
+at least with clearlooks
+
+In the tests and examples, a lot of tasks are never unreferenced. This isn't
+setting a good example!!
+
+---------------------------------------------------------------------------
+The Future
+---------------------------------------------------------------------------
+
+If this project ever gets more adoption:
+	http://ssickert.wordpress.com/2010/11/22/taskview-release/
+it might be worth creating an IrisProgressMonitor that could send task status
+over dbus according to the spec.
+
+It would be cool to animate watches disappearing from the progress dialog. This
+is pie in the sky :)

@@ -1,6 +1,6 @@
 /* iris-progress.h
  *
- * Copyright (C) 2009 Sam Thursfield <ssssam@gmail.com>
+ * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -32,6 +32,7 @@
  *                                  above two are not sent, in the case that
  *                                  progress is better represented as a
  *                                  fraction.
+ * @IRIS_PROGRESS_MESSAGE_TITLE: string; sent when the title of the process changes
  *
  * An #IrisProgressMonitor listens for these messages to update its UI. It's
  * recommended you don't send status messages more than once every 250ms or so;
@@ -46,7 +47,8 @@ typedef enum
 	IRIS_PROGRESS_MESSAGE_CANCELLED,
 	IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS,
 	IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS,
-	IRIS_PROGRESS_MESSAGE_FRACTION
+	IRIS_PROGRESS_MESSAGE_FRACTION,
+	IRIS_PROGRESS_MESSAGE_TITLE
 } IrisProgressMessageType;
 
 #endif

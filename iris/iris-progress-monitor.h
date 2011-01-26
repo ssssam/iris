@@ -1,6 +1,6 @@
 /* iris-progress-monitor.h
  *
- * Copyright (C) 2009 Sam Thursfield <ssssam@gmail.com>
+ * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -40,32 +40,6 @@ typedef struct _IrisProgressMonitorInterface   IrisProgressMonitorInterface;
 
 typedef struct _IrisProgressWatch              IrisProgressWatch;
 
-struct _IrisProgressMonitorInterface
-{
-	GTypeInterface parent_iface;
-
-	void     (*add_watch)            (IrisProgressMonitor *progress_monitor,
-	                                  IrisProgressWatch   *watch);
-
-	void     (*handle_message)       (IrisProgressMonitor *progress_monitor,
-	                                  IrisProgressWatch   *watch,
-	                                  IrisMessage         *message);
-
-	gboolean (*is_watching_task)     (IrisProgressMonitor *progress_monitor,
-	                                  IrisTask            *task);
-
-	void     (*set_title)            (IrisProgressMonitor *progress_monitor,
-	                                  const gchar         *title);
-
-	void     (*set_close_delay)      (IrisProgressMonitor *progress_monitor,
-	                                  int                  milliseconds);
-
-	void     (*reserved1)            (void);
-	void     (*reserved2)            (void);
-	void     (*reserved3)            (void);
-	void     (*reserved4)            (void);
-};
-
 /**
  * IrisProgressMonitorDisplayStyle:
  * @IRIS_PROGRESS_MONITOR_ITEMS: display "x items of y"
@@ -80,6 +54,33 @@ typedef enum {
 	IRIS_PROGRESS_MONITOR_PERCENTAGE
 } IrisProgressMonitorDisplayStyle;
 
+
+struct _IrisProgressMonitorInterface
+{
+	GTypeInterface parent_iface;
+
+	void     (*add_watch)            (IrisProgressMonitor *progress_monitor,
+	                                  IrisProgressWatch   *watch);
+
+	void     (*handle_message)       (IrisProgressMonitor *progress_monitor,
+	                                  IrisProgressWatch   *watch,
+	                                  IrisMessage         *message);
+
+	gboolean (*is_watching_task)     (IrisProgressMonitor *progress_monitor,
+	                                  IrisTask            *task);
+
+	void     (*set_permanent_mode)   (IrisProgressMonitor *progress_monitor,
+	                                  gboolean             enable);
+
+	void     (*set_watch_hide_delay) (IrisProgressMonitor *progress_monitor,
+	                                  gint                 millisecs);
+
+	void     (*reserved1)            (void);
+	void     (*reserved2)            (void);
+	void     (*reserved3)            (void);
+	void     (*reserved4)            (void);
+};
+
 GType         iris_progress_monitor_get_type             (void) G_GNUC_CONST;
 
 /* General API */
@@ -88,12 +89,11 @@ IrisPort     *iris_progress_monitor_add_watch            (IrisProgressMonitor   
                                                           IrisProgressMonitorDisplayStyle  display_style,
                                                           const gchar                     *title);
 
-void          iris_progress_monitor_set_title            (IrisProgressMonitor *progress_monitor,
-                                                          const gchar *title);
+void          iris_progress_monitor_set_permanent_mode   (IrisProgressMonitor             *progress_monitor,
+                                                          gboolean                         enable);
 
-void          iris_progress_monitor_set_close_delay      (IrisProgressMonitor *progress_monitor,
-                                                          gint                 milliseconds);
-
+void          iris_progress_monitor_set_watch_hide_delay (IrisProgressMonitor             *progress_monitor,
+                                                          gint                             milliseconds);
 
 /* IrisProcess-specific API */
 void          iris_progress_monitor_watch_process        (IrisProgressMonitor             *progress_monitor,

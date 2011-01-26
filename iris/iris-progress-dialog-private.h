@@ -1,6 +1,6 @@
 /* iris-progress-dialog-private.h
  *
- * Copyright (C) 2009 Sam Thursfield <ssssam@gmail.com>
+ * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,6 +24,7 @@
 G_BEGIN_DECLS
 
 #include "iris-scheduler.h"
+#include "iris-progress-monitor-private.h"
 
 #define IRIS_PROGRESS_DIALOG_GET_PRIVATE(object)                  \
           (G_TYPE_INSTANCE_GET_PRIVATE((object),                  \
@@ -35,16 +36,19 @@ struct _IrisProgressDialogPrivate
 
 	GList         *watch_list;
 
-	GtkWidget *button;
+	gchar         *title_format;        /* NULL if default title to be used */
 
-	gboolean completed;
+	guint          permanent_mode : 1;
 
-	gint    close_delay;        /* millisecs to wait befor closing after the
-	                               last watch completes */
-	gint    destroy_timer_id;   /* source tag for the timeout to close the
-	                               dialog, to ensure we only try to close
-	                               once */
+	gint           watch_hide_delay;
+
+	guint          in_finished : 1;     /* TRUE when emitting ::finished */
+	guint          title_is_static : 1; /* TRUE if title_format does not include '%s' */
 };
+
+/* For testing */
+IrisProgressWatch *_iris_progress_dialog_get_watch (IrisProgressDialog *progress_dialog,
+                                                    IrisTask           *task);
 
 G_END_DECLS
 

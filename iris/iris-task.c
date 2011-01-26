@@ -162,7 +162,7 @@ iris_task_new_with_func (IrisTaskFunc   func,
  * @user_data: data for @func
  * @notify: A destroy notify after execution of the task
  * @async: Will the task complete during the execution of @func
- * @scheduler: An #IrisScheduler or %NULL
+ * @work_scheduler: An #IrisScheduler or %NULL
  * @context: A #GMainContext or %NULL
  *
  * Creates a new instance of #IrisTask.  This method allows for setting
@@ -175,10 +175,11 @@ iris_task_new_with_func (IrisTaskFunc   func,
  * you may specify @context or %NULL for the callbacks to happen within
  * the worker thread.
  *
- * @scheduler allows you to set a specific #IrisScheduler to perform
- * execution of the task within.  Note that all message passing associated
- * with the tasks internal #IrisPort<!-- -->'s will also happen on this
- * scheduler.
+ * @work_scheduler allows you to set a specific #IrisScheduler to perform
+ * execution of the task within.  All message passing associated with the
+ * task's internal #IrisPort<!-- -->'s will still happen on the default
+ * #IrisScheduler, but you may change this with the function
+ * iris_task_set_control_scheduler().
  *
  * Return value: The newly created #IrisTask instance.
  */
@@ -187,12 +188,12 @@ iris_task_new_full (IrisTaskFunc   func,
                     gpointer       user_data,
                     GDestroyNotify notify,
                     gboolean       async,
-                    IrisScheduler *scheduler,
+                    IrisScheduler *work_scheduler,
                     GMainContext  *context)
 {
 	IrisTask *task = iris_task_new_with_func (func, user_data, notify);
-	if (scheduler)
-		iris_task_set_scheduler (task, scheduler);
+	if (work_scheduler)
+		iris_task_set_work_scheduler (task, work_scheduler);
 	if (async)
 		task->priv->flags |= IRIS_TASK_FLAG_ASYNC;
 	if (context)
@@ -639,6 +640,13 @@ iris_task_is_finished (IrisTask *task)
  * Sets a #GMainContext to use to perform the errbacks and callbacks
  * from.  All future callbacks and errbacks will be executed from within
  * the context.
+ *
+ * This function will <emphasis>not</emphasis> cause the actual task to execute
+ * in the GMainContext; if you do want to achieve this you should pass an
+ * #IrisGMainScheduler to iris_task_set_work_scheduler(). However, consider if
+ * you actually need #IrisTask, if you don't need the task to run in parallel -
+ * it might be sufficient to simply enqueue your function for execution using
+ * g_idle_add().
  */
 void
 iris_task_set_main_context (IrisTask     *task,
@@ -881,25 +889,61 @@ iris_task_set_result_gtype (IrisTask *task,
 }
 
 /**
- * iris_task_set_scheduler:
+ * iris_task_set_control_scheduler:
  * @task: An #IrisTask
- * @scheduler: An #IrisScheduler
+ * @control_scheduler: An #IrisScheduler
  *
- * Sets the scheduler used to execute future work items.
+ * Sets the scheduler used for internal communication inside @task. It is
+ * usually best to leave messages running in the default scheduler, and move
+ * the slow work that may interfere with them into its own scheduler.
  */
 void
-iris_task_set_scheduler (IrisTask      *task,
-                         IrisScheduler *scheduler)
+iris_task_set_control_scheduler (IrisTask      *task,
+                                 IrisScheduler *control_scheduler)
 {
 	IrisTaskPrivate *priv;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
-	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
+	g_return_if_fail (IRIS_IS_SCHEDULER (control_scheduler));
 
 	priv = task->priv;
 
-	iris_receiver_set_scheduler (priv->receiver, scheduler);
+	iris_receiver_set_scheduler (priv->receiver, control_scheduler);
 }
+
+/**
+ * iris_task_set_work_scheduler:
+ * @task: An #IrisTask
+ * @work_scheduler: An #IrisScheduler
+ *
+ * Sets the scheduler used to execute the task's work function.
+ */
+void
+iris_task_set_work_scheduler (IrisTask      *task,
+                              IrisScheduler *work_scheduler)
+{
+	IrisTaskPrivate *priv;
+	IrisScheduler   *old_sched;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (IRIS_IS_SCHEDULER (work_scheduler));
+
+	priv = task->priv;
+
+	if (work_scheduler == NULL)
+		work_scheduler = g_object_ref (iris_scheduler_default ());
+
+	/* Like in iris-receiver, changing scheduler while executing is a bad idea
+	 * but hopefully will not cause crashes
+	 */
+	do {
+		old_sched = g_atomic_pointer_get (&priv->work_scheduler);
+	} while (!g_atomic_pointer_compare_and_exchange (
+	          (gpointer*)&priv->work_scheduler, old_sched, work_scheduler));
+
+	g_object_unref (old_sched);
+}
+
 
 /**************************************************************************
  *                      IrisTask Private Implementation                   *
@@ -1020,7 +1064,7 @@ iris_task_schedule (IrisTask *task)
 	DISABLE_FLAG (task, IRIS_TASK_FLAG_NEED_EXECUTE);
 	ENABLE_FLAG (task, IRIS_TASK_FLAG_EXECUTING);
 
-	iris_scheduler_queue (priv->receiver->priv->scheduler,
+	iris_scheduler_queue (g_atomic_pointer_get (&priv->work_scheduler),
 	                      (IrisCallback)iris_task_execute,
 	                      g_object_ref (task),
 	                      NULL);
@@ -1518,6 +1562,9 @@ iris_task_init (IrisTask *task)
 	                                       iris_task_handle_message,
 	                                       g_object_ref (task),
 	                                       (GDestroyNotify)g_object_unref);
+
+	priv->work_scheduler = g_object_ref (iris_scheduler_default ());
+
 	priv->mutex = g_mutex_new ();
 
 	/* FIXME: We should have a teardown port for dispose */

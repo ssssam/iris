@@ -107,9 +107,8 @@ get_next_item:
 		per_quanta++;
 	}
 	else {
-#if 0
+		/* This should not be possible since iris_queue_pop cannot return NULL */
 		g_warning ("Exclusive thread is done managing, received NULL");
-#endif
 		return;
 	}
 
@@ -168,7 +167,7 @@ iris_thread_worker_transient (IrisThread  *thread,
 		g_get_current_time (&tv_timeout);
 		g_time_val_add (&tv_timeout, POP_WAIT_TIMEOUT);
 
-		if ((thread_work = iris_queue_timed_pop (queue, &tv_timeout)) != NULL) {
+		if ((thread_work = iris_queue_timed_pop_or_close (queue, &tv_timeout)) != NULL) {
 			if (!VERIFY_THREAD_WORK (thread_work))
 				continue;
 			iris_thread_work_run (thread_work);
@@ -178,6 +177,7 @@ iris_thread_worker_transient (IrisThread  *thread,
 
 	/* Yield our thread back to the scheduler manager */
 	iris_scheduler_manager_yield (thread);
+	thread->scheduler = NULL;
 }
 
 static void
@@ -191,6 +191,8 @@ iris_thread_handle_manage (IrisThread  *thread,
 	g_mutex_lock (thread->mutex);
 	thread->active = g_object_ref (queue);
 	g_mutex_unlock (thread->mutex);
+
+	thread->exclusive = exclusive;
 
 	if (G_UNLIKELY (exclusive))
 		iris_thread_worker_exclusive (thread, queue, leader);
@@ -239,9 +241,12 @@ next_message:
 		message = g_async_queue_timed_pop (thread->queue, &timeout);
 
 		if (!message) {
-			/* Make sure that the manager removes us from the
-			 * free thread list. */
-			iris_scheduler_manager_destroy (thread);
+			/* Make sure that the manager removes us from the free thread list.
+			 * The manager can return FALSE to prevent shutdown if it has
+			 * decided to give us new work.
+			 */
+			if (!iris_scheduler_manager_destroy (thread))
+				goto next_message;
 
 			/* make sure nothing was added while we
 			 * removed ourselves */
@@ -360,10 +365,16 @@ iris_thread_get (void)
  * iris_thread_manage:
  * @thread: An #IrisThread
  * @queue: A #GAsyncQueue
+ * @exclusive: Whether the thread should run in exclusive mode
  * @leader: If the thread is responsible for asking for more threads
  *
  * Sends a message to the thread asking it to retreive work items from
  * the queue.
+ *
+ * If @exclusive is %TRUE, the thread will watch @queue for work items
+ * indefinitely. If it is %FALSE, the thread runs in transient mode - once
+ * @queue is empty it will remove itself from the calling scheduler and yield
+ * itself back to the scheduler manager.
  *
  * If @leader is %TRUE, then the thread will periodically ask the scheduler
  * manager to ask for more threads.
@@ -371,6 +382,7 @@ iris_thread_get (void)
 void
 iris_thread_manage (IrisThread    *thread,
                     IrisQueue     *queue,
+                    gboolean       exclusive,
                     gboolean       leader)
 {
 	IrisMessage *message;
@@ -381,7 +393,7 @@ iris_thread_manage (IrisThread    *thread,
 	iris_debug (IRIS_DEBUG_THREAD);
 
 	message = iris_message_new_full (MSG_MANAGE,
-	                                 "exclusive", G_TYPE_BOOLEAN, thread->exclusive,
+	                                 "exclusive", G_TYPE_BOOLEAN, exclusive,
 	                                 "queue", G_TYPE_POINTER, queue,
 	                                 "leader", G_TYPE_BOOLEAN, leader,
 	                                 NULL);
@@ -422,8 +434,12 @@ iris_thread_print_stat (IrisThread *thread)
 	g_mutex_lock (thread->mutex);
 
 	g_fprintf (stderr,
-	           "    Thread 0x%016lx     Active: %3s     Queue Size: %d\n",
+	           "    Thread 0x%016lx     Sched 0x%016lx %s Work q. 0x%016lx\n"
+	           "\t  Active: %3s     Queue Size: %d\n",
 	           (long)thread->thread,
+	           (long)thread->scheduler,
+	           thread->scheduler==iris_scheduler_default()? "(def.)  ": "        ",
+	           (long)thread->active,
 	           thread->active != NULL ? "yes" : "no",
 	           thread->active != NULL ? iris_queue_length (thread->active) : 0);
 

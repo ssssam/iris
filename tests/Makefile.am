@@ -12,12 +12,14 @@ noinst_PROGRAMS =		\
 	message-1		\
 	port-1			\
 	process-1		\
+	process-2		\
 	queue-1			\
 	receiver-1		\
 	receiver-scheduler-1	\
 	rrobin-1		\
 	scheduler-manager-1	\
 	scheduler-1		\
+	scheduler-2		\
 	service-1		\
 	stack-1			\
 	task-1			\
@@ -34,12 +36,14 @@ TEST_PROGS +=			\
 	message-1		\
 	port-1			\
 	process-1		\
+	process-2		\
 	queue-1			\
 	receiver-1		\
 	receiver-scheduler-1	\
 	rrobin-1		\
 	scheduler-manager-1	\
 	scheduler-1		\
+	scheduler-2		\
 	service-1		\
 	stack-1			\
 	task-1			\
@@ -47,8 +51,13 @@ TEST_PROGS +=			\
 	ws-queue-1
 
 if ENABLE_GTK
-noinst_PROGRAMS += progress-monitor-gtk-1
-TEST_PROGS += progress-monitor-gtk-1
+noinst_PROGRAMS +=		\
+	progress-dialog-gtk-1	\
+	progress-monitor-gtk-1
+
+TEST_PROGS += 		\
+	progress-dialog-gtk-1	\
+	progress-monitor-gtk-1
 endif
 
 noinst_PROGRAMS += $(NULL)
@@ -64,6 +73,7 @@ arbiter_1_sources = arbiter-1.c
 message_1_sources = message-1.c
 port_1_sources = port-1.c mocks/mock-callback-receiver.c
 process_1_sources = process-1.c
+process_2_sources = process-2.c
 receiver_1_sources = receiver-1.c
 scheduler_manager_1_sources = scheduler-manager-1.c
 scheduler_1_sources = scheduler-1.c
@@ -82,6 +92,7 @@ gmainscheduler_1_sources = gmainscheduler-1.c
 receiver_scheduler_1_sources = receiver-scheduler-1.c
 
 progress_monitor_gtk_1_sources = progress-monitor-gtk-1.c
+progress_dialog_gtk_1_sources = progress-dialog-gtk-1.c
 
 EXTRA_DIST +=					\
 	mocks/mock-callback-receiver.c		\

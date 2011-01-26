@@ -64,20 +64,27 @@ G_LOCK_DEFINE (default_scheduler);
 
 static IrisScheduler *default_scheduler = NULL;
 
-static void
+static gboolean
 iris_scheduler_queue_rrobin_cb (gpointer data,
                                 gpointer user_data)
 {
 	IrisQueue      *queue;
 	IrisThreadWork *thread_work;
 
-	g_return_if_fail (data != NULL);
-	g_return_if_fail (user_data != NULL);
+	g_return_val_if_fail (data != NULL, FALSE);
+	g_return_val_if_fail (user_data != NULL, FALSE);
 
 	queue = data;
 	thread_work = user_data;
 
+	if (iris_queue_is_closed (queue)) {
+		/* This thread has finished; request a new item */
+		return FALSE;
+	}
+
 	iris_queue_push (queue, thread_work);
+
+	return TRUE;
 }
 
 static void
@@ -88,14 +95,12 @@ iris_scheduler_queue_real (IrisScheduler  *scheduler,
 {
 	IrisSchedulerPrivate *priv;
 	IrisThreadWork       *thread_work;
-	IrisThread           *thread;
 
 	g_return_if_fail (scheduler != NULL);
 	g_return_if_fail (func != NULL);
 
 	priv = scheduler->priv;
 
-	thread = iris_thread_get ();
 	thread_work = iris_thread_work_new (func, data);
 
 	iris_rrobin_apply (priv->rrobin, iris_scheduler_queue_rrobin_cb, thread_work);
@@ -166,31 +171,6 @@ iris_scheduler_foreach_real (IrisScheduler            *scheduler,
 	                     &closure);
 };
 
-static guint
-iris_scheduler_get_n_cpu (void)
-{
-	static gint n_cpu = 0;
-	if (G_UNLIKELY (!n_cpu)) {
-		if (g_getenv ("IRIS_SCHED_MAX") != NULL)
-			n_cpu = atoi (g_getenv ("IRIS_SCHED_MAX"));
-#ifdef LINUX
-		if (n_cpu == 0)
-			n_cpu = get_nprocs ();
-#elif DARWIN
-		size_t size = sizeof (n_cpu);
-		if (sysctlbyname ("hw.ncpu", &n_cpu, &size, NULL, 0))
-			n_cpu = 1;
-#elif defined(WIN32)
-		SYSTEM_INFO info;
-		GetSystemInfo (&info);
-		n_cpu = info.dwNumberOfProcessors;
-#else
-		n_cpu = 1;
-#endif
-	}
-	return n_cpu;
-}
-
 static gint
 iris_scheduler_get_min_threads_real (IrisScheduler *scheduler)
 {
@@ -210,7 +190,8 @@ iris_scheduler_get_max_threads_real (IrisScheduler *scheduler)
 
 static void
 iris_scheduler_add_thread_real (IrisScheduler  *scheduler,
-                                IrisThread     *thread)
+                                IrisThread     *thread,
+                                gboolean        exclusive)
 {
 	IrisSchedulerPrivate *priv;
 	gboolean              leader;
@@ -241,7 +222,9 @@ iris_scheduler_add_thread_real (IrisScheduler  *scheduler,
 	/* check if this thread is the leader */
 	leader = g_atomic_int_compare_and_exchange (&priv->has_leader, FALSE, TRUE);
 
-	iris_thread_manage (thread, queue, leader);
+	g_warn_if_fail (leader==FALSE || exclusive==TRUE);
+
+	iris_thread_manage (thread, queue, exclusive, leader);
 
 	return;
 
@@ -254,7 +237,28 @@ static void
 iris_scheduler_remove_thread_real (IrisScheduler *scheduler,
                                    IrisThread    *thread)
 {
-	/* FIXME: Implement */
+	IrisSchedulerPrivate *priv;
+	IrisQueue            *work_queue;
+
+	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
+
+	priv = scheduler->priv;
+
+	g_mutex_lock (thread->mutex);
+	work_queue = thread->user_data;
+
+	g_warn_if_fail (IRIS_IS_QUEUE (work_queue));
+	g_warn_if_fail (iris_queue_is_closed (work_queue));
+
+	iris_rrobin_remove (priv->rrobin, work_queue);
+
+	thread->user_data = NULL;
+
+	/* We don't check, but this thread should not be the leader because the
+	 * leader should be running in exclusive mode ...
+	 */
+
+	g_mutex_unlock (thread->mutex);
 }
 
 static void
@@ -458,9 +462,7 @@ void iris_scheduler_foreach (IrisScheduler            *scheduler,
  * The default is equal to the number of cpus unless there is only a single
  * cpu, in which case the default is 2.
  *
- * Currently, only Linux is supported for the number of cpus.  If you
- * would like another OS supported, please send an email with the method
- * to retreive the number of cpus (get_nprocs() on Linux).
+ * See iris_scheduler_get_n_cpu() for more information.
  *
  * Return value: the maximum number of threads to allocate.
  */
@@ -490,6 +492,8 @@ iris_scheduler_get_min_threads (IrisScheduler *scheduler)
  * iris_scheduler_add_thread:
  * @scheduler: An #IrisScheduler
  * @thread: An #IrisThread
+ * @exclusive: Whether the thread belongs to the scheduler, or is just being
+ *             added temporarily to clear a backlog of work
  *
  * Requests that the scheduler add the thread to its set of executing
  * threads. It is the responsibility of the scheduler to tell the thread
@@ -497,9 +501,10 @@ iris_scheduler_get_min_threads (IrisScheduler *scheduler)
  */
 void
 iris_scheduler_add_thread (IrisScheduler *scheduler,
-                           IrisThread    *thread)
+                           IrisThread    *thread,
+                           gboolean       exclusive)
 {
-	IRIS_SCHEDULER_GET_CLASS (scheduler)->add_thread (scheduler, thread);
+	IRIS_SCHEDULER_GET_CLASS (scheduler)->add_thread (scheduler, thread, exclusive);
 	thread->scheduler = g_object_ref (scheduler);
 }
 
@@ -525,4 +530,39 @@ iris_scheduler_remove_thread (IrisScheduler *scheduler,
 
 	thread->scheduler = NULL;
 	g_object_unref (scheduler);
+}
+
+/**
+ * iris_scheduler_get_n_cpu:
+ *
+ * Returns the number of processor cores identified by the system.
+ * This operation is currently supported on Linux, Mac OS X and MS Windows.
+ * If you would like another OS supported, please send an email with the
+ * method to retreive the number of cpus (get_nprocs() on Linux).
+ *
+ * Return value: number of processor cores identified by the system.
+ */
+guint
+iris_scheduler_get_n_cpu (void)
+{
+	static gint n_cpu = 0;
+	if (G_UNLIKELY (!n_cpu)) {
+		if (g_getenv ("IRIS_SCHED_MAX") != NULL)
+			n_cpu = atoi (g_getenv ("IRIS_SCHED_MAX"));
+#ifdef LINUX
+		if (n_cpu == 0)
+			n_cpu = get_nprocs ();
+#elif DARWIN
+		size_t size = sizeof (n_cpu);
+		if (sysctlbyname ("hw.ncpu", &n_cpu, &size, NULL, 0))
+			n_cpu = 1;
+#elif defined(WIN32)
+		SYSTEM_INFO info;
+		GetSystemInfo (&info);
+		n_cpu = info.dwNumberOfProcessors;
+#else
+		n_cpu = 1;
+#endif
+	}
+	return n_cpu;
 }

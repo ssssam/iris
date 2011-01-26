@@ -1,6 +1,6 @@
 /* iris-process.c
  *
- * Copyright (C) 2009 Sam Thursfield <ssssam@gmail.com>
+ * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -102,9 +102,25 @@ enum {
 	PROP_TITLE
 };
 
+static void             post_progress_message      (IrisProcess *process,
+                                                    IrisMessage *progress_message);
+
 static void             iris_process_dummy         (IrisProcess *task,
                                                     IrisMessage *work_item,
                                                     gpointer user_data);
+
+
+/* The process subsystem runs tasks in its own scheduler, because
+ *  a) we don't always benefit from the default scheduler's policy of one
+ *     thread per core because the processing is often IO-bound, and
+ *  b) work items could execute very slowly or block altogether, if this is
+ *     happening in the default scheduler then it can delay or even prevent
+ *     message delivery. This is especially bad when the message pending is a
+ *     cancel for the slow process.
+ */
+static IrisScheduler *process_scheduler = NULL;
+
+G_LOCK_DEFINE (process_scheduler);
 
 
 /**************************************************************************
@@ -698,6 +714,7 @@ iris_process_set_title (IrisProcess *process,
                         const gchar *title)
 {
 	IrisProcessPrivate *priv;
+	IrisMessage        *message;
 	gchar              *old_title;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
@@ -707,6 +724,14 @@ iris_process_set_title (IrisProcess *process,
 	old_title = priv->title;
 	g_atomic_pointer_set (&priv->title, g_strdup (title));
 	g_free (old_title);
+
+	if (priv->watch_port_list != NULL) {
+		message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_TITLE,
+		                                 G_TYPE_STRING,
+		                                 title);
+		post_progress_message (process, message);
+		iris_message_unref (message);
+	}
 }
 
 
@@ -757,7 +782,7 @@ post_progress_message (IrisProcess *process,
 };
 
 static void
-update_status (IrisProcess *process)
+update_status (IrisProcess *process, gboolean force)
 {
 	IrisProcessPrivate *priv;
 	IrisMessage        *message;
@@ -768,7 +793,7 @@ update_status (IrisProcess *process)
 	/* Send total items first, so we don't risk processed_items > total_items */
 	total = g_atomic_int_get (&priv->total_items);
 
-	if (priv->total_items_pushed < total) {
+	if (force || priv->total_items_pushed < total) {
 		priv->total_items_pushed = total;
 
 		message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS,
@@ -935,6 +960,7 @@ handle_add_watch (IrisProcess *process,
 	IrisProcessPrivate *priv;
 	const GValue       *data;
 	IrisPort           *watch_port;
+	IrisMessage        *progress_message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (message != NULL);
@@ -948,16 +974,27 @@ handle_add_watch (IrisProcess *process,
 	priv->watch_port_list = g_list_append (priv->watch_port_list,
 	                                       watch_port);
 
+	/* Send the title. The progress monitor does call iris_process_get_title(),
+	 * but it could have changed between iris_progress_monitor_watch_process
+	 * and us receiving the ADD_WATCH message
+	 */
+	progress_message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_TITLE,
+	                                          G_TYPE_STRING,
+	                                          priv->title);
+	post_progress_message (process, progress_message);
+	iris_message_unref (progress_message);
+
 	/* Send a status message now, it's possible that the process has actually
 	 * already completed and so this may be only status message that the watcher
-	 * receives.
+	 * receives. Force==TRUE because total_items may have been lost in the same
+	 * way as title mentioned above.
 	 */
-	update_status (process);
+	update_status (process, TRUE);
 
 	if (iris_process_is_finished (process)) {
-		message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
-		post_progress_message (process, message);
-		iris_message_unref (message);
+		progress_message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
+		post_progress_message (process, progress_message);
+		iris_message_unref (progress_message);
 	}
 }
 
@@ -1051,6 +1088,7 @@ iris_process_execute_real (IrisTask *task)
 	IrisProcess        *process;
 	IrisProcessPrivate *priv;
 	IrisMessage        *message;
+	IrisScheduler      *work_scheduler;
 
 	g_return_if_fail (IRIS_IS_PROCESS (task));
 
@@ -1061,9 +1099,7 @@ iris_process_execute_real (IrisTask *task)
 	g_value_set_object (&params[0], process);
 	g_value_init (&params[1], G_TYPE_POINTER);
 
-	/* Lock-free queue, so pop and timed_pop should be avoided. We need a
-	 * timeout anyway to check for cancellation.
-	 */
+	/* See TODO about why this code is really dumb and how it could be improved */
 	while (1) {
 		IrisMessage *work_item;
 
@@ -1073,7 +1109,7 @@ iris_process_execute_real (IrisTask *task)
 		if (priv->watch_port_list != NULL &&
 		    g_timer_elapsed (priv->watch_timer, NULL) >= 0.250) {
 			g_timer_reset (priv->watch_timer);
-			update_status (process);
+			update_status (process, FALSE);
 		}
 
 		if (cancelled)
@@ -1100,7 +1136,8 @@ iris_process_execute_real (IrisTask *task)
 			 * FIXME: would be nice if we could tell the scheduler "don't execute this for at least
 			 * 20ms" or something so we don't waste quite as much power waiting for work.
 			 */
-			iris_scheduler_queue (iris_scheduler_default (),
+			work_scheduler = g_atomic_pointer_get (&IRIS_TASK (process)->priv->work_scheduler);
+			iris_scheduler_queue (work_scheduler,
 			                      (IrisCallback)iris_process_execute_real,
 			                      process,
 			                      NULL);
@@ -1123,7 +1160,7 @@ iris_process_execute_real (IrisTask *task)
 	g_value_unset (&params[0]);
 
 	if (priv->watch_port_list != NULL) {
-		update_status (process);
+		update_status (process, TRUE);
 
 		if (cancelled) {
 			message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
@@ -1239,17 +1276,40 @@ static void
 iris_process_init (IrisProcess *process)
 {
 	IrisProcessPrivate *priv;
+	int                 max_threads;
 
 	priv = process->priv = IRIS_PROCESS_GET_PRIVATE (process);
 
+	/* FIXME: This probably needs all sorts of tweaking. The basic idea is one
+	 * thread per process at the moment, does that make sense? */
+	if (G_UNLIKELY (!process_scheduler)) {
+		G_LOCK (process_scheduler);
+		if (G_LIKELY (!process_scheduler)) {
+			max_threads = iris_scheduler_get_n_cpu() * 4;
+			process_scheduler = iris_scheduler_new_full (1, max_threads);
+		}
+		G_UNLOCK (process_scheduler);
+	}
+
 	/* FIXME: Leaked? "We should have a teardown port for dispose" */
+
+	/* Default scheduler is used to pass work items, the only real reason is
+	 * maybe one work item will take a lot longer than the others, and if that
+	 * item blocks the quicker ones being received it prevents them being
+	 * processed by other cores ...
+	 * FIXME: not sure even this is a compelling rationale ..
+	 */
 	priv->work_port = iris_port_new ();
-	priv->work_receiver = iris_arbiter_receive (NULL,
+	priv->work_receiver = iris_arbiter_receive (/*g_atomic_pointer_get (&process_scheduler),*/
+	                                            iris_scheduler_default (),
 	                                            priv->work_port,
 	                                            iris_process_post_work_item,
 	                                            g_object_ref (process),
 	                                            (GDestroyNotify)g_object_unref);
 	iris_arbiter_coordinate (priv->work_receiver, NULL, NULL);
+
+	iris_task_set_work_scheduler (IRIS_TASK (process),
+	                              g_atomic_pointer_get (&process_scheduler));
 
 	priv->work_queue = iris_queue_new ();
 
@@ -1264,12 +1324,6 @@ iris_process_init (IrisProcess *process)
 
 	priv->watch_port_list = NULL;
 	priv->watch_timer = g_timer_new ();
-
-	/* FIXME: very, very simplistic implementation .. */
-	IrisScheduler *scheduler = iris_scheduler_default ();
-	if (scheduler->maxed)
-		g_warning ("Scheduler maxed.\n");
-	iris_scheduler_add_thread (scheduler, iris_thread_new (TRUE));
 }
 
 static void

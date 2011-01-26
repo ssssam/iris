@@ -49,24 +49,34 @@ struct _IrisQueueClass
 {
 	GObjectClass parent_class;
 
-	void     (*push)      (IrisQueue *queue,
-	                       gpointer   data);
-	gpointer (*pop)       (IrisQueue *queue);
-	gpointer (*try_pop)   (IrisQueue *queue);
-	gpointer (*timed_pop) (IrisQueue *queue,
-	                       GTimeVal  *timeout);
-	guint    (*length)    (IrisQueue *queue);
+	void     (*push)               (IrisQueue *queue,
+	                                gpointer   data);
+	gpointer (*pop)                (IrisQueue *queue);
+	gpointer (*try_pop)            (IrisQueue *queue);
+	gpointer (*timed_pop)          (IrisQueue *queue,
+	                                GTimeVal  *timeout);
+	gpointer (*try_pop_or_close)   (IrisQueue *queue);
+	gpointer (*timed_pop_or_close) (IrisQueue *queue,
+	                                GTimeVal  *timeout);
+	guint    (*length)             (IrisQueue *queue);
+	gboolean (*is_closed)          (IrisQueue *queue);
 };
 
-GType       iris_queue_get_type  (void) G_GNUC_CONST;
-IrisQueue * iris_queue_new       (void);
-void        iris_queue_push      (IrisQueue *queue,
-                                  gpointer   data);
-gpointer    iris_queue_pop       (IrisQueue *queue);
-gpointer    iris_queue_try_pop   (IrisQueue *queue);
-gpointer    iris_queue_timed_pop (IrisQueue *queue,
-                                  GTimeVal  *timeout);
-guint       iris_queue_length    (IrisQueue *queue);
+GType       iris_queue_get_type           (void) G_GNUC_CONST;
+IrisQueue * iris_queue_new                (void);
+
+void        iris_queue_push               (IrisQueue *queue,
+                                           gpointer   data);
+gpointer    iris_queue_pop                (IrisQueue *queue);
+gpointer    iris_queue_try_pop            (IrisQueue *queue);
+gpointer    iris_queue_timed_pop          (IrisQueue *queue,
+                                           GTimeVal  *timeout);
+gpointer    iris_queue_try_pop_or_close   (IrisQueue *queue);
+gpointer    iris_queue_timed_pop_or_close (IrisQueue *queue,
+                                           GTimeVal  *timeout);
+                                           
+guint       iris_queue_length             (IrisQueue *queue);
+gboolean    iris_queue_is_closed          (IrisQueue *queue);
 
 G_END_DECLS
 

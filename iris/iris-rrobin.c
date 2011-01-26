@@ -160,13 +160,17 @@ void
 iris_rrobin_remove (IrisRRobin *rrobin,
                     gpointer    data)
 {
-	gint i;
+	gint     i;
+	gboolean ignore;
 
 	g_return_if_fail (data != NULL);
 
-	for (i = 0; i < rrobin->size; i++)
-		if (g_atomic_pointer_compare_and_exchange (&rrobin->data [i], data, NULL))
+	for (i = 0; i < rrobin->size; i++) {
+		if (g_atomic_pointer_compare_and_exchange (&rrobin->data [i], data, NULL)) {
+			ignore = g_atomic_int_dec_and_test (&rrobin->count);
 			break;
+		}
+	}
 }
 
 /**
@@ -178,7 +182,11 @@ iris_rrobin_remove (IrisRRobin *rrobin,
  * Executes @callback using the data from the next item in the round-robin
  * data structure.
  *
- * Return value: %FALSE if no items where in the #IrisRRobin, else %TRUE.
+ * @callback should normally return %TRUE. If the item passed is not suitable
+ * for some reason, it may return %FALSE to request the next item in @rrobin.
+ *
+ * Return value: %FALSE if the callback rejected every item or the #IrisRRobin
+ *               was empty, else %TRUE.
  */
 gboolean
 iris_rrobin_apply (IrisRRobin     *rrobin,
@@ -189,37 +197,47 @@ iris_rrobin_apply (IrisRRobin     *rrobin,
 	gint     my_index;
 	gint     first_index = -1;
 
+	gint     count;
+
 	g_return_val_if_fail (rrobin != NULL, FALSE);
 	g_return_val_if_fail (callback != NULL, FALSE);
 
 _try_next_index:
 
+	count = g_atomic_int_get (&rrobin->count);
+	g_return_val_if_fail (count > 0, FALSE);
+
 	/* get our index to try */
-	my_index = iris_atomics_fetch_and_inc (&rrobin->active) % rrobin->count;
+	my_index = iris_atomics_fetch_and_inc (&rrobin->active) % count;
 
 	/* continue to look for an item if there isn't one here.
 	 * this should only happen during an item move.
 	 */
 	if (G_UNLIKELY ((data = rrobin->data [my_index]) == NULL)) {
-		/* keep track if the first item so we know when we
-		 * got all the way through the list.
-		 */
 		if (first_index == -1) {
 			first_index = my_index;
-		}
-		else if (first_index == my_index) {
+		} else
+		if (first_index == my_index)
 			/* we iterated through the entire list. we might
 			 * as well check the current count just to verify
 			 * it has an item. if not, we will return false.
 			 */
 			if (g_atomic_int_get (&rrobin->count) == 0)
 				return FALSE;
-		}
 
 		goto _try_next_index;
 	}
 
-	callback (rrobin->data [my_index], user_data);
+	if (callback (rrobin->data [my_index], user_data) == FALSE) {
+		if (first_index == -1) {
+			first_index = my_index;
+		} else
+		if (first_index == my_index)
+			/* Looks like the callback has rejected every single item. */
+			return FALSE;
+
+		goto _try_next_index;
+	}
 
 	return TRUE;
 }
@@ -257,7 +275,7 @@ iris_rrobin_foreach (IrisRRobin            *rrobin,
 	g_return_if_fail (rrobin != NULL);
 	g_return_if_fail (callback != NULL);
 
-	end = rrobin->count;
+	end = g_atomic_int_get (&rrobin->count);
 
 	for (i = 0; i < end; i++) {
 		if (!rrobin->data [i])

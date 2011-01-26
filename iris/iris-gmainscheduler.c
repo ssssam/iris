@@ -112,7 +112,8 @@ iris_gmainscheduler_remove_thread_real (IrisScheduler *scheduler,
 
 static void
 iris_gmainscheduler_add_thread_real (IrisScheduler  *scheduler,
-                                     IrisThread     *thread)
+                                     IrisThread     *thread,
+                                     gboolean        exclusive)
 {
 }
 

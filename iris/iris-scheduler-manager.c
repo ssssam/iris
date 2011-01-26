@@ -54,16 +54,34 @@ iris_scheduler_manager_yield (IrisThread *thread)
 
 	/* Remove the thread from the scheduler. */
 	iris_scheduler_remove_thread (thread->scheduler, thread);
+
+	G_LOCK (singleton);
+	singleton->free_list = g_list_prepend (singleton->free_list, thread);
+	G_UNLOCK (singleton);
 }
 
-void
+gboolean
 iris_scheduler_manager_destroy (IrisThread *thread)
 {
+	GList *node;
 	iris_debug_message (IRIS_DEBUG_SCHEDULER, "Destroying thread %lu", (gulong)thread);
 
 	G_LOCK (singleton);
+	/* Search for the thread in the free list; if it's not there, it has been
+	 * repurposed by gen_or_create_thread() after it decided to shut down and
+	 * we need to put it back into action
+	 */
+	node = g_list_find (singleton->free_list, thread);
+
+	if (!node) {
+		G_UNLOCK (singleton);
+		return FALSE;
+	}
+
 	singleton->free_list = g_list_remove (singleton->free_list, thread);
 	G_UNLOCK (singleton);
+
+	return TRUE;
 }
 
 /**
@@ -84,9 +102,15 @@ get_or_create_thread_unlocked (gboolean exclusive)
 	IrisThread *thread = NULL;
 
 	if (singleton->free_list) {
+		/* There is a possible race condition where we select a transient thread
+		 * for repurposing but meanwhile it has timed out and decided to shut
+		 * down. To avoid this iris_scheduler_manager_destroy() will check if
+		 * the thread shutting down is still in the free list and if not, will
+		 * return FALSE to tell the thread to carry on executing.
+		 */
 		thread = singleton->free_list->data;
 		singleton->free_list = g_list_remove (singleton->free_list,
-		                                      singleton->free_list);
+		                                      thread);
 	}
 
 	if (!thread) {
@@ -153,7 +177,7 @@ iris_scheduler_manager_prepare (IrisScheduler *scheduler)
 		g_return_if_fail (thread != NULL);
 
 		thread->scheduler = scheduler;
-		iris_scheduler_add_thread (scheduler, thread);
+		iris_scheduler_add_thread (scheduler, thread, TRUE);
 	}
 
 	g_object_set_data (G_OBJECT (scheduler), THREAD_KEY,
@@ -218,7 +242,7 @@ iris_scheduler_manager_request (IrisScheduler *scheduler,
 	if (n_threads < max_threads) {
 		for (i = n_threads; i < requested; i++) {
 			thread = get_or_create_thread_unlocked (FALSE);
-			iris_scheduler_add_thread (scheduler, thread);
+			iris_scheduler_add_thread (scheduler, thread, FALSE);
 			n_threads++;
 		}
 	}

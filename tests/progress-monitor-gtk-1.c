@@ -1,6 +1,6 @@
 /* progress-monitor-gtk-1.c
  *
- * Copyright (C) 2009 Sam Thursfield <ssssam@gmail.com>
+ * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,11 +20,14 @@
  
 /* progress-monitor-gtk-1: tests implementations of IrisProgressMonitor. */
  
+#include <stdlib.h>
 #include <gtk/gtk.h>
 #include <iris/iris.h>
 #include <iris/iris-gtk.h>
 
 #include "iris/iris-process-private.h"
+#include "iris/iris-progress-dialog-private.h"
+#include "iris/iris-progress-info-bar-private.h"
 
 /* Work item to increment a global counter, so we can tell if the hole queue
  * gets executed propertly
@@ -87,6 +90,7 @@ count_sheep_func (IrisProcess *process,
                   IrisMessage *work_item,
                   gpointer     user_data)
 {
+	/* There's one! */
 	g_usleep (10000);
 }
 
@@ -129,9 +133,23 @@ thinking_task_func (IrisTask *task,
 	iris_port_post (watch_port, status_message);
 }
 
+static void
+counter_enqueue (IrisProcess *process,
+                 gint        *counter,
+                 gint         count)
+{
+	int i;
+
+	for (i=0; i < count; i++) {
+		IrisMessage *work_item = iris_message_new (0);
+		iris_message_set_pointer (work_item, "counter", counter);
+		iris_process_enqueue (process, work_item);
+	}
+}
 
 typedef struct {
 	GMainLoop           *main_loop;
+	GtkWidget           *container;
 	IrisProgressMonitor *monitor;
 } ProgressFixture;
 
@@ -142,15 +160,13 @@ iris_progress_dialog_fixture_setup (ProgressFixture *fixture,
 	GtkWidget *dialog;
 
 	fixture->main_loop = g_main_loop_new (NULL, TRUE);
+	fixture->container = NULL;
 
-	dialog = iris_progress_dialog_new ("Test Process", NULL);
+	dialog = iris_progress_dialog_new (NULL);
 
 	g_assert (IRIS_IS_PROGRESS_DIALOG (dialog));
 
 	fixture->monitor = IRIS_PROGRESS_MONITOR (dialog);
-
-	/* Don't close the dialog automatically, so we can test its state */
-	iris_progress_monitor_set_close_delay (fixture->monitor, -1);
 
 	gtk_widget_show (dialog);
 }
@@ -173,16 +189,21 @@ iris_progress_info_bar_fixture_setup (ProgressFixture *fixture,
 
 	fixture->main_loop = g_main_loop_new (NULL, TRUE);
 
-	info_bar = iris_progress_info_bar_new ("Test Process");
+	/* Container window so we can display the infobar; it's not a great test if the
+	 * widget is not even realized.
+	 */
+	fixture->container = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+
+	info_bar = iris_progress_info_bar_new ();
 
 	g_assert (IRIS_IS_PROGRESS_INFO_BAR (info_bar));
 
 	fixture->monitor = IRIS_PROGRESS_MONITOR (info_bar);
 
-	/* Don't close the bar automatically, so we can test its state */
-	iris_progress_monitor_set_close_delay (fixture->monitor, -1);
+	gtk_container_add (GTK_CONTAINER (fixture->container), GTK_WIDGET (fixture->monitor));
 
 	gtk_widget_show (info_bar);
+	gtk_widget_show (fixture->container);
 }
 
 static void
@@ -192,29 +213,25 @@ iris_progress_info_bar_fixture_teardown (ProgressFixture *fixture,
 	if (fixture->monitor != NULL)
 		gtk_widget_destroy (GTK_WIDGET (fixture->monitor));
 
+	gtk_widget_destroy (fixture->container);
+
 	g_main_loop_unref (fixture->main_loop);
 }
-
 
 
 static void
 simple (ProgressFixture *fixture,
         gconstpointer data)
 {
-	gint counter = 0,
-	     i;
+	gint counter = 0;
 
 	IrisProcess *process = iris_process_new_with_func (counter_callback, NULL,
 	                                                   NULL);
 	iris_progress_monitor_watch_process (fixture->monitor, process,
-		                                 IRIS_PROGRESS_MONITOR_ITEMS);
+	                                     IRIS_PROGRESS_MONITOR_ITEMS);
 	iris_process_run (process);
 
-	for (i=0; i < 50; i++) {
-		IrisMessage *work_item = iris_message_new (0);
-		iris_message_set_pointer (work_item, "counter", &counter);
-		iris_process_enqueue (process, work_item);
-	}
+	counter_enqueue (process, &counter, 50);
 	iris_process_no_more_work (process);
 
 	while (!iris_process_is_finished (process)) {
@@ -226,20 +243,26 @@ simple (ProgressFixture *fixture,
 }
 
 
-/* titles: test that NULL titles don't break anything */
+/* process titles 1: test that NULL titles and title updates don't break
+ *                   anything
+ */
 static void
-titles (ProgressFixture *fixture,
-        gconstpointer data)
+process_titles_1 (ProgressFixture *fixture,
+                  gconstpointer data)
 {
-	IrisProcess *process = iris_process_new_with_func (count_sheep_func, NULL,
-	                                                   NULL);
+	gint counter = 0;
+
+	/* A process with no title */
+	IrisProcess *process = iris_process_new_with_func (count_sheep_func,
+	                                                   NULL, NULL);
 	iris_progress_monitor_watch_process (fixture->monitor, process,
 	                                     IRIS_PROGRESS_MONITOR_ITEMS);
-	iris_progress_monitor_set_title (fixture->monitor, NULL);
 	iris_process_run (process);
 
-	IrisMessage *work_item = iris_message_new (0);
-	iris_process_enqueue (process, work_item);
+	counter_enqueue (process, &counter, 50);
+
+	/* Check the title change message doesn't crash anything */
+	iris_process_set_title (process, "Test title");
 	iris_process_no_more_work (process);
 
 	while (!iris_process_is_finished (process)) {
@@ -251,6 +274,87 @@ titles (ProgressFixture *fixture,
 }
 
 
+/* process titles 2: test that UI is updated on changes */
+static void
+process_titles_2 (ProgressFixture *fixture,
+                  gconstpointer    data)
+{
+	gint               counter = 0,
+	                   i;
+	IrisProcess       *process_1,
+	                  *process_2;
+
+	IrisProgressWatch *watch;
+	const char        *displayed_title_1 = NULL,
+	                  *displayed_title_2 = NULL;
+
+	/* Don't remove watches so we can test their UI elements */
+	iris_progress_monitor_set_watch_hide_delay (fixture->monitor, -1);
+
+	process_1 = iris_process_new_with_func (count_sheep_func,
+	                                        NULL, NULL);
+	iris_process_set_title (process_1, "Test");
+	iris_progress_monitor_watch_process (fixture->monitor, process_1,
+	                                     IRIS_PROGRESS_MONITOR_ITEMS);
+	counter_enqueue (process_1, &counter, 50);
+	iris_process_run (process_1);
+
+	/* Delay before adding the second process. We are aiming to trigger a bug
+	 * where the 'ADD_WATCH' message to process_2 gets delayed, so when the
+	 * title changes, below, it does not notify the progress monitor.
+	 */
+
+	for (i=0; i<50; i++) {
+		g_usleep (50);
+		g_main_context_iteration (NULL, FALSE);
+	}
+
+	process_2 = iris_process_new_with_func (count_sheep_func,
+	                                        NULL, NULL);
+	iris_process_set_title (process_2, "Test");
+	iris_progress_monitor_watch_process (fixture->monitor, process_2,
+	                                     IRIS_PROGRESS_MONITOR_ITEMS);
+
+	counter_enqueue (process_2, &counter, 50);
+	iris_process_run (process_2);
+
+	iris_process_set_title (process_1, "New Title");
+	iris_process_no_more_work (process_1);
+
+	iris_process_set_title (process_2, "New Title");
+	iris_process_no_more_work (process_2);
+
+	while (!iris_process_is_finished (process_2)) {
+		g_thread_yield ();
+		g_main_context_iteration (NULL, FALSE);
+	}
+
+	/* Check that the UI reflects the title */
+	if (IRIS_IS_PROGRESS_DIALOG (fixture->monitor)) {
+		watch = _iris_progress_dialog_get_watch (IRIS_PROGRESS_DIALOG (fixture->monitor),
+		                                         IRIS_TASK (process_1));
+		displayed_title_1 = gtk_label_get_text (watch->title_label);
+		watch = _iris_progress_dialog_get_watch (IRIS_PROGRESS_DIALOG (fixture->monitor),
+		                                         IRIS_TASK (process_2));
+		displayed_title_2 = gtk_label_get_text (watch->title_label);
+	}
+	else if (IRIS_IS_PROGRESS_INFO_BAR (fixture->monitor)) {
+		watch = _iris_progress_info_bar_get_watch (IRIS_PROGRESS_INFO_BAR (fixture->monitor),
+		                                           IRIS_TASK (process_1));
+		displayed_title_1 = gtk_label_get_text (watch->title_label);
+		watch = _iris_progress_info_bar_get_watch (IRIS_PROGRESS_INFO_BAR (fixture->monitor),
+		                                           IRIS_TASK (process_2));
+		displayed_title_2 = gtk_label_get_text (watch->title_label);
+	}
+
+	g_assert_cmpstr (displayed_title_1, ==, "New Title");
+	g_assert_cmpstr (displayed_title_2, ==, "New Title");
+
+	g_object_unref (process_2);
+	g_object_unref (process_1);
+}
+
+/* recurse 1: basic check for recursive processes */
 static void
 recurse_1 (ProgressFixture *fixture,
            gconstpointer data)
@@ -282,6 +386,7 @@ recurse_1 (ProgressFixture *fixture,
 	g_object_unref (recursive_process);
 }
 
+/* chaining 1: basic test for chaining processes */
 static void
 chaining_1 (ProgressFixture *fixture,
             gconstpointer data)
@@ -316,49 +421,31 @@ chaining_1 (ProgressFixture *fixture,
 	g_object_unref (tail_process);
 }
 
-/* cancelling: test the widget's cancel button */
-/*static void
-cancelling (ProgressFixture *fixture,
-            gconstpointer data)
-{
-	int i;
-
-	IrisProcess *process;
-
-	process = iris_process_new_with_func (time_waster_callback, NULL, NULL);
-	iris_progress_monitor_watch_process (fixture->monitor, process);
-	iris_process_run (process);
-
-	for (i=0; i < 50; i++)
-		iris_process_enqueue (process, iris_message_new (0));
-
-	progress_fixture_cancel (fixture);
-
-	while (!iris_process_is_finished (process)) {
-		g_thread_yield ();
-		g_main_context_iteration (NULL, FALSE);
-	}
-
-	g_object_unref (process);
-};
-*/
-
-
-/* completing 1: run several processes under the same monitor, all completing
- *               quickly. This tests the widget does not try to destroy itself
- *               multiple times or something silly.
+/* finishing 1: run several processes under the same monitor, all completing
+ *              quickly. This tests the widget does not emit 'finali
  */
 static void
-completing_1 (ProgressFixture *fixture,
-              gconstpointer    data)
+finished_handler (IrisProgressMonitor *progress_monitor,
+                  gpointer             user_data) {
+	gboolean *finished_has_executed = (gboolean *)user_data;
+
+	g_assert ((*finished_has_executed) == FALSE);
+
+	*finished_has_executed = TRUE;
+}
+
+static void
+finished_1 (ProgressFixture *fixture,
+            gconstpointer    data)
 {
 	IrisProcess *process;
-	int i, j;
+	gboolean     finished_has_executed = FALSE;
+	int          i, j;
 
-	iris_progress_monitor_set_close_delay (fixture->monitor, 500);
-
-	g_object_add_weak_pointer (G_OBJECT (fixture->monitor),
-	                           (gpointer *) &fixture->monitor);
+	g_signal_connect (G_OBJECT (fixture->monitor),
+	                  "finished",
+	                  G_CALLBACK (finished_handler),
+	                  &finished_has_executed);
 
 	for (i=0; i<4; i++) {
 		process = iris_process_new_with_func (count_sheep_func, NULL, NULL);
@@ -373,13 +460,46 @@ completing_1 (ProgressFixture *fixture,
 		iris_process_run (process);
 	}
 
-	while (fixture->monitor != NULL) {
+	while (finished_has_executed == FALSE) {
 		g_thread_yield ();
 		g_main_context_iteration (NULL, FALSE);
 	}
 }
 
-/* recurse_2: potentially recursive process with only 1 work item */
+/* finalize: test that destroying the progress monitor while watches are
+ *           running does not crash anything (although it's not really good
+ *           practice to do this)
+ */
+static void
+finalize (ProgressFixture *fixture,
+          gconstpointer    data)
+{
+	IrisProcess *process;
+	int          i, j;
+
+	for (i=0; i<4; i++) {
+		process = iris_process_new_with_func (count_sheep_func, NULL, NULL);
+
+		iris_progress_monitor_watch_process (fixture->monitor, process,
+		                                     IRIS_PROGRESS_MONITOR_ITEMS);
+
+		for (j=0; j<100; j++)
+			iris_process_enqueue (process, iris_message_new (0));
+		iris_process_no_more_work (process);
+
+		iris_process_run (process);
+	}
+
+	gtk_widget_destroy (GTK_WIDGET (fixture->monitor));
+
+	fixture->monitor = FALSE;
+}
+
+
+/* recurse_2: potentially recursive process with only 1 work item, if there is
+ *            any danger of progress update signals being missed this will
+ *            hopefully trigger the bugs
+ */
 static void
 recurse_2_head_callback (IrisProcess *process,
                          IrisMessage *work_item,
@@ -400,15 +520,16 @@ recurse_2 (ProgressFixture *fixture,
 
 	g_object_add_weak_pointer (G_OBJECT (fixture->monitor),
 	                           (gpointer *) &fixture->monitor);
-	iris_progress_monitor_set_close_delay (fixture->monitor, 500);
+	g_signal_connect (fixture->monitor,
+	                  "finished",
+	                  G_CALLBACK (gtk_widget_destroy),
+	                  NULL);
 
-	// MUSIC_SEARCH_PROCESS
 	head_process = iris_process_new_with_func (recurse_2_head_callback, NULL, NULL);
 
 	item = iris_message_new (1);
 	iris_process_enqueue (head_process, item);
 
-	// FILE IMPORT PROCESS
 	tail_process = iris_process_new_with_func (count_sheep_func, NULL, NULL);
 
 	iris_process_connect (head_process, tail_process);
@@ -444,7 +565,10 @@ tasks (ProgressFixture *fixture,
 
 	g_object_add_weak_pointer (G_OBJECT (fixture->monitor),
 	                           (gpointer *) &fixture->monitor);
-	iris_progress_monitor_set_close_delay (fixture->monitor, 500);
+	g_signal_connect (fixture->monitor,
+	                  "finished",
+	                  G_CALLBACK (gtk_widget_destroy),
+	                  NULL);
 
 	iris_task_run (task);
 
@@ -453,6 +577,34 @@ tasks (ProgressFixture *fixture,
 		g_main_context_iteration (NULL, FALSE);
 	}
 }
+
+/* cancelling: test the widget's cancel button */
+/*
+static void
+cancelling (ProgressFixture *fixture,
+            gconstpointer data)
+{
+	int i;
+
+	IrisProcess *process;
+
+	process = iris_process_new_with_func (time_waster_callback, NULL, NULL);
+	iris_progress_monitor_watch_process (fixture->monitor, process);
+	iris_process_run (process);
+
+	for (i=0; i < 50; i++)
+		iris_process_enqueue (process, iris_message_new (0));
+
+	progress_fixture_cancel (fixture);
+
+	while (!iris_process_is_finished (process)) {
+		g_thread_yield ();
+		g_main_context_iteration (NULL, FALSE);
+	}
+
+	g_object_unref (process);
+};
+*/
 
 static void
 add_tests_with_fixture (void (*setup) (ProgressFixture *, gconstpointer),
@@ -464,8 +616,11 @@ add_tests_with_fixture (void (*setup) (ProgressFixture *, gconstpointer),
 	g_snprintf (buf, 255, "/progress-monitor/%s/simple", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, simple, teardown);
 
-	g_snprintf (buf, 255, "/progress-monitor/%s/titles", name);
-	g_test_add (buf, ProgressFixture, NULL, setup, titles, teardown);
+	g_snprintf (buf, 255, "/progress-monitor/%s/process titles 1", name);
+	g_test_add (buf, ProgressFixture, NULL, setup, process_titles_1, teardown);
+
+	g_snprintf (buf, 255, "/progress-monitor/%s/process titles 2", name);
+	g_test_add (buf, ProgressFixture, NULL, setup, process_titles_2, teardown);
 
 	g_snprintf (buf, 255, "/progress-monitor/%s/recurse 1", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, recurse_1, teardown);
@@ -473,8 +628,11 @@ add_tests_with_fixture (void (*setup) (ProgressFixture *, gconstpointer),
 	g_snprintf (buf, 255, "/progress-monitor/%s/chaining 1", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, chaining_1, teardown);
 
-	g_snprintf (buf, 255, "/progress-monitor/%s/completing 1", name);
-	g_test_add (buf, ProgressFixture, NULL, setup, completing_1, teardown);
+	g_snprintf (buf, 255, "/progress-monitor/%s/finished 1", name);
+	g_test_add (buf, ProgressFixture, NULL, setup, finished_1, teardown);
+
+	g_snprintf (buf, 255, "/progress-monitor/%s/finalize", name);
+	g_test_add (buf, ProgressFixture, NULL, setup, finalize, teardown);
 
 	g_snprintf (buf, 255, "/progress-monitor/%s/recurse 2", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, recurse_2, teardown);
@@ -482,8 +640,8 @@ add_tests_with_fixture (void (*setup) (ProgressFixture *, gconstpointer),
 	g_snprintf (buf, 255, "/progress-monitor/%s/tasks", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, tasks, teardown);
 
-	/*g_snprintf (buf, 255, "/process/%s/cancelling", name);
-	g_test_add (buf, ProgressFixture, NULL, setup, cancelling, teardown);*/
+//	g_snprintf (buf, 255, "/progress-monitor/%s/cancelling", name);
+//	g_test_add (buf, ProgressFixture, NULL, setup, cancelling, teardown);
 }
 
 int main(int argc, char *argv[]) {
@@ -497,5 +655,5 @@ int main(int argc, char *argv[]) {
 	                        iris_progress_info_bar_fixture_teardown,
 	                        "info-bar");
 
-  	return g_test_run();
+	return g_test_run();
 }
