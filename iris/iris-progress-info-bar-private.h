@@ -1,6 +1,6 @@
 /* iris-progress-info-bar-private.h
  *
- * Copyright (C) 2009 Sam Thursfield <ssssam@gmail.com>
+ * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public

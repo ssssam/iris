@@ -1,6 +1,6 @@
 /* iris-process.c
  *
- * Copyright (C) 2009 Sam Thursfield <ssssam@gmail.com>
+ * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -1099,9 +1099,7 @@ iris_process_execute_real (IrisTask *task)
 	g_value_set_object (&params[0], process);
 	g_value_init (&params[1], G_TYPE_POINTER);
 
-	/* Lock-free queue, so pop and timed_pop should be avoided. We need a
-	 * timeout anyway to check for cancellation.
-	 */
+	/* See TODO about why this code is really dumb and how it could be improved */
 	while (1) {
 		IrisMessage *work_item;
 

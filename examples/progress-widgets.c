@@ -1,6 +1,6 @@
 /* process-widgets.c
  *
- * Copyright (C) 2009 Sam Thursfield <ssssam@gmail.com>
+ * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -45,7 +45,7 @@ static void
 remove_process_from_list (IrisTask *task,
                           gpointer  user_data)
 {
-	/* Called from callback/errback of IrisProcess */
+	/* Called from callback/errback of IrisProcess in glib main loop */
 	g_assert (task == user_data);
 	process_list = g_list_remove (process_list, user_data);
 }
@@ -70,6 +70,8 @@ trigger_process (GtkButton *trigger,
 	process = iris_process_new_with_func (count_sheep_func, NULL, NULL);
 	iris_process_set_title (process, gtk_entry_get_text (GTK_ENTRY (title_entry)));
 
+	iris_task_set_main_context (IRIS_TASK (process),
+	                            g_main_context_default ());
 	iris_task_add_both (IRIS_TASK (process),
 	                    remove_process_from_list,
 	                    remove_process_from_list,
@@ -120,7 +122,15 @@ create_demo_dialog (void)
 	demo_window = gtk_dialog_new_with_buttons
 	                ("Iris progress widgets demo", NULL, 0,
 	                 GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE,
-	                 NULL);
+	                 NULL);	                 
+	g_signal_connect (demo_window,
+	                  "response",
+	                  G_CALLBACK (gtk_widget_destroy),
+	                  NULL);
+	g_signal_connect (demo_window,
+	                  "destroy",
+	                  G_CALLBACK (gtk_main_quit),
+	                  NULL);
 	gtk_window_set_default_size (GTK_WINDOW (demo_window), 480, 240);
 
 	vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
@@ -180,6 +190,11 @@ create_progress_monitors (void)
 	gtk_box_pack_end (GTK_BOX (vbox), info_bar, FALSE, TRUE, 0);
 	gtk_widget_hide (info_bar);
 
+	/* Without this reference the info bar is destroyed by the dialog on close,
+	 * due to the call to gtk_widget_destroy().
+	 */
+	g_object_ref (info_bar);
+
 	iris_progress_monitor_set_permanent_mode (IRIS_PROGRESS_MONITOR (info_bar),
 	                                          TRUE);
 	monitor_list = g_list_prepend (monitor_list, info_bar);
@@ -206,7 +221,4 @@ main (gint argc, char *argv[])
 		g_assert_cmpint (G_OBJECT (node->data)->ref_count, ==, 1);
 		gtk_widget_destroy (GTK_WIDGET (node->data));
 	}
-
-	/* Clean up */
-	//gtk_widget_destroy (demo_window);
 }
