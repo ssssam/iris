@@ -56,7 +56,7 @@ create_progress_monitors () {
 
 	info_bar = iris_progress_info_bar_new ("Counting some sheep");
 	vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
-	gtk_box_pack_end (GTK_BOX (vbox), info_bar, TRUE, FALSE, 0);
+	gtk_box_pack_end (GTK_BOX (vbox), info_bar, FALSE, TRUE, 0);
 	gtk_widget_show (info_bar);
 	iris_progress_monitor_set_close_delay (IRIS_PROGRESS_MONITOR (info_bar),
 	                                       500);
@@ -112,6 +112,7 @@ create_demo_dialog (void)
 	                ("Iris progress widgets demo", NULL, 0,
 	                 GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE,
 	                 NULL);
+	gtk_window_set_default_size (GTK_WINDOW (demo_window), 480, 240);
 
 	vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
 
@@ -133,7 +134,7 @@ create_demo_dialog (void)
 	                  GINT_TO_POINTER (1000));
 	gtk_box_pack_start (GTK_BOX (triggers_box), button, TRUE, TRUE, 0);
 
-	gtk_box_pack_start (GTK_BOX (vbox), triggers_box, TRUE, TRUE, 4);
+	gtk_box_pack_start (GTK_BOX (vbox), triggers_box, FALSE, TRUE, 4);
 }
 
 gint

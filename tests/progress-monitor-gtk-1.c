@@ -91,6 +91,45 @@ count_sheep_func (IrisProcess *process,
 }
 
 
+/* From examples/progress-tasks.c, code for a task that will send appropriate messages for
+ * IrisProgressMonitor */
+static void
+thinking_task_func (IrisTask *task,
+                    gpointer  user_data)
+{
+	IrisMessage *status_message;
+	IrisPort    *watch_port = g_object_get_data (G_OBJECT (task), "watch-port");
+	const gint   count = GPOINTER_TO_INT (user_data);
+	gboolean     cancelled = FALSE;
+	gint         i;
+
+	for (i=0; i<count; i++) {
+		g_usleep (1000);
+
+		if (iris_task_is_canceled (task)) {
+			cancelled = TRUE;
+			break;
+		}
+
+		status_message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_FRACTION,
+		                                        G_TYPE_FLOAT,
+		                                        (float)i/(float)count);
+		iris_port_post (watch_port, status_message);
+	}
+
+	if (cancelled) {
+		status_message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
+	} else {
+		status_message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_FRACTION,
+		                                        G_TYPE_FLOAT, 1.0);
+		iris_port_post (watch_port, status_message);
+
+		status_message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
+	}
+	iris_port_post (watch_port, status_message);
+}
+
+
 typedef struct {
 	GMainLoop           *main_loop;
 	IrisProgressMonitor *monitor;
@@ -386,6 +425,34 @@ recurse_2 (ProgressFixture *fixture,
 	}
 }
 
+/* tasks: check that progress monitors don't only work for IrisProcess */
+static void
+tasks (ProgressFixture *fixture,
+       gconstpointer    data)
+{
+	IrisTask *task;
+	IrisPort *watch_port;
+
+	task = iris_task_new_with_func (thinking_task_func, GINT_TO_POINTER (100), NULL);
+
+	watch_port = iris_progress_monitor_add_watch
+	               (IRIS_PROGRESS_MONITOR (fixture->monitor),
+	                task,
+	                IRIS_PROGRESS_MONITOR_PERCENTAGE,
+	                "Test");
+	g_object_set_data (G_OBJECT (task), "watch-port", watch_port);
+
+	g_object_add_weak_pointer (G_OBJECT (fixture->monitor),
+	                           (gpointer *) &fixture->monitor);
+	iris_progress_monitor_set_close_delay (fixture->monitor, 500);
+
+	iris_task_run (task);
+
+	while (fixture->monitor != NULL) {
+		g_thread_yield ();
+		g_main_context_iteration (NULL, FALSE);
+	}
+}
 
 static void
 add_tests_with_fixture (void (*setup) (ProgressFixture *, gconstpointer),
@@ -411,6 +478,9 @@ add_tests_with_fixture (void (*setup) (ProgressFixture *, gconstpointer),
 
 	g_snprintf (buf, 255, "/progress-monitor/%s/recurse 2", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, recurse_2, teardown);
+
+	g_snprintf (buf, 255, "/progress-monitor/%s/tasks", name);
+	g_test_add (buf, ProgressFixture, NULL, setup, tasks, teardown);
 
 	/*g_snprintf (buf, 255, "/process/%s/cancelling", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, cancelling, teardown);*/

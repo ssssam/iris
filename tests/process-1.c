@@ -104,6 +104,42 @@ simple (void)
 	g_object_unref (process);
 }
 
+/* titles: Check the title property does not break */
+static void
+titles (void)
+{
+	gint        counter = 0,
+	            i;
+	const char *title;
+
+	IrisProcess *process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	iris_process_set_title (process, "Title 1");
+	iris_process_run (process);
+
+	g_object_get (G_OBJECT (process), "title", &title, NULL);
+	g_assert_cmpstr (title, ==, "Title 1");
+
+	g_object_set (G_OBJECT (process), "title", NULL, NULL);
+
+	for (i=0; i < 50; i++) {
+		IrisMessage *work_item = iris_message_new (0);
+		iris_message_set_pointer (work_item, "counter", &counter);
+		iris_process_enqueue (process, work_item);
+	}
+
+	title = iris_process_get_title (process);
+	g_assert_cmpstr (title, ==, NULL);
+
+	iris_process_no_more_work (process);
+
+	while (!iris_process_is_finished (process))
+		g_thread_yield ();
+
+	g_assert_cmpint (counter, ==, 50);
+
+	g_object_unref (process);
+}
+
 
 static void
 recurse_1 (void)
@@ -146,8 +182,30 @@ cancelling_1 (void)
 
 	for (i=0; i < 50; i++)
 		iris_process_enqueue (process, iris_message_new (0));
+	iris_process_no_more_work (process);
 
 	iris_process_cancel (process);
+	while (!iris_process_is_finished (process))
+		g_thread_yield ();
+
+	g_object_unref (process);
+};
+
+/* Cancel a process before running it. Should finish straight away. */
+static void
+cancelling_2 (void)
+{
+	IrisProcess *process;
+	int          i;
+
+	process = iris_process_new_with_func (time_waster_callback, NULL, NULL);
+	iris_process_cancel (process);
+	iris_process_run (process);
+
+	for (i=0; i < 50; i++)
+		iris_process_enqueue (process, iris_message_new (0));
+	iris_process_no_more_work (process);
+
 	while (!iris_process_is_finished (process))
 		g_thread_yield ();
 
@@ -162,7 +220,7 @@ chaining_1 (void)
 {
 	int i;
 
-	for (i=0; i < 1000; i++) {
+	for (i=0; i < 100; i++) {
 		IrisProcess *head_process = iris_process_new_with_func
 		                              (pre_counter_callback, NULL, NULL);
 		IrisProcess *tail_process = iris_process_new_with_func
@@ -172,11 +230,13 @@ chaining_1 (void)
 
 		iris_process_run (head_process);
 
-		while (1)
+		while (1) {
+			g_usleep (10);
 			if (iris_process_is_executing (head_process)) {
 				g_assert (iris_process_has_successor (head_process));
 				break;
 			}
+		}
 
 		g_object_unref (head_process);
 		g_object_unref (tail_process);
@@ -215,8 +275,9 @@ chaining_2 (void)
 	g_object_unref (tail_process);
 }
 
+/* Cancel a chain and make sure they all exit */
 static void
-cancelling_2 (void) {
+cancelling_3 (void) {
 	int i;
 
 	IrisProcess *head_process, *mid_process, *tail_process;
@@ -240,12 +301,35 @@ cancelling_2 (void) {
 	iris_process_cancel (tail_process);
 
 	while (!iris_process_is_finished (tail_process))
-		g_thread_yield ();
+		g_usleep (50);
 
 	g_object_unref (head_process);
 	g_object_unref (tail_process);
 };
 
+/* Cancel a process before chaining it to another. It's hard to see how this
+ * could happen in real life. See also: cancelling 2.
+ */
+static void
+cancelling_4 (void) {
+	IrisProcess *head_process, *tail_process;
+
+	head_process = iris_process_new_with_func (time_waster_callback, NULL,
+	                                           NULL);
+	tail_process = iris_process_new_with_func (time_waster_callback, NULL,
+	                                           NULL);
+
+	iris_process_cancel (head_process);
+	iris_process_connect (head_process, tail_process);
+
+	iris_process_run (head_process);
+
+	while (!iris_process_is_finished (tail_process))
+		g_thread_yield ();
+
+	g_object_unref (head_process);
+	g_object_unref (tail_process);
+};
 
 int main(int argc, char *argv[]) {
 	g_type_init ();
@@ -253,11 +337,14 @@ int main(int argc, char *argv[]) {
 	g_thread_init (NULL);
 
 	g_test_add_func ("/process/simple", simple);
+	g_test_add_func ("/process/titles", titles);
 	g_test_add_func ("/process/cancelling 1", cancelling_1);
+	g_test_add_func ("/process/cancelling 2", cancelling_2);
 	g_test_add_func ("/process/recurse 1", recurse_1);
 	g_test_add_func ("/process/chaining 1", chaining_1);
 	g_test_add_func ("/process/chaining 2", chaining_2);
-	g_test_add_func ("/process/cancelling 2", cancelling_2);
+	g_test_add_func ("/process/cancelling 3", cancelling_3);
+	g_test_add_func ("/process/cancelling 4", cancelling_4);
 
-  	return g_test_run();
+	return g_test_run();
 }

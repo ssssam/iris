@@ -97,6 +97,11 @@
 
 G_DEFINE_TYPE (IrisProcess, iris_process, IRIS_TYPE_TASK);
 
+enum {
+	PROP_0,
+	PROP_TITLE
+};
+
 static void             iris_process_dummy         (IrisProcess *task,
                                                     IrisMessage *work_item,
                                                     gpointer user_data);
@@ -623,7 +628,7 @@ iris_process_get_title (IrisProcess  *process)
 {
 	g_return_val_if_fail (IRIS_IS_PROCESS (process), NULL);
 
-	return process->priv->title;
+	return g_atomic_pointer_get (&process->priv->title);
 }
 
 /**
@@ -693,14 +698,15 @@ iris_process_set_title (IrisProcess *process,
                         const gchar *title)
 {
 	IrisProcessPrivate *priv;
+	gchar              *old_title;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 
 	priv = process->priv;
 
-	g_free (priv->title);
-
-	priv->title = g_strdup (title);
+	old_title = priv->title;
+	g_atomic_pointer_set (&priv->title, g_strdup (title));
+	g_free (old_title);
 }
 
 
@@ -1156,6 +1162,46 @@ iris_process_finalize (GObject *object)
 }
 
 static void
+iris_process_set_property (GObject      *object,
+                           guint         prop_id,
+                           const GValue *value,
+                           GParamSpec   *pspec)
+{
+	IrisProcess *process;
+
+	process = IRIS_PROCESS (object);
+
+	switch (prop_id) {
+		case PROP_TITLE:
+			iris_process_set_title (process, g_value_get_string (value));
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
+}
+
+static void
+iris_process_get_property (GObject    *object,
+                           guint       prop_id,
+                           GValue     *value,
+                           GParamSpec *pspec)
+{
+	IrisProcess *process;
+
+	process = IRIS_PROCESS (object);
+
+	switch (prop_id) {
+		case PROP_TITLE:
+			g_value_set_string (value, iris_process_get_title (process));
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
+}
+
+static void
 iris_process_class_init (IrisProcessClass *process_class)
 {
 	IrisTaskClass *task_class;
@@ -1169,6 +1215,22 @@ iris_process_class_init (IrisProcessClass *process_class)
 
 	object_class = G_OBJECT_CLASS (process_class);
 	object_class->finalize = iris_process_finalize;
+	object_class->set_property = iris_process_set_property;
+	object_class->get_property = iris_process_get_property;
+
+	/**
+	 * IrisProcess:title:
+	 *
+	 * Title of the process, which may be displayed by #IrisProgressMonitor classes.
+	 */
+	g_object_class_install_property (object_class,
+	                                 PROP_TITLE,
+	                                 g_param_spec_string ("title",
+	                                                      "Title",
+	                                                      "Process title",
+	                                                      NULL,
+	                                                      G_PARAM_READWRITE |
+	                                                      G_PARAM_STATIC_STRINGS));
 
 	g_type_class_add_private (object_class, sizeof(IrisProcessPrivate));
 }
