@@ -67,7 +67,7 @@ recursive (void)
 	
 	gint i;
 	for (i = 0; i < ITER_MAX; i++) {
-		IrisMessage *msg = iris_message_new (MSG_ID);
+		msg = iris_message_new (MSG_ID);
 		iris_port_post (port, msg);
 		iris_message_unref (msg);
 	}

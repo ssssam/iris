@@ -77,13 +77,13 @@ recursive_counter_callback (IrisProcess *process,
 	(*counter_address) ++;
 }
 
-static void
+/*static void
 time_waster_callback (IrisProcess *process,
                       IrisMessage *work_item,
                       gpointer     user_data)
 {
 	g_usleep (1 * G_USEC_PER_SEC);
-}
+}*/
 
 static void
 count_sheep_func (IrisProcess *process,
@@ -421,8 +421,9 @@ chaining_1 (ProgressFixture *fixture,
 	g_object_unref (tail_process);
 }
 
-/* finishing 1: run several processes under the same monitor, all completing
- *              quickly. This tests the widget does not emit 'finali
+/* finished 1: run several processes under the same monitor, all completing
+ *             quickly. This tests the progress monitor emits 'finished' at
+ *             the right time: too early and segfaults occur.
  */
 static void
 finished_handler (IrisProgressMonitor *progress_monitor,

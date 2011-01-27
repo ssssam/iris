@@ -1,13 +1,13 @@
 #include <iris/iris.h>
 #include <string.h>
 
-static GMainLoop *main_loop = NULL;
+/* static GMainLoop *main_loop = NULL; */
 
-static gboolean
+/*static gboolean
 dummy (gpointer data)
 {
 	return FALSE;
-}
+}*/
 
 static void
 main_context1_cb (IrisMessage *message,

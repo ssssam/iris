@@ -1,4 +1,4 @@
-/* process-tasks.c
+/* progress-tasks.c
  *
  * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
@@ -19,7 +19,7 @@
  */
 
 /* progress-tasks: demonstrates using IrisProgressMonitor for something other
- *    than an IrisProcess. */
+ *                 than an IrisProcess. */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -80,21 +80,27 @@ trigger_task (GtkButton *trigger,
 
 	task = iris_task_new_with_func (thinking_task_func, user_data, NULL);
 
+	if (watch_group == NULL)
+		watch_group = iris_progress_monitor_add_group
+		                 (IRIS_PROGRESS_MONITOR (progress_widget),
+		                  "Thinking about things",
+		                  NULL);
+
 	watch_port = iris_progress_monitor_add_watch
 	               (IRIS_PROGRESS_MONITOR (progress_widget),
 	                task,
+	                "Thinking",
 	                IRIS_PROGRESS_MONITOR_PERCENTAGE,
-	                "Thinking");
+	                watch_group);
 	g_object_set_data (G_OBJECT (task), "watch-port", watch_port);
 
 	iris_task_run (task);
 }
 
-static GtkWidget *
+static void
 create_demo_dialog (void)
 {
 	GtkWidget *vbox,
-	          *triggers_box,
 	          *button;
 
 	demo_window = gtk_dialog_new_with_buttons
@@ -150,6 +156,6 @@ main (gint argc, char *argv[])
 	gtk_main ();
 
 	gtk_widget_destroy (progress_widget);
+
+	return 0;
 }
-
-

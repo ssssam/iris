@@ -1,6 +1,9 @@
 #include <iris/iris.h>
 #include <string.h>
 
+/* A less hacky solution is to link mock source files into a libtestutils, and
+ * then link that with each test.
+ */
 #include "mocks/mock-callback-receiver.h"
 #include "mocks/mock-callback-receiver.c"
 

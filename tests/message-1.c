@@ -93,7 +93,7 @@ get_type1 (void)
 	g_assert_cmpint (IRIS_TYPE_MESSAGE, !=, G_TYPE_INVALID);
 }
 
-static void
+/*static void
 is_empty1 (void)
 {
 	IrisMessage *msg;
@@ -119,7 +119,7 @@ new_full1 (void)
 
 	g_assert_cmpint (iris_message_get_int (msg, "id"), ==, 1234567890);
 	g_assert_cmpstr (iris_message_get_string (msg, "name"), ==, "Christian");
-}
+}*/
 
 static void
 contains1 (void)

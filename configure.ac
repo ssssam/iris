@@ -305,11 +305,11 @@ AC_SUBST(IRIS_EXTRA_LIBS)
 AC_SUBST(IRIS_EXTRA_CFLAGS)
 
 GTK_DOC_CHECK([1.11])
-SHAVE_INIT([build/autotools], [enable])
+SHAVE_INIT([autotools], [enable])
 
 AC_CONFIG_FILES([
-        build/autotools/shave-libtool
-        build/autotools/shave
+        autotools/shave-libtool
+        autotools/shave
         Makefile
         iris/Makefile
         iris/iris-version.h

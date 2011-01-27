@@ -1,4 +1,4 @@
-/* process-widgets.c
+/* progress-widgets.c
  *
  * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
@@ -18,13 +18,7 @@
  * 02110-1301 USA
  */
 
-/* progress-widgets: demonstrates IrisProgressDialog and IrisProgressInfoBar.
- * 
- *   Note that the 'title' entry only affects the processes which are active;
- *   any that have finished but are still displayed will not have the titles
- *   updated. This is not considered a bug; titles are intended to be static,
- *   changes are only supported because setting a process title on construct
- *   is sometimes slightly too limiting. */
+/* progress-widgets: demonstrates IrisProgressDialog and IrisProgressInfoBar. */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -46,7 +40,8 @@ remove_process_from_list (IrisTask *task,
                           gpointer  user_data)
 {
 	/* Called from callback/errback of IrisProcess in glib main loop */
-	g_assert (task == user_data);
+	g_warn_if_fail (task == user_data);
+
 	process_list = g_list_remove (process_list, user_data);
 }
 
@@ -110,7 +105,7 @@ title_entry_notify (GObject    *title_entry_object,
 	}
 }
 
-static GtkWidget *
+static void
 create_demo_dialog (void)
 {
 	GtkWidget *vbox,
@@ -167,7 +162,7 @@ create_demo_dialog (void)
 	gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, TRUE, 4);
 }
 
-static GtkWidget *
+static void
 create_progress_monitors (void)
 {
 	GtkWidget *dialog, *info_bar,
@@ -221,4 +216,6 @@ main (gint argc, char *argv[])
 		g_assert_cmpint (G_OBJECT (node->data)->ref_count, ==, 1);
 		gtk_widget_destroy (GTK_WIDGET (node->data));
 	}
+
+	return 0;
 }

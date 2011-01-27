@@ -13,13 +13,13 @@ slow_counter_callback (IrisProcess *process,
 	g_usleep (500);
 }
 
-static void
+/*static void
 sleep_task_func (IrisTask *task,
                  gpointer  user_data)
 {
-	/* 1.5 secs to provoke the scheduler into requesting more threads */
+	// 1.5 secs to provoke the scheduler into requesting more threads
 	g_usleep (1500000);
-}
+}*/
 
 static void
 message_handler (IrisMessage *message,

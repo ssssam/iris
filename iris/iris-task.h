@@ -76,7 +76,7 @@ G_BEGIN_DECLS
  */
 #define IRIS_TASK_CATCH(t,e)                                                \
         G_STMT_START {                                                      \
-                if (e)                                                      \
+                if (e != NULL)                                              \
                 	iris_task_get_error (t,e);                          \
                 iris_task_set_error (t,NULL);                               \
         } G_STMT_END
