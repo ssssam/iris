@@ -245,6 +245,7 @@ IrisReceiverClass
 IrisReceiverPrivate
 iris_receiver_get_scheduler
 iris_receiver_set_scheduler
+iris_receiver_abort
 <SUBSECTION Standard>
 IRIS_RECEIVER
 IRIS_IS_RECEIVER

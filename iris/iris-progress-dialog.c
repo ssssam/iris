@@ -130,14 +130,7 @@ iris_progress_dialog_finalize (GObject *object)
 		if (watch->finish_timeout_id != 0)
 			g_source_remove (watch->finish_timeout_id);
 
-		/* Receiver must be freed, or we will get messages after we have
-		 * been freed .. */
-		iris_port_set_receiver (watch->port, NULL);
-
-		g_warn_if_fail (G_OBJECT (watch->receiver)->ref_count == 1);
-
-		g_object_unref (watch->receiver);
-
+		_iris_progress_watch_disconnect (node->data);
 		_iris_progress_watch_free (node->data);
 	}
 

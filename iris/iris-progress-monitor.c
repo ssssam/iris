@@ -182,6 +182,19 @@ iris_progress_monitor_add_watch_internal (IrisProgressMonitor             *progr
 	return watch;
 }
 
+/* Stop receiving status messages from a watch that is still running */
+void
+_iris_progress_watch_disconnect (IrisProgressWatch *watch)
+{
+	/* Receiver must be freed, or we will get messages after we have
+	 * been freed .. */
+	iris_port_set_receiver (watch->port, NULL);
+
+	g_warn_if_fail (G_OBJECT (watch->receiver)->ref_count == 1);
+	iris_receiver_abort (watch->receiver);
+	g_object_unref (watch->receiver);
+}
+
 /**
  * iris_progress_monitor_add_watch:
  * @progress_monitor: an #IrisProgressMonitor

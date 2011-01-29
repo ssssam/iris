@@ -67,6 +67,7 @@ struct _IrisProgressWatch
 
 
 void _iris_progress_watch_free             (IrisProgressWatch *watch);
+void _iris_progress_watch_disconnect       (IrisProgressWatch *watch);
 
 /* Called when cancel button pressed on widget - will cancel every process in 
  * watch_list and emit 'cancel' signal.
