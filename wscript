@@ -15,6 +15,12 @@ out = 'build'
 cflags_maintainer = ['-g', '-O0', '-Werror', '-Wall', '-Wshadow', '-Wcast-align',
                      '-Wno-uninitialized', '-Wformat-security', '-Winit-self']
 
+glib_req_version = '2.16.0'
+
+# 2.18 for GtkInfoBar
+gtk_req_version = '2.18.0'
+
+
 test_execution_order = \
   ["queue-1", "lf-queue-1", "ws-queue-1",
    "free-list-1", "gstamppointer-1", "stack-1", "rrobin-1",
@@ -56,9 +62,6 @@ def options (opt):
 
 def configure (conf):
 	conf.load ('compiler_c')
-
-	glib_req_version = '2.16.0'
-	gtk_req_version = '2.18.0'
 
 	if not Options.options.shared and not Options.options.static:
 		raise Errors.WafError("Error: both shared and static versions of library are disabled")
@@ -163,7 +166,7 @@ def build (bld):
 	for file in tests_dir.ant_glob('*.c', src=True, dir=False):
 		test = bld (features = 'c cprogram',
 		            source = file,
-		            target = file.change_ext('').get_bld(),
+		            target = file.change_ext('').get_bld().name,
 		            uselib = libiris_uselib,
 		            includes = '. tests',
 		            use = 'iris',
@@ -193,8 +196,8 @@ def check_action (bld):
 		if not hasattr (test_obj,'unit_test') or not getattr(test_obj, 'unit_test'):
 			continue
 
-		filename = test_obj.target.abspath()
-		test_nodes.append (filename)
+		file_node = bld.path.find_resource(test_obj.target)
+		test_nodes.append (file_node.abspath())
 
 	gtester_params = [bld.env['GTESTER']]
 	gtester_params.append ('--verbose');
@@ -209,6 +212,7 @@ def check_action (bld):
 
 	if Logs.verbose > 1:
 		print gtester_params
+	print unicode (gtester_params)
 	pp = subprocess.Popen (gtester_params,
 	                       env = gtester_env)
 	result = pp.wait ()
