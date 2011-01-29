@@ -12,8 +12,8 @@ APPNAME = 'iris'
 top = '.'
 out = 'build'
 
-cflags_maintainer = ['-Werror', '-Wall', '-Wshadow', '-Wcast-align', '-Wno-uninitialized',
-                     '-Wformat-security', '-Winit-self']
+cflags_maintainer = ['-g', '-O0', '-Werror', '-Wall', '-Wshadow', '-Wcast-align',
+                     '-Wno-uninitialized', '-Wformat-security', '-Winit-self']
 
 def options (opt):
 	opt.load ('compiler_c')
@@ -103,7 +103,6 @@ def configure (conf):
 	print "   Maintainer Compiler flags:  forced in waf"
 	print "   Profiling................:  not supported in waf"
 	print "   Build API reference......:  not supported in waf"
-	print "   Enable test suite........:  not supported in waf"
 	print "   Enable GTK+ widgets......:  forced in waf"
 	print ""
 	print " Preview Bindings"
