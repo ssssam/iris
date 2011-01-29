@@ -1376,15 +1376,15 @@ iris_task_remove_dependency_sync (IrisTask *task,
                                   IrisTask *dep)
 {
 	IrisTaskPrivate *priv;
-	GList           *link;
+	GList           *node;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 	g_return_if_fail (IRIS_IS_TASK (dep));
 
 	priv = task->priv;
 
-	if ((link = g_list_find (priv->dependencies, dep)) != NULL) {
-		priv->dependencies = g_list_delete_link (priv->dependencies, link);
+	if ((node = g_list_find (priv->dependencies, dep)) != NULL) {
+		priv->dependencies = g_list_delete_link (priv->dependencies, node);
 		g_object_unref (dep);
 	}
 

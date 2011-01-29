@@ -77,6 +77,7 @@ process_2_sources = process-2.c
 receiver_1_sources = receiver-1.c
 scheduler_manager_1_sources = scheduler-manager-1.c
 scheduler_1_sources = scheduler-1.c
+scheduler_2_sources = scheduler-2.c
 free_list_1_sources = free-list-1.c
 stack_1_sources = stack-1.c
 queue_1_sources = queue-1.c

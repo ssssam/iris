@@ -243,7 +243,7 @@ iris_queue_real_push (IrisQueue *queue,
 	if (G_LIKELY (g_atomic_int_get (&queue->priv->open)))
 		g_async_queue_push_unlocked (queue->priv->q, data);
 	else
-		g_warning ("iris_queue_push: queue %x is closed", (guint)queue);
+		g_warning ("iris_queue_push: queue %lx is closed", (gulong)queue);
 	g_async_queue_unlock (queue->priv->q);
 }
 

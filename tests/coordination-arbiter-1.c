@@ -8,8 +8,8 @@ G_LOCK_DEFINE (exclusive);
 G_LOCK_DEFINE (concurrent);
 G_LOCK_DEFINE (teardown);
 
-static GMutex *sync[10] = { NULL, };
-static GCond  *cond[10] = { NULL, };
+static GMutex *mutex[10] = { NULL, };
+static GCond  *cond[10]  = { NULL, };
 
 static void
 test1 (void)
@@ -28,10 +28,10 @@ test2_e (IrisMessage *message,
 {
 	gboolean *exc_b = user_data;
 
-	g_mutex_lock (sync [message->what]);
+	g_mutex_lock (mutex [message->what]);
 	*exc_b = !(*exc_b);
 	g_cond_signal (cond [message->what]);
-	g_mutex_unlock (sync [message->what]);
+	g_mutex_unlock (mutex [message->what]);
 }
 
 static void
@@ -40,10 +40,10 @@ test2_c (IrisMessage *message,
 {
 	gboolean *cnc_b = user_data;
 
-	g_mutex_lock (sync [message->what]);
+	g_mutex_lock (mutex [message->what]);
 	*cnc_b = !(*cnc_b);
 	g_cond_signal (cond [message->what]);
-	g_mutex_unlock (sync [message->what]);
+	g_mutex_unlock (mutex [message->what]);
 }
 
 static void
@@ -70,9 +70,9 @@ test2 (void)
 	gint          i;
 
 	for (i = 1; i < 10; i++) {
-		sync [i] = g_mutex_new ();
+		mutex [i] = g_mutex_new ();
 		cond [i] = g_cond_new ();
-		g_mutex_lock (sync [i]);
+		g_mutex_lock (mutex [i]);
 	}
 
 	/******************************************************************/
@@ -99,7 +99,7 @@ test2 (void)
 	 * hold the arbiter lock so we know it cannot progress until we do our
 	 * active check. */
 	g_static_rec_mutex_lock (&IRIS_COORDINATION_ARBITER (arbiter)->priv->mutex);
-	g_cond_wait (cond [1], sync [1]);
+	g_cond_wait (cond [1], mutex [1]);
 	g_assert (exc_b == TRUE);
 	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,1);
 	g_assert (exc_r->priv->message != NULL);
@@ -122,7 +122,7 @@ test2 (void)
 
 	/* Signal the second exclusive thread, allowing it to complete and then
 	 * switch to the concurrent mode. */
-	g_cond_wait (cond [2], sync [2]);
+	g_cond_wait (cond [2], mutex [2]);
 	g_assert (exc_b == FALSE);
 
 	/* make sure exclusive really is done */
@@ -133,7 +133,7 @@ test2 (void)
 	 * we can wait on the first concurrent cond so we know we are in
 	 * concurrent mode.
 	 */
-	g_cond_wait (cond [3], sync [3]);
+	g_cond_wait (cond [3], mutex [3]);
 
 	/* kinda racey */
 	g_static_rec_mutex_lock (&IRIS_COORDINATION_ARBITER (arbiter)->priv->mutex);
@@ -162,9 +162,9 @@ test2 (void)
 	g_static_rec_mutex_unlock (&IRIS_COORDINATION_ARBITER (arbiter)->priv->mutex);
 
 	/* let 4,5,6 finish */
-	g_cond_wait (cond [4], sync [4]);
-	g_cond_wait (cond [5], sync [5]);
-	g_cond_wait (cond [6], sync [6]);
+	g_cond_wait (cond [4], mutex [4]);
+	g_cond_wait (cond [5], mutex [5]);
+	g_cond_wait (cond [6], mutex [6]);
 
 	/* again, racey */
 	g_usleep (G_USEC_PER_SEC / 50);
@@ -172,8 +172,8 @@ test2 (void)
 	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,2);
 
 	/* let the rest finish */
-	g_cond_wait (cond [7], sync [7]);
-	g_cond_wait (cond [8], sync [8]);
+	g_cond_wait (cond [7], mutex [7]);
+	g_cond_wait (cond [8], mutex [8]);
 
 	g_usleep (G_USEC_PER_SEC / 50);
 
