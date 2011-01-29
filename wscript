@@ -15,6 +15,19 @@ out = 'build'
 cflags_maintainer = ['-g', '-O0', '-Werror', '-Wall', '-Wshadow', '-Wcast-align',
                      '-Wno-uninitialized', '-Wformat-security', '-Winit-self']
 
+test_execution_order = \
+  ["queue-1", "lf-queue-1", "ws-queue-1",
+   "free-list-1", "gstamppointer-1", "stack-1", "rrobin-1",
+   "message-1", 
+   "port-1", "arbiter-1", "receiver-1",
+   "coordination-arbiter-1",
+   "thread-1", "scheduler-1", "scheduler-manager-1", "gmainscheduler-1",
+   "receiver-scheduler-1",
+   "task-1", "service-1",
+   "process-1", "process-2",
+   "progress-monitor-gtk-1", "progress-dialog-gtk-1"]
+
+
 def options (opt):
 	opt.load ('compiler_c')
 	opt.load ('gnu_dirs')
@@ -174,13 +187,14 @@ def check_action (bld):
 	# Run tests through gtester
 	#
 	test_nodes = []
-	for group in bld.groups:
-		for obj in group:
-			if not hasattr (obj,'unit_test') or not getattr(obj, 'unit_test'):
-				continue
+	for test in test_execution_order:
+		test_obj = bld.get_tgen_by_name (test)
 
-			filename = obj.target.abspath()
-			test_nodes.append (filename)
+		if not hasattr (test_obj,'unit_test') or not getattr(test_obj, 'unit_test'):
+			continue
+
+		filename = test_obj.target.abspath()
+		test_nodes.append (filename)
 
 	gtester_params = [bld.env['GTESTER']]
 	gtester_params.append ('--verbose');
