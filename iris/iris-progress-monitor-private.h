@@ -23,6 +23,31 @@
 
 G_BEGIN_DECLS
 
+struct _IrisProgressGroup
+{
+	IrisProgressMonitor *progress_monitor;
+
+	gint   ref_count;
+
+	GList *watch_list;
+
+	gchar *title,
+	      *plural;
+
+	/* Used to calculate total progress */
+	gint   completed_watches;
+
+	guint  visible : 1;
+	guint  cancelled : 1;
+
+	/* User data */
+	gpointer toplevel,
+	         watch_box,
+	         progress_bar,
+	         user_data1,
+	         user_data2;
+};
+
 struct _IrisProgressWatch
 {
 	IrisProgressMonitor *monitor;
@@ -48,26 +73,29 @@ struct _IrisProgressWatch
 	gint  processed_items, total_items;
 	float fraction;
 
+	IrisProgressGroup *group;
 	gchar *title;
 
 	/* This member should be used by implementations to ensure the same process
-	 * is not watched multiple times. */
+	 * is not watched multiple times.
+	 */
 	IrisTask *task;
 
 	/* For implementations to store g_source that will hide the watch. */
 	gint finish_timeout_id;
 
 	/* For use by implementations to store widget pointers etc. */
-	gpointer container,
+	gpointer toplevel,
 	         title_label,
 	         progress_bar,
-	         progress_label,
 	         cancel_button;
 };
 
 
 void _iris_progress_watch_free             (IrisProgressWatch *watch);
 void _iris_progress_watch_disconnect       (IrisProgressWatch *watch);
+
+void _iris_progress_group_reset            (IrisProgressGroup *group);
 
 /* Called when cancel button pressed on widget - will cancel every process in 
  * watch_list and emit 'cancel' signal.
@@ -78,11 +106,15 @@ void _iris_progress_watch_disconnect       (IrisProgressWatch *watch);
 /* Emit IrisProgressMonitor::finished */
 void _iris_progress_monitor_finished       (IrisProgressMonitor *progress_monitor);
 
-/* Format status of watch into 'progress_text', as for example x% or a/b items.
+/* Format status of watch/group into 'progress_text', as for example x% or a/b items.
  * progress_text must point to a character array of 256 bytes or more. */
-void _iris_progress_monitor_format_watch   (IrisProgressMonitor *progress_monitor,
-                                            IrisProgressWatch   *watch,
-                                            gchar               *progress_text);
+void _iris_progress_monitor_format_watch_progress   (IrisProgressMonitor *progress_monitor,
+                                                     IrisProgressWatch   *watch,
+                                                     gchar               *p_progress_text);
+void _iris_progress_monitor_format_group_progress   (IrisProgressMonitor *progress_monitor,
+                                                     IrisProgressGroup   *group,
+                                                     gchar               *p_progress_text,
+                                                     gdouble             *p_fraction);
 
 /* This function should be the handler for the watch's progress messages.
  * It invokes the class handler after updating the watch object.

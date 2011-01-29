@@ -35,6 +35,8 @@ GtkWidget *demo_window = NULL,
 
 GtkWidget *show_info_bar = NULL;
 
+IrisProgressGroup *watch_group = NULL;
+
 static void
 thinking_task_func (IrisTask *task,
                     gpointer  user_data)
@@ -46,6 +48,7 @@ thinking_task_func (IrisTask *task,
 	gint         i;
 
 	for (i=0; i<count; i++) {
+		/* The 'work' of this task is just sleeping, of course */
 		g_usleep (50000);
 
 		if (iris_task_is_canceled (task)) {
@@ -53,6 +56,7 @@ thinking_task_func (IrisTask *task,
 			break;
 		}
 
+		/* Every so often we send a progress message! */
 		status_message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_FRACTION,
 		                                        G_TYPE_FLOAT,
 		                                        (float)i/(float)count);
@@ -61,14 +65,18 @@ thinking_task_func (IrisTask *task,
 
 	if (cancelled) {
 		status_message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
+		iris_port_post (watch_port, status_message);
 	} else {
+		/* Make sure the 100% mark is reached, it looks strange for a watch to
+		 * disappear before it reaches 100%
+		 */
 		status_message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_FRACTION,
 		                                        G_TYPE_FLOAT, 1.0);
 		iris_port_post (watch_port, status_message);
 
 		status_message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
+		iris_port_post (watch_port, status_message);
 	}
-	iris_port_post (watch_port, status_message);
 }
 
 static void

@@ -36,19 +36,14 @@ struct _IrisProgressInfoBarPrivate
 
 	GList *watch_list;
 
-	GtkWidget *title_label,
-	          *total_progress_bar,
-	          *watch_vbox;
+	GtkWidget    *box;
+	GtkSizeGroup *title_group;
+
+	gint       watch_hide_delay;
 
 	guint      in_finished : 1;
 	guint      permanent_mode : 1;
-
-	gint       watch_hide_delay;
 };
-
-/* For testing */
-IrisProgressWatch *_iris_progress_info_bar_get_watch (IrisProgressInfoBar *progress_info_bar,
-                                                      IrisTask            *task);
 
 G_END_DECLS
 

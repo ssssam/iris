@@ -1,7 +1,7 @@
 noinst_PROGRAMS = basic recursive coordinator task-ls
 
 if ENABLE_GTK
-noinst_PROGRAMS += progress-widgets progress-tasks
+noinst_PROGRAMS += progress-widgets progress-groups progress-tasks progress-chains
 endif
 
 INCLUDES = -I$(top_srcdir)
@@ -17,5 +17,6 @@ coordinator_sources = coordinator.c
 task_ls_sources = task-ls.c
 
 progress_widgets_sources = progress-widgets.c
+progress_groups_sources = progress-groups.c
 progress_tasks_sources = progress-tasks.c
-
+progress_chain_sources = progress-chain.c

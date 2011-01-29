@@ -28,6 +28,15 @@
 #include "iris/iris-process-private.h"
 #include "iris/iris-progress-dialog-private.h"
 
+static void
+push_next_func (IrisProcess *process,
+                IrisMessage *work_item,
+                gpointer     user_data)
+{
+	iris_message_ref (work_item);
+	iris_process_forward (process, work_item);
+}
+
 /* wait_func: hold up the process until a flag is set to continue; useful for
  *            testing progress UI
  */
@@ -44,7 +53,6 @@ wait_func (IrisProcess *process,
 		while (g_atomic_int_get (wait_state) != 2)
 			g_usleep (100000);
 }
-
 
 static void
 main_loop_iteration_times (gint times)
@@ -111,8 +119,10 @@ default_title (ProgressFixture *fixture,
 
 	IrisProcess *process = iris_process_new_with_func (wait_func,
 	                                                   &wait_state, NULL);
-	iris_progress_monitor_watch_process (fixture->monitor, process,
-	                                     IRIS_PROGRESS_MONITOR_PERCENTAGE);
+	iris_progress_monitor_watch_process (fixture->monitor,
+	                                     process,
+	                                     IRIS_PROGRESS_MONITOR_PERCENTAGE,
+	                                     0);
 	iris_progress_monitor_set_watch_hide_delay (fixture->monitor, 0);
 	iris_process_run (process);
 
@@ -167,8 +177,10 @@ custom_static_title (ProgressFixture *fixture,
 
 	IrisProcess *process = iris_process_new_with_func (wait_func,
 	                                                   &wait_state, NULL);
-	iris_progress_monitor_watch_process (fixture->monitor, process,
-	                                     IRIS_PROGRESS_MONITOR_PERCENTAGE);
+	iris_progress_monitor_watch_process (fixture->monitor,
+	                                     process,
+	                                     IRIS_PROGRESS_MONITOR_PERCENTAGE,
+	                                     0);
 	iris_progress_monitor_set_watch_hide_delay (fixture->monitor, 0);
 	iris_process_run (process);
 
@@ -209,8 +221,10 @@ custom_dynamic_title (ProgressFixture *fixture,
 
 	IrisProcess *process = iris_process_new_with_func (wait_func,
 	                                                   &wait_state, NULL);
-	iris_progress_monitor_watch_process (fixture->monitor, process,
-	                                     IRIS_PROGRESS_MONITOR_PERCENTAGE);
+	iris_progress_monitor_watch_process (fixture->monitor,
+	                                     process,
+	                                     IRIS_PROGRESS_MONITOR_PERCENTAGE,
+	                                     0);
 	iris_progress_monitor_set_watch_hide_delay (fixture->monitor, 0);
 
 	work_item = iris_message_new (0);
@@ -231,7 +245,7 @@ custom_dynamic_title (ProgressFixture *fixture,
 
 	main_loop_iteration_times (10);
 
-	/* Check default title when process has no title */
+	/* Check default title when process is titled */
 	title = gtk_window_get_title (GTK_WINDOW (fixture->monitor));
 	g_assert_cmpstr (title, ==, "Test Test process - 0% complete Test");
 
@@ -246,6 +260,54 @@ custom_dynamic_title (ProgressFixture *fixture,
 
 	g_object_unref (process);
 }
+
+
+/* groups: watch title should come from first group being watched */
+static void
+test_groups (ProgressFixture *fixture,
+             gconstpointer    data)
+{
+	IrisMessage *work_item;
+	gint         wait_state = 0;
+	const gchar *title;
+
+	IrisProcess *process_head, *process_tail;
+	
+	process_head = iris_process_new_with_func (push_next_func, NULL, NULL);
+	process_tail = iris_process_new_with_func (wait_func, &wait_state, NULL);
+
+	iris_process_connect (process_head, process_tail);
+
+	iris_progress_monitor_watch_process_chain (fixture->monitor,
+	                                           process_head,
+	                                           IRIS_PROGRESS_MONITOR_ITEMS,
+	                                           "Test Group",
+	                                           NULL);
+	iris_progress_monitor_set_watch_hide_delay (fixture->monitor, 0);
+
+	work_item = iris_message_new (0);
+	iris_process_enqueue (process_head, work_item);
+	work_item = iris_message_new (0);
+	iris_process_enqueue (process_head, work_item);
+	iris_process_no_more_work (process_head);
+
+	iris_process_run (process_head);
+
+	main_loop_iteration_times (1000);
+
+	/* Check group progress is shown */
+	title = gtk_window_get_title (GTK_WINDOW (fixture->monitor));
+	g_assert_cmpstr (title, ==, "Test Group - 75% complete");
+
+	g_atomic_int_set (&wait_state, 2);
+
+	while (!iris_process_is_finished (process_tail))
+		main_loop_iteration_times (100);
+
+	g_object_unref (process_head);
+	g_object_unref (process_tail);
+}
+
 
 int main(int argc, char *argv[]) {
 	g_thread_init (NULL);
@@ -270,6 +332,13 @@ int main(int argc, char *argv[]) {
 	            NULL,
 	            iris_progress_dialog_fixture_setup,
 	            custom_dynamic_title,
+	            iris_progress_dialog_fixture_teardown);
+
+	g_test_add ("/progress-dialog/groups",
+	            ProgressFixture,
+	            NULL,
+	            iris_progress_dialog_fixture_setup,
+	            test_groups,
 	            iris_progress_dialog_fixture_teardown);
 
 	return g_test_run();

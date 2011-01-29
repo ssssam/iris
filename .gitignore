@@ -98,6 +98,8 @@ examples/basic
 examples/basic.o
 examples/progress-tasks
 examples/progress-widgets
+examples/progress-groups
+examples/progress-chains
 examples/recursive
 examples/recursive.o
 examples/coordinator
