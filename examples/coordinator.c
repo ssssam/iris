@@ -36,9 +36,11 @@ coordinator (void)
 	IrisReceiver *exclusive_r  = iris_arbiter_receive (NULL, exclusive,  exclusive_handler, NULL, NULL),
 	             *concurrent_r = iris_arbiter_receive (NULL, concurrent, concurrent_handler, NULL, NULL),
 	             *teardown_r   = iris_arbiter_receive (NULL, concurrent, teardown_handler, NULL, NULL);
-	IrisArbiter  *arbiter      = iris_arbiter_coordinate (exclusive_r, concurrent_r, teardown_r);
+	IrisArbiter  *arbiter;
 	IrisMessage  *message;
 	gint          i;
+
+	arbiter = iris_arbiter_coordinate (exclusive_r, concurrent_r, teardown_r);
 
 	mutex = g_mutex_new ();
 	g_mutex_lock (mutex);

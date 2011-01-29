@@ -106,7 +106,7 @@ destruction1 (SchedulerFixture *fixture,
 	}
 
 	iris_port_set_receiver (p, NULL);
-
+	iris_receiver_abort (r);
 	g_object_unref (r);
 
 	if (fixture->main_loop != NULL) 
@@ -128,6 +128,7 @@ add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/destruction1", name);
 	g_test_add (buf, SchedulerFixture, NULL, setup, destruction1, teardown);
 }
+
 gint
 main (int   argc,
       char *argv[])

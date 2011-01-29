@@ -31,44 +31,83 @@
  * @short_description: Interface for progress monitor widgets
  * @see_also: #IrisProgressDialog, #IrisProgressInfoBar
  *
- * This interface is not of direct use unless you want to implement a new
- * monitoring widget, or monitor something other than an #IrisTask - you might
- * like #IrisProgressDialog or #IrisProgressInfoBar which are implementations.
+ * #IrisProgressMonitor is a generic interface for widgets that display the
+ * progress of #IrisProcess<!-- -->es and #IrisTask<!-- -->s. For simple use,
+ * just create an instance of a progress manager widget (#IrisProgressDialog
+ * or #IrisProgressInfoBar) and call iris_progress_monitor_watch_process() or
+ * iris_progress_monitor_watch_process_chain().
  *
- * #IrisProgressMonitor is an interface for widgets which display the progress
- * of an action. It has support to watch any number of #IrisProcess objects
- * using the iris_progress_monitor_watch_process() and
- * iris_progress_monitor_watch_process_chain() functions.
+ * <refsect2 id="grouping">
+ * <title>Grouping</title>
+ * <para>
+ * If you have more than one or two watches active, it is a good idea to group
+ * them together: this improves visual presentation and avoids the danger of
+ * your app displaying an enourmous #IrisProgressInfoBar that shows six
+ * processes. The exact way grouping is handled depends on the
+ * #IrisProgressMonitor widget, but a good example is #IrisProgressInfoBar,
+ * where grouping is very important as the the ideal info bar takes up very
+ * little space. By default an #IrisProgressInfoBar will show a group as just a
+ * title and an progress bar showing for overall completion; an expander arrow
+ * allows the user to see details if they wish.
  *
- * The interface has the flexibility to watch any #IrisTask objects if desired.
- * To do this you must first call iris_progress_monitor_add_watch(). This
- * returns an #IrisPort object where you should then send messages of
- * #IrisProgressMessageType. The progress monitor will watch the task until it
- * receives #IRIS_PROGRESS_MESSAGE_CANCELLED or #IRIS_PROGRESS_MESSAGE_COMPLETE.
+ * If you have a series of connected process, or <firstterm>chain</firstterm>,
+ * they will often fit nicely into their own group. If you use
+ * iris_progress_monitor_watch_process_chain() you don't have to worry about
+ * the #IrisProgressGroup object at all, or for more complicated setups you
+ * must first call iris_progress_monitor_add_group() and then pass the result
+ * to the the appropriate method.
+ *
+ * A watch group has both a <firstterm>title</firstterm> and a
+ * <firstterm>plural</firstterm>; the plural is currently not
+ * implemented but will be used to group together similar watch groups (to
+ * further prevent giant #IrisProgressInfoBar<!-- -->s).
+ * For example, if you have several groups of processes each reading a
+ * location on disk, you could give them the plural "Reading directories", and
+ * #IrisProgressInfoBar would be able to display them as just one progress group
+ * unless the user clicked on the expander to view the details.
+ *
+ * The #IrisProgressWatch object will not be freed automatically. If you have
+ * added all of the watches to a group, you can drop your reference using
+ * iris_progress_group_unref() and then the group object will be freed
+ * automatically when the work completes. If you keep this reference, the object
+ * will not be freed and you can carry on using it.
+ * </para>
+ * </refsect2>
  *
  * <refsect2 id="lifecycle">
  * <title>Lifecycle</title>
  * <para>
- * The typical use-case for #IrisProgressMonitor is that you want for example
+ * The typical use case for #IrisProgressMonitor is that you want for example
  * an #IrisProgressInfoBar in your application's main window that displays any
  * slow processes that are currently in progress. If no processes are running
- * the #IrisProgressInfoBar should be hidden. The recommended way to achieve
- * this is by creating one #IrisProgressInfoBar object during the initialization
- * of your program and then showing and hiding this one widget appropriately.
- * You can get the widget to handle this automatically, by calling
- * iris_progress_monitor_set_permanent_mode(). The widget will then make sure it
- * is visible (using gtk_widget_show() in the case of the Gtk+ progress
- * monitors) whenever it has any watches active, and will hide itself again
+ * the info bar should be hidden. The recommended way to achieve this is by
+ * creating one #IrisProgressInfoBar object, during the initialization of your
+ * program, and then showing and hiding this one widget appropriately.
+ * You can get the widget to do this automatically by calling
+ * iris_progress_monitor_set_permanent_mode(): the widget will then make sure it
+ * is visible whenever it has any watches active, and will hide itself again
  * when the last process it is watching finishes.
  *
- * A more powerful mechanism exists if you want to go beyond this behaviour:
+ * A more powerful mechanism exists if you need to go beyond this behaviour -
  * when all of the watches have completed, the #IrisProgressMonitor::finished
- * signal is emitted. For example, you could connect this signal to
+ * signal is emitted. You could, for example, connect this signal to
  * gtk_widget_destroy() to make the widget finalize itself when it has no more
- * active processes to watch.
+ * active watches.
  * </para>
  * </refsect2>
  *
+ * <refsect2 id="tasks">
+ * <title>Watching Tasks</title>
+ * <para>
+ * The interface has the flexibility to watch any #IrisTask objects if desired.
+ * To do this you must first call iris_progress_monitor_add_watch(). This
+ * returns an #IrisPort object where you should then send messages of
+ * #IrisProgressMessageType to update the UI. The progress monitor will watch
+ * the task until it receives #IRIS_PROGRESS_MESSAGE_CANCELLED or
+ * #IRIS_PROGRESS_MESSAGE_COMPLETE. You can find an example implementation of
+ * this in <filename>examples/progress-tasks</filename> in the iris source tree.
+ * </para>
+ * </refsect2>
  */
 
 /* Signal id's */
@@ -157,11 +196,66 @@ iris_progress_monitor_base_init (gpointer g_class)
 }
 
 
+/* A group 'resets' when all its watches complete and it gets hidden */
+void
+_iris_progress_group_reset (IrisProgressGroup *group)
+{
+	group->completed_watches = 0;
+}
+
+/**
+ * iris_progress_monitor_add_group:
+ * @progress_monitor: an #IrisProgressMonitor
+ * @title: a name for the new group
+ * @plural: generic description of the task (not currently used)
+ *
+ * Creates a new watch group. Groups enable you to group together related
+ * processes or tasks; see <link linkend="grouping">the introduction</link>
+ * for more information.
+ *
+ * The caller owns one reference on the returned object, which can be released
+ * using iris_progress_group_unref().
+ *
+ * Returns: an #IrisProgressGroup object.
+ *          
+ **/
+IrisProgressGroup *
+iris_progress_monitor_add_group (IrisProgressMonitor *progress_monitor,
+                                 const gchar         *title,
+                                 const gchar         *plural)
+{
+	IrisProgressMonitorInterface *iface;
+	IrisProgressGroup            *group;
+
+	g_return_val_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor), 0);
+	g_return_val_if_fail (title != NULL, 0);
+
+	iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
+
+	group = g_slice_new (IrisProgressGroup);
+
+	group->progress_monitor = progress_monitor;
+	group->ref_count = 1;
+
+	group->watch_list = NULL;
+
+	group->title = g_strdup (title);
+	group->plural = g_strdup (plural);
+
+	_iris_progress_group_reset (group);
+
+	iface->add_group (progress_monitor, group);
+
+	return group;
+}
+
+
 static IrisProgressWatch *
 iris_progress_monitor_add_watch_internal (IrisProgressMonitor             *progress_monitor,
                                           IrisTask                        *task,
                                           IrisProgressMonitorDisplayStyle  display_style,
-                                          const gchar                     *title)
+                                          const gchar                     *title,
+                                          IrisProgressGroup               *group)
 {
 	IrisProgressMonitorInterface *iface;
 	IrisProgressWatch *watch;
@@ -171,6 +265,13 @@ iris_progress_monitor_add_watch_internal (IrisProgressMonitor             *progr
 	watch->port = iris_port_new ();
 
 	watch->display_style = display_style;
+
+	if (group != NULL) {
+		iris_progress_group_ref (group);
+		watch->group = group;
+
+		group->watch_list = g_list_prepend (group->watch_list, watch);
+	}
 
 	watch->title = g_strdup (title);
 
@@ -182,16 +283,45 @@ iris_progress_monitor_add_watch_internal (IrisProgressMonitor             *progr
 	return watch;
 }
 
+void
+_iris_progress_watch_free (IrisProgressWatch *watch)
+{
+	g_free (watch->title);
+
+	if (watch->group != NULL) {
+		watch->group->watch_list = g_list_remove (watch->group->watch_list,
+		                                          watch);
+		iris_progress_group_unref (watch->group);
+		watch->group = NULL;
+	}
+
+	g_object_unref (watch->port);
+
+	g_slice_free (IrisProgressWatch, watch);
+}
+
+/* Stop receiving status messages from a watch that is still running */
+void
+_iris_progress_watch_disconnect (IrisProgressWatch *watch)
+{
+	/* Receiver must be freed, or we will get messages after we have
+	 * been freed .. */
+	iris_port_set_receiver (watch->port, NULL);
+
+	g_warn_if_fail (G_OBJECT (watch->receiver)->ref_count == 1);
+	iris_receiver_abort (watch->receiver);
+	g_object_unref (watch->receiver);
+}
+
 /**
  * iris_progress_monitor_add_watch:
  * @progress_monitor: an #IrisProgressMonitor
- * @task: the #IrisTask that is being watched. This gets used if the cancel
- *        button is pressed, and to make sure the same task is not watched
- *        multiple times.
+ * @task: the #IrisTask that is being watched.
  * @display_style: format for the textual description, see
  *                 #IrisProgressMonitorDisplayStyle.
  * @title: name of the task being watched, used to label its progress bar, or
  *         %NULL.
+ * @group: #IrisProgressGroup to add the watch to, or %NULL for none
  *
  * Causes @progress_monitor to add a new watch (generally represented by
  * a progress bar) for a task, which needs to update it by posting messages on
@@ -199,14 +329,16 @@ iris_progress_monitor_add_watch_internal (IrisProgressMonitor             *progr
  * #IrisProgressMessageType. The watch will be removed when the port receives
  * #IRIS_PROGRESS_MESSAGE_CANCELLED or #IRIS_PROGRESS_MESSAGE_COMPLETE.
  *
+ * See iris_progress_monitor_add_group() for more info on watch groups.
+ *
  * Returns: an #IrisPort, listening for progress messages.
- *          
- **/
+ */
 IrisPort *
 iris_progress_monitor_add_watch (IrisProgressMonitor             *progress_monitor,
                                  IrisTask                        *task,
+                                 const gchar                     *title,
                                  IrisProgressMonitorDisplayStyle  display_style,
-                                 const gchar                     *title)
+                                 IrisProgressGroup               *group)
 {
 	IrisProgressWatch            *watch;
 	IrisProgressMonitorInterface *iface;
@@ -219,19 +351,10 @@ iris_progress_monitor_add_watch (IrisProgressMonitor             *progress_monit
 	watch = iris_progress_monitor_add_watch_internal (progress_monitor,
 	                                                  task,
 	                                                  display_style, 
-	                                                  title);
+	                                                  title,
+	                                                  group);
 
 	return watch->port;
-}
-
-void
-_iris_progress_watch_free (IrisProgressWatch *watch)
-{
-	g_free (watch->title);
-
-	g_object_unref (watch->port);
-
-	g_slice_free (IrisProgressWatch, watch);
 }
 
 
@@ -268,12 +391,12 @@ iris_progress_monitor_set_permanent_mode (IrisProgressMonitor *progress_monitor,
  * @progress_monitor: an #IrisProgressMonitor
  * @milliseconds: time in milliseconds to display progress information for a task
  *             or process after it has completed or been cancelled. Default
- *             value: 500 ms.
+ *             value: 750 ms.
  *
  * It is slightly visually jarring for a process or group of processes that are
  * being watched to disappear instantly when they complete or the cancel button
  * is clicked. You should not normally need to change the default value of
- * 500ms, which allows time for the UI to catch up with the process and the
+ * 750ms, which allows time for the UI to catch up with the process and the
  * user to catch up with the UI.
  **/
 /* If milliseconds == -1 the watches will never be cleared. This is not
@@ -306,6 +429,7 @@ static IrisProgressWatch *
 watch_process_internal (IrisProgressMonitor             *progress_monitor,
                         IrisProcess                     *process,
                         IrisProgressMonitorDisplayStyle  display_style,
+                        IrisProgressGroup               *group,
                         gboolean                         chain)
 {
 	IrisProgressMonitorInterface *iface;
@@ -324,7 +448,8 @@ watch_process_internal (IrisProgressMonitor             *progress_monitor,
 	          (progress_monitor,
 	           IRIS_TASK (process),
 	           display_style,
-	           iris_process_get_title (process));
+	           iris_process_get_title (process),
+	           group);
 
 	watch->display_style = display_style;
 	watch->chain_flag = chain;
@@ -337,39 +462,126 @@ watch_process_internal (IrisProgressMonitor             *progress_monitor,
 
 /**
  * iris_progress_monitor_watch_process:
- * @progress_monitor: An #IrisProgressMonitor
+ * @progress_monitor: an #IrisProgressMonitor
  * @process: an #IrisProcess
  * @display_style: format to display progress, such as a percentage or
  *                 as items/total. See #IrisProgressMonitorDisplayStyle.
+ * @group: group to add the process watch to, or 0 for none
  *
  * Visually display the progress of @process. If @process has source or sink
  * processes connected, they are ignored.
+ *
+ * See iris_progress_monitor_add_group() for more info on watch groups.
  **/
 void
 iris_progress_monitor_watch_process (IrisProgressMonitor             *progress_monitor,
                                      IrisProcess                     *process,
-                                     IrisProgressMonitorDisplayStyle  display_style)
+                                     IrisProgressMonitorDisplayStyle  display_style,
+                                     IrisProgressGroup               *group)
 {
-	watch_process_internal (progress_monitor, process, display_style, FALSE);
+	watch_process_internal (progress_monitor, process, display_style, group, FALSE);
 }
 
 /**
  * iris_progress_monitor_watch_process_chain:
- * @progress_monitor: An #IrisProgressMonitor
+ * @progress_monitor: an #IrisProgressMonitor
  * @process: an #IrisProcess
  * @display_style: format to display progress, such as a percentage or
  *                 as items/total. See #IrisProgressMonitorDisplayStyle.
+ * @title: overall title for this group of processes
+ * @plural: a more general title
  *
  * Visually display the progress of @process, and any processes which are
  * connected. Each process in the chain is displayed separately in the order of
  * the data flow.
+ *
+ * This function will create a watch group for the chain of processes, which
+ * improves the visual display. If you would like more control over what
+ * happens, iris_progress_monitor_watch_process_chain_in_group() allows you to
+ * add the chain to an existing group or avoid grouping the processes.
+ * See <link linkend="grouping">the introduction</link> for more information on
+ * groups.
  **/
 void
 iris_progress_monitor_watch_process_chain (IrisProgressMonitor             *progress_monitor,
                                            IrisProcess                     *process,
-                                           IrisProgressMonitorDisplayStyle  display_style)
+                                           IrisProgressMonitorDisplayStyle  display_style,
+                                           const gchar                     *title,
+                                           const gchar                     *plural)
 {
-	watch_process_internal (progress_monitor, process, display_style, TRUE);
+	IrisProgressGroup *group;
+
+	group = iris_progress_monitor_add_group (progress_monitor, title, plural);
+
+	watch_process_internal (progress_monitor, process, display_style, group, TRUE);
+
+	/* Drop the caller's reference; this means the object will be freed
+	 * automatically whenever the process chain completes
+	 */
+	iris_progress_group_unref (group);
+}
+
+/**
+ * iris_progress_monitor_watch_process_chain_in_group:
+ * @progress_monitor: an #IrisProgressMonitor
+ * @process: an #IrisProcess
+ * @display_style: format to display progress, such as a percentage or
+ *                 as items/total. See #IrisProgressMonitorDisplayStyle.
+ * @group: group in which to add @process and its linked processe, or 0.
+ *
+ * This function is a version of iris_progress_monitor_watch_process_chain()
+ * which allows you to add @process and its linked processes to an existing
+ * watch group, or to not add them to a group at all. See
+ * <link linkend="grouping">the introduction</link> for more information.
+ **/
+void
+iris_progress_monitor_watch_process_chain_in_group (IrisProgressMonitor             *progress_monitor,
+                                                    IrisProcess                     *process,
+                                                    IrisProgressMonitorDisplayStyle  display_style,
+                                                    IrisProgressGroup               *group)
+{
+	watch_process_internal (progress_monitor, process, display_style, group, TRUE);
+}
+
+/**************************************************************************
+ *                       IrisProgressGroup stuff                          *
+ *************************************************************************/
+
+/** iris_progress_group_ref:
+ * @group: an #IrisProgressGroup
+ *
+ * Increases the reference count of @group.
+ */
+void
+iris_progress_group_ref (IrisProgressGroup *group) {
+	g_atomic_int_inc (&group->ref_count);
+}
+
+/** iris_progress_group_unref:
+ * @group: an #IrisProgressGroup
+ *
+ * Removes a reference to @group and frees the object if there are no
+ * references remaining. Any watch which is a member of @group will also hold a
+ * reference, so @group will never be freed until it is not needed any more.
+ */
+void
+iris_progress_group_unref (IrisProgressGroup *group) {
+	IrisProgressMonitorInterface *iface;
+
+	if (g_atomic_int_dec_and_test (&group->ref_count)) {
+		g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (group->progress_monitor));
+
+		/* Free user data (ie. the widgets) associated by the implementation */
+		iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (group->progress_monitor);
+		iface->remove_group (group->progress_monitor, group);
+
+		group->progress_monitor = NULL;
+
+		g_free (group->title);
+		g_free (group->plural);
+
+		g_slice_free (IrisProgressGroup, group);
+	}
 }
 
 
@@ -407,23 +619,38 @@ watch_chain (IrisProgressMonitor             *progress_monitor,
              IrisProcess                     *process,
              IrisProgressMonitorDisplayStyle  display_style)
 {
-	IrisProcess *head;
+	IrisProgressMonitorInterface *iface;
+	IrisProcess                  *head;
+	IrisProgressWatch            *watch;
+	IrisProgressGroup            *group;
 
 	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
 	g_return_if_fail (IRIS_IS_PROCESS (process));
+
+	iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
 
 	head = process;
 	while (iris_process_has_predecessor (head))
 		head = iris_process_get_predecessor (head);
 
+	watch = iface->get_watch (progress_monitor, IRIS_TASK (process));
+	group = watch->group;
+
+	if (head != process) {
+		/* If the initially added process wasn't the head of the chain, remove
+		 * it so the processes are shown in order.
+		 * FIXME: currently does not work due to iris_receiver_abort not working
+		 * I think
+		 */
+		/*_iris_progress_watch_disconnect (watch);
+		iface->remove_watch (progress_monitor, watch, TRUE);*/
+	}
+
 	process = head;
 	do {
-		watch_process_internal (progress_monitor,
-		                        process, 
-		                        display_style,
-		                        FALSE);
+		watch_process_internal (progress_monitor, process,
+		                        display_style, group, FALSE);
 	} while ((process = iris_process_get_successor (process)) != NULL);
-
 }
 
 static void
@@ -539,31 +766,90 @@ _iris_progress_monitor_handle_message (IrisMessage  *message,
 	iface->handle_message (progress_monitor, watch, message);
 }
 
+static void
+make_progress_string (IrisProgressMonitorDisplayStyle  display_style,
+                      gdouble                          fraction,
+                      gint                             processed_items,
+                      gint                             total_items,
+                      gchar                           *p_progress_text)
+{
+	switch (display_style) {
+		case IRIS_PROGRESS_MONITOR_ITEMS:
+			g_snprintf (p_progress_text, 255, _("%i items of %i"), 
+			            processed_items, total_items);
+			break;
+		case IRIS_PROGRESS_MONITOR_PERCENTAGE:
+			g_snprintf (p_progress_text, 255, _("%.0f%% complete"), 
+			            (fraction * 100.0));
+			break;
+		default:
+			g_warning ("iris-progress-monitor: Invalid display_style.\n");
+			p_progress_text[0] = 0;
+	}
+}
+
 void
-_iris_progress_monitor_format_watch (IrisProgressMonitor *progress_monitor,
-                                     IrisProgressWatch   *watch,
-                                     gchar               *progress_text)
+_iris_progress_monitor_format_watch_progress (IrisProgressMonitor *progress_monitor,
+                                              IrisProgressWatch   *watch,
+                                              gchar               *p_progress_text)
 {
 	if (watch->complete) {
-		g_snprintf (progress_text, 255, _("Complete"));
+		g_snprintf (p_progress_text, 255, _("Complete"));
 		return;
 	} else if (watch->cancelled) {
-		g_snprintf (progress_text, 255, _("Cancelled"));
+		g_snprintf (p_progress_text, 255, _("Cancelled"));
 		return;
 	}
 
-	switch (watch->display_style) {
-		case IRIS_PROGRESS_MONITOR_ITEMS:
-			g_snprintf (progress_text, 255, _("%i items of %i"), 
-			            watch->processed_items,
-			            watch->total_items);
-			break;
-		case IRIS_PROGRESS_MONITOR_PERCENTAGE:
-			g_snprintf (progress_text, 255, _("%.0f%% complete"), 
-			            (watch->fraction * 100.0));
-			break;
-		default:
-			g_warning ("Unrecognised value for watch->display_style.\n");
-			progress_text[0] = 0;
+	make_progress_string (watch->display_style, watch->fraction,
+	                      watch->processed_items, watch->total_items,
+	                      p_progress_text);
+}
+
+void
+_iris_progress_monitor_format_group_progress (IrisProgressMonitor *progress_monitor,
+                                              IrisProgressGroup   *group,
+                                              gchar               *p_progress_text,
+                                              gdouble             *p_fraction)
+{
+	IrisProgressWatch *watch;
+	GList   *node;
+	gboolean complete = TRUE;
+	gdouble  fraction = 0;
+	gint     watch_count = 0;
+
+	g_return_if_fail (group->watch_list != NULL);
+
+	if (group->cancelled) {
+		g_snprintf (p_progress_text, 255, _("Cancelled"));
+		return;
 	}
+
+	for (node=group->watch_list; node; node=node->next) {
+		watch = node->data;
+
+		/* We do count completed watches that are in the list, because they are
+		 * only accounted for in ->completed_watches once they are removed from
+		 * the list
+		 */
+		if (!watch->complete)
+			complete = FALSE;
+
+		fraction += watch->fraction;
+		watch_count ++;
+	}
+
+	fraction += group->completed_watches;
+	fraction /= (group->completed_watches + watch_count);
+
+	if (p_fraction != NULL)
+		*p_fraction = fraction;
+
+	if (complete) {
+		g_snprintf (p_progress_text, 255, _("Complete"));
+		return;
+	}
+
+	make_progress_string (IRIS_PROGRESS_MONITOR_PERCENTAGE, fraction,
+	                      0, 0, p_progress_text);
 }

@@ -49,6 +49,8 @@ IrisScheduler* iris_receiver_get_scheduler (IrisReceiver  *receiver);
 void           iris_receiver_set_scheduler (IrisReceiver  *receiver,
                                             IrisScheduler *scheduler);
 
+void           iris_receiver_abort         (IrisReceiver  *receiver);
+
 G_END_DECLS
 
 #endif /* __IRIS_RECEIVER_H__ */

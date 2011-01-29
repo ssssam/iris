@@ -36,19 +36,17 @@ struct _IrisProgressDialogPrivate
 
 	GList         *watch_list;
 
+	GtkWidget     *box;
 	gchar         *title_format;        /* NULL if default title to be used */
-
-	guint          permanent_mode : 1;
+	gint           max_width;
 
 	gint           watch_hide_delay;
+
+	guint          permanent_mode : 1;
 
 	guint          in_finished : 1;     /* TRUE when emitting ::finished */
 	guint          title_is_static : 1; /* TRUE if title_format does not include '%s' */
 };
-
-/* For testing */
-IrisProgressWatch *_iris_progress_dialog_get_watch (IrisProgressDialog *progress_dialog,
-                                                    IrisTask           *task);
 
 G_END_DECLS
 

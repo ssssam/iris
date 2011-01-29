@@ -39,6 +39,7 @@ typedef struct _IrisProgressMonitor            IrisProgressMonitor;
 typedef struct _IrisProgressMonitorInterface   IrisProgressMonitorInterface;
 
 typedef struct _IrisProgressWatch              IrisProgressWatch;
+typedef struct _IrisProgressGroup              IrisProgressGroup;
 
 /**
  * IrisProgressMonitorDisplayStyle:
@@ -59,6 +60,8 @@ struct _IrisProgressMonitorInterface
 {
 	GTypeInterface parent_iface;
 
+	void     (*add_group)            (IrisProgressMonitor *progress_monitor,
+	                                  IrisProgressGroup   *group);
 	void     (*add_watch)            (IrisProgressMonitor *progress_monitor,
 	                                  IrisProgressWatch   *watch);
 
@@ -75,6 +78,15 @@ struct _IrisProgressMonitorInterface
 	void     (*set_watch_hide_delay) (IrisProgressMonitor *progress_monitor,
 	                                  gint                 millisecs);
 
+	/* Private */
+	void               (*remove_group) (IrisProgressMonitor *progress_monitor,
+	                                    IrisProgressGroup   *group);
+	IrisProgressWatch *(*get_watch)    (IrisProgressMonitor *progress_monitor,
+	                                    IrisTask            *task);
+	void               (*remove_watch) (IrisProgressMonitor *progress_monitor,
+	                                    IrisProgressWatch   *watch,
+	                                    gboolean             temporary);
+
 	void     (*reserved1)            (void);
 	void     (*reserved2)            (void);
 	void     (*reserved3)            (void);
@@ -84,10 +96,14 @@ struct _IrisProgressMonitorInterface
 GType         iris_progress_monitor_get_type             (void) G_GNUC_CONST;
 
 /* General API */
-IrisPort     *iris_progress_monitor_add_watch            (IrisProgressMonitor             *progress_monitor,
+IrisProgressGroup *iris_progress_monitor_add_group       (IrisProgressMonitor *progress_monitor,
+                                                          const gchar         *title,
+                                                          const gchar         *plural);
+IrisPort          *iris_progress_monitor_add_watch       (IrisProgressMonitor             *progress_monitor,
                                                           IrisTask                        *task,
+                                                          const gchar                     *title,
                                                           IrisProgressMonitorDisplayStyle  display_style,
-                                                          const gchar                     *title);
+                                                          IrisProgressGroup               *group);
 
 void          iris_progress_monitor_set_permanent_mode   (IrisProgressMonitor             *progress_monitor,
                                                           gboolean                         enable);
@@ -96,12 +112,22 @@ void          iris_progress_monitor_set_watch_hide_delay (IrisProgressMonitor   
                                                           gint                             milliseconds);
 
 /* IrisProcess-specific API */
-void          iris_progress_monitor_watch_process        (IrisProgressMonitor             *progress_monitor,
-                                                          IrisProcess                     *process,
-                                                          IrisProgressMonitorDisplayStyle  display_style);
-void          iris_progress_monitor_watch_process_chain  (IrisProgressMonitor             *progress_monitor,
-                                                          IrisProcess                     *process,
-                                                          IrisProgressMonitorDisplayStyle  display_style);
+void          iris_progress_monitor_watch_process                (IrisProgressMonitor             *progress_monitor,
+                                                                  IrisProcess                     *process,
+                                                                  IrisProgressMonitorDisplayStyle  display_style,
+                                                                  IrisProgressGroup               *group);
+void          iris_progress_monitor_watch_process_chain          (IrisProgressMonitor             *progress_monitor,
+                                                                  IrisProcess                     *process,
+                                                                  IrisProgressMonitorDisplayStyle  display_style,
+                                                                  const gchar                     *title,
+                                                                  const gchar                     *plural);
+void          iris_progress_monitor_watch_process_chain_in_group (IrisProgressMonitor             *progress_monitor,
+                                                                  IrisProcess                     *process,
+                                                                  IrisProgressMonitorDisplayStyle  display_style,
+                                                                  IrisProgressGroup               *group);
+
+void          iris_progress_group_ref   (IrisProgressGroup *progress_group);
+void          iris_progress_group_unref (IrisProgressGroup *progress_group);
 
 G_END_DECLS
 

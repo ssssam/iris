@@ -102,11 +102,11 @@ many_message_delivered1 (void)
 	g_assert_cmpint (counter, ==, 100);
 }
 
-static void
+/*static void
 set_scheduler1_cb (IrisMessage *msg,
                    gpointer     data)
 {
-}
+}*/
 
 static void
 set_scheduler1 (void)

@@ -460,7 +460,8 @@ test23 (void)
 static void
 test24 (void)
 {
-	IrisScheduler *sched = mock_scheduler_new ();
+	IrisScheduler *sched;
+	sched = mock_scheduler_new ();
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_control_scheduler (task, mock_scheduler_new ());
 	iris_task_set_work_scheduler (task, mock_scheduler_new ());

@@ -1,4 +1,4 @@
-/* process-tasks.c
+/* progress-tasks.c
  *
  * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
@@ -19,7 +19,7 @@
  */
 
 /* progress-tasks: demonstrates using IrisProgressMonitor for something other
- *    than an IrisProcess. */
+ *                 than an IrisProcess. */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -35,6 +35,8 @@ GtkWidget *demo_window = NULL,
 
 GtkWidget *show_info_bar = NULL;
 
+IrisProgressGroup *watch_group = NULL;
+
 static void
 thinking_task_func (IrisTask *task,
                     gpointer  user_data)
@@ -46,6 +48,7 @@ thinking_task_func (IrisTask *task,
 	gint         i;
 
 	for (i=0; i<count; i++) {
+		/* The 'work' of this task is just sleeping, of course */
 		g_usleep (50000);
 
 		if (iris_task_is_canceled (task)) {
@@ -53,6 +56,7 @@ thinking_task_func (IrisTask *task,
 			break;
 		}
 
+		/* Every so often we send a progress message! */
 		status_message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_FRACTION,
 		                                        G_TYPE_FLOAT,
 		                                        (float)i/(float)count);
@@ -61,14 +65,18 @@ thinking_task_func (IrisTask *task,
 
 	if (cancelled) {
 		status_message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
+		iris_port_post (watch_port, status_message);
 	} else {
+		/* Make sure the 100% mark is reached, it looks strange for a watch to
+		 * disappear before it reaches 100%
+		 */
 		status_message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_FRACTION,
 		                                        G_TYPE_FLOAT, 1.0);
 		iris_port_post (watch_port, status_message);
 
 		status_message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
+		iris_port_post (watch_port, status_message);
 	}
-	iris_port_post (watch_port, status_message);
 }
 
 static void
@@ -80,21 +88,27 @@ trigger_task (GtkButton *trigger,
 
 	task = iris_task_new_with_func (thinking_task_func, user_data, NULL);
 
+	if (watch_group == NULL)
+		watch_group = iris_progress_monitor_add_group
+		                 (IRIS_PROGRESS_MONITOR (progress_widget),
+		                  "Thinking about things",
+		                  NULL);
+
 	watch_port = iris_progress_monitor_add_watch
 	               (IRIS_PROGRESS_MONITOR (progress_widget),
 	                task,
+	                "Thinking",
 	                IRIS_PROGRESS_MONITOR_PERCENTAGE,
-	                "Thinking");
+	                watch_group);
 	g_object_set_data (G_OBJECT (task), "watch-port", watch_port);
 
 	iris_task_run (task);
 }
 
-static GtkWidget *
+static void
 create_demo_dialog (void)
 {
 	GtkWidget *vbox,
-	          *triggers_box,
 	          *button;
 
 	demo_window = gtk_dialog_new_with_buttons
@@ -150,6 +164,6 @@ main (gint argc, char *argv[])
 	gtk_main ();
 
 	gtk_widget_destroy (progress_widget);
+
+	return 0;
 }
-
-

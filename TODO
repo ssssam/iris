@@ -1,20 +1,11 @@
 ---------------------------------------------------------------------------
-To do now
+Iris 0.3.0
 ---------------------------------------------------------------------------
 
-Grouping, & titles ...
-  * watch groups can be created, and a watch shown under a group. Or a chain can be
-    classified as a group. These have their own titles.
-    group_id = iris_progress_monitor_add_group (self, title, plural)
-    iris_progress_monitor_watch_process (self, process, style, group_id)
-    iris_progress_monitor_watch_process_chain (self, process, style, title, plural)
-    iris_progress_monitor_watch_process_chain_in_group (self, process, style, group_id)
-    iris_progress_monitor_add_watch (self, task, style, title, group_id)
+cancel button, reimplement this! Make it work in progress-tasks too!!
+Remember to doc. in iris-progress-monitor.c
 
-  * cancel button, reimplement this! Make it work in progress-tasks too!!
-
-  * groups examples:
-      - one where there are 3 buttons to launch a task, each one launches it into a different group
+* fix watch_chain using gtk_box_reorder_child
 
 Fix progress-tasks, current bugs include:
  - progress-tasks actually sometimes misses tasks or does 2 at once
@@ -24,30 +15,6 @@ Fix progress-tasks, current bugs include:
 
 Since STATUS_COMPLETE is sent when the task receives 'finish', why not rename it to 'finish'
 also???
-
-* Should anything be allowed to happen after execution begins? Seems like a recipe for races.
-  Currently on tasks you can: add callbacks/errbacks and dependencies; add watches; and
-  it also seems like you can execute tasks again once they are finished :/
-  Surely all this should be dealt with but not allowed, using an assertion or two
-  .. actually for processes it seems you should be allowed to do stuff until _no_more_work.
-  Make sure the docs reflect this!!!! 
-  -> put in assertions and tests for all this
-  -> what about chaining together processes that are being cancelled? is this possible?
-     it could be cancelled before it is run. I guess. We should make sure that does not break anything.
-
-* Finalisation: 
-    - make sure nothing can be finalized while it still has messages to process
-      maybe add a new flag 'finalizable?'. or move 'finished' to after the observers and
-      async result is handled.
-
-    Thoughts on ref counting:
-      - object unrefs itself after finished; if nothing else is holding on to it there it goes ..
-        could ref itself too, so that the object doesn't magically disappear unless the user
-        explicitly dropped their ref too ..
-      - there could be a 'task garbage collector' where the scheduler or someone
-        periodically checks tasks to see if they have completed and can be freed
-
-   -> Put in a bunch of finalisation tests, including cancellation etc.
 
 How much of tests/progress-monitor-gtk-1 could use wait-func instead of count-sheep-func???
 
@@ -62,9 +29,20 @@ Tests should always use a fresh scheduler, no?
 
 Bump version to 0.3, and maybe give Iris a blog post :)
 
+
 ---------------------------------------------------------------------------
 Missing or Incompleteness
 ---------------------------------------------------------------------------
+
+waf should build the gtk-docs
+
+The IrisProgressMonitor examples could perhaps be described using a couple of
+screenshots.
+To do this in gtk-doc you do:
+  <inlinegraphic fileref="gnome-foo.png" format="PNG" />
+then add the file in doc/makefile.am:
+  HTML_IMAGES= \
+          $(srcdir)/images/gnome-foo.png
 
 When I added the 'closed' API I broke IrisLFQueue and IrisWSQueue :( While
 there, they each have their own unit tests which duplicate some code, we
@@ -172,21 +150,46 @@ Progress widgets
 	similar groups to save space, eg. importing 6 directories could each have
 	the plural "Importing files" so on their own they display as "Importing
 	/home/foo/bar" but when space becomes short they are collapsed to "Importing
-	files" rather than showing 6 collapsed processes/groups
+	files" rather than showing 6 collapsed processes/groups. Remember to update
+	all the docs in iris-progress-monitor.c when you implement this!
 
 	It would be faster to only update progress monitor labels/title bars
 	when the string has changed; only relevent with %-ages and even then
 	probably not a massive improvement
 
+	A useful addition might be a simple IrisProgressBar, which would watch a process,
+	group, task etc. and could just be embedded in an app's status bar or main window.
+
 Alex added warnings for GSimpleAsyncResult when not used from main thread.
 We need to implement our own now since this isn't reusable.
+
+Should anything be allowed to happen after execution begins? Currently on tasks
+you can add callbacks/errbacks and dependencies, add watches, and it even seems
+you can execute tasks again once they are finished :/ This is a reciple for
+nasty race conditions down the line. It should be handled but not allowed, using
+an assertion or two. For processes you should be allowed to do stuff until BOTH
+iris_process_no_more_work() or iris_process_run() are called, for tasks just
+until iris_tasks_run() is called. Need to update:
+  -> the docs
+  -> put in the tests and the assertions
+
+What about chaining together processes that are being cancelled, is this possible?
+The tests could be cancelled before they run; add a testcase for this.
+
+Finalisation: a few issues here.
+  * make sure nothing can be finalized while it still has messages to process.
+
+  * The best way forward for destruction is to make IrisTask hold a reference to
+    itself, released when execution is complete. The user can keep it alive as
+    long as they hold a reference, but it will never be destroyed until it
+    is cancelled or it completes.
+
+  * All this needs thorough testing of course!
 
 
 ---------------------------------------------------------------------------
 Optimization TODO's
 ---------------------------------------------------------------------------
-
-Using waf would speed up compile time :)
 
 iris_message_unref()
 
@@ -238,7 +241,8 @@ Make branches of some GNOME apps to use Iris!
 For example: Nautilus, .. who else uses progress bars so much?
 
 This is a GTK+ theme bug, but the 'expander in an infobar' is pretty ugly on hover
-at least with clearlooks
+at least with clearlooks. One theme has progress bars in an infobar with a grey
+background behind their rounded corners as well.
 
 In the tests and examples, a lot of tasks are never unreferenced. This isn't
 setting a good example!!

@@ -38,7 +38,6 @@ wait_func (IrisProcess *process,
 {
 	gint *wait_state = user_data;
 
-	printf ("wait_func: state %i\n", g_atomic_int_get (wait_state));
 	if (g_atomic_int_get (wait_state)==0)
 		g_atomic_int_set (wait_state, 1);
 	else
@@ -47,7 +46,7 @@ wait_func (IrisProcess *process,
 }
 
 
-static void
+/*static void
 main_loop_iteration_times (gint times)
 {
 	gint i;
@@ -57,7 +56,7 @@ main_loop_iteration_times (gint times)
 		g_usleep (50);
 		g_thread_yield ();
 	}
-}
+}*/
 
 static void
 hospital_handler (IrisMessage *message,
@@ -126,8 +125,6 @@ blocking_1 ()
 		message = iris_message_new (999);
 		iris_port_post (port, message);
 
-		iris_scheduler_manager_print_stat ();
-
 		/* If the process is running in the default scheduler, one of the
 		 * messages will not be received because one of the scheduler threads
 		 * will be blocking in work_func().
@@ -150,11 +147,15 @@ blocking_1 ()
 	}
 }
 
+
 int main(int argc, char *argv[]) {
 	g_thread_init (NULL);
-	gtk_test_init (&argc, &argv, NULL);
+	g_type_init ();
+	g_test_init (&argc, &argv, NULL);
 
-	g_test_add_func ("/scheduler 2/blocking 1", blocking_1);
+	g_test_add_func ("/process 2/blocking 1", blocking_1);
 
 	return g_test_run ();
 }
+
+
