@@ -33,7 +33,7 @@
  * iris_queue_timed_pop_or_close() or iris_queue_try_pop_or_close(), the owner
  * of a queue may signal to other parts of the program that it is no longer
  * processing the queue. If a queue might close, callers must always check that
- * it is open using iris_queue_is_open() before calling iris_queue_push().
+ * it is open using iris_queue_is_closed() before calling iris_queue_push().
  * Pushing items to a closed #IrisQueue will trigger a warning.
  *
  * By setting the flag on the queue rather than somewhere else you ensure that
