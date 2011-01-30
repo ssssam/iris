@@ -99,8 +99,10 @@ iris_thread_worker_exclusive (IrisThread  *thread,
 get_next_item:
 
 	if (G_LIKELY ((thread_work = iris_queue_pop (queue)) != NULL)) {
-		if (!VERIFY_THREAD_WORK (thread_work))
+		if (!VERIFY_THREAD_WORK (thread_work)) {
+			g_warning ("Invalid thread_work %lx\n", (gulong)thread_work);
 			goto get_next_item;
+		}
 
 		iris_thread_work_run (thread_work);
 		iris_thread_work_free (thread_work);
