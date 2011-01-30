@@ -31,6 +31,17 @@ Bump version to 0.3, and maybe give Iris a blog post :)
 
 
 ---------------------------------------------------------------------------
+Buggy code
+---------------------------------------------------------------------------
+
+The process tests occasionally hang. Other times they just go very slow, so
+this could just be the really poor implementation of the process work function
+at the moment. See below for improvement ideas.
+
+Test /receiver-scheduler/*/destruction sometimes fails, this is (I think)
+because iris_receiver_abort() does not work perfectly.
+
+---------------------------------------------------------------------------
 Missing or Incompleteness
 ---------------------------------------------------------------------------
 
@@ -64,10 +75,6 @@ IrisScheduler
 	  - it not to destroy itself until all of its work queues are done,
 	    *or* it to give up its work queues ..
 
-	I once got this error on finalize.
-	GThread-ERROR **: file /build/buildd/glib2.0-2.24.1/gthread/gthread-posix.c: line 171 (g_mutex_free_posix_impl): error 'Device or resource busy' during 'pthread_mutex_destroy ((pthread_mutex_t *) mutex)'
-	aborting...
-	Aborted
 
 IrisMessage
 

@@ -45,9 +45,9 @@ counter_enqueue_times (IrisProcess *process,
 	}
 }
 
-/* live: general check that no work items are lost by schedulers */
+/* live_process: general check that no work items are lost by schedulers, using a process */
 static void
-test_live (void)
+test_live_process (void)
 {
 	IrisScheduler *scheduler;
 	IrisProcess   *process;
@@ -56,10 +56,10 @@ test_live (void)
 	IrisMessage   *message;
 	gint           process_counter,
 	               message_counter;
-	gint           ii, j;
+	gint           n_threads, j;
 
-	for (ii=0; ii<5; ii++) {
-		scheduler = iris_scheduler_new_full (1, 2);
+	for (n_threads=4; n_threads<=8; n_threads++) {
+		scheduler = iris_scheduler_new_full (n_threads, n_threads);
 		iris_scheduler_set_default (scheduler);
 
 		process_counter = 0;
@@ -75,12 +75,13 @@ test_live (void)
 		 */
 		process = iris_process_new_with_func (slow_counter_callback,
 		                                      NULL, NULL);
-		counter_enqueue_times (process, &process_counter, 1000);
+		counter_enqueue_times (process, &process_counter, 20);
 		iris_process_no_more_work (process);
 		iris_process_run (process);
 
-		while (g_atomic_int_get (&process_counter) < 500)
-			g_usleep (5000);
+		while (g_atomic_int_get (&process_counter) < 10) {
+			g_usleep (50000);
+		}
 
 		/* By this point, the scheduler has probably opened and closed
 		 * transient thread, now let's check messages are still getting
@@ -98,9 +99,12 @@ test_live (void)
 			iris_message_unref (message);
 		}
 
-		while (g_atomic_int_get (&process_counter) < 1000 ||
-		       g_atomic_int_get (&message_counter) < 10)
+		while (g_atomic_int_get (&process_counter) < 20 ||
+		       g_atomic_int_get (&message_counter) < 10) {
+			/*g_print ("%i / %i\n", g_atomic_int_get (&process_counter),
+			                      g_atomic_int_get (&message_counter));*/
 			g_usleep (50000);
+		}
 
 		g_object_unref (receiver);
 		g_object_unref (port);
@@ -117,7 +121,7 @@ main (int   argc,
 	g_test_init (&argc, &argv, NULL);
 	g_thread_init (NULL);
 
-	g_test_add_func ("/scheduler/live", test_live);
+	g_test_add_func ("/scheduler/live process", test_live_process);
 
 	return g_test_run ();
 }

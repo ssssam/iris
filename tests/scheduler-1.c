@@ -21,6 +21,62 @@ test3 (void)
 	g_assert_cmpint (iris_scheduler_get_max_threads (sched), >=, 2);
 }
 
+/* Callback to register that each work item as executed */
+#define WORK_COUNT 128
+gint    exec_flag[WORK_COUNT],
+        counter;
+
+static void
+work_register_cb (gpointer data)
+{
+	gint n = GPOINTER_TO_INT (data);
+	exec_flag[n] = TRUE;
+	g_atomic_int_inc (&counter);
+	g_usleep (500);
+}
+
+/* live: test all work queued items execute */
+static void
+test_live (void)
+{
+	IrisScheduler *scheduler;
+	gint           n_threads,
+	               i;
+	GList         *missing_list;
+
+	for (n_threads=1; n_threads<=8; n_threads++) {
+		counter = 0;
+		memset (exec_flag, 0, WORK_COUNT * sizeof(gint));
+
+		scheduler = iris_scheduler_new_full (n_threads, n_threads);
+
+		for (i=0; i<WORK_COUNT; i++)
+			iris_scheduler_queue (scheduler, work_register_cb, GINT_TO_POINTER (i), NULL);
+
+		while (1) {
+			g_usleep (50000);
+			missing_list = NULL;
+
+			for (i=0; i<WORK_COUNT; i++)
+				if (!exec_flag[i])
+					missing_list = g_list_prepend (missing_list, GINT_TO_POINTER(i));
+
+			if (missing_list == NULL && g_atomic_int_get (&counter) == WORK_COUNT)
+				break;
+
+			/*g_print ("Missing work: ");
+			for (node=missing_list; node; node=node->next)
+				g_print ("%i ", GPOINTER_TO_INT (node->data));
+			g_print ("\n");*/
+
+			g_list_free (missing_list);
+		}
+
+		g_object_unref (scheduler);
+	}
+}
+
+
 gint
 main (int   argc,
       char *argv[])
@@ -32,6 +88,8 @@ main (int   argc,
 	g_test_add_func ("/scheduler/default1", test1);
 	g_test_add_func ("/scheduler/get_min_threads1", test2);
 	g_test_add_func ("/scheduler/get_max_threads1", test3);
+
+	g_test_add_func ("/scheduler/live", test_live);
 
 	return g_test_run ();
 }

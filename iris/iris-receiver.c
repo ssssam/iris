@@ -112,7 +112,7 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
                             IrisMessage  *message)
 {
 	IrisReceiverPrivate *priv;
-	IrisDeliveryStatus   status = IRIS_DELIVERY_ACCEPTED;
+	IrisDeliveryStatus   status = IRIS_DELIVERY_PAUSE;
 	IrisReceiveDecision  decision;
 	gboolean             execute = TRUE;
 	gboolean             unpause = FALSE;
@@ -137,7 +137,7 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 	g_static_rec_mutex_lock (&priv->mutex);
 
 	if (g_atomic_int_get (&priv->completed) == TRUE) {
-		decision = IRIS_DELIVERY_REMOVE;
+		status = IRIS_DELIVERY_REMOVE;
 		execute = FALSE;
 	}
 	else if ((priv->max_active > 0 && priv->active == priv->max_active) || g_atomic_pointer_get (&priv->message))
@@ -145,7 +145,7 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 		/* We cannot accept an item at this time, so let
 		 * the port queue the item for us.
 		 */
-		decision = IRIS_DELIVERY_PAUSE;
+		status = IRIS_DELIVERY_PAUSE;
 		execute = FALSE;
 	}
 	else if (priv->arbiter) {
@@ -210,8 +210,9 @@ _post_decision:
 			status = IRIS_DELIVERY_ACCEPTED_REMOVE;
 	}
 
-	if (unpause && iris_port_is_paused (priv->port))
-		iris_port_flush (priv->port);
+	if (unpause && iris_port_is_paused (priv->port)) {
+		iris_port_flush (priv->port, NULL);
+	}
 
 	return status;
 }
@@ -403,13 +404,11 @@ iris_receiver_resume (IrisReceiver *receiver)
 
 	g_static_rec_mutex_unlock (&priv->mutex);
 
-	if (message) {
-		/* repost message so it is at beginning of queue */
-		iris_port_repost (priv->port, message);
-		iris_message_unref (message);
-	}
+	/* Our held message is posted at the front of the queue */
+	iris_port_flush (priv->port, message);
 
-	iris_port_flush (priv->port);
+	if (message != NULL)
+		iris_message_unref (message);
 }
 
 

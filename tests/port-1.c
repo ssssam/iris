@@ -215,7 +215,7 @@ flush1 (void)
 	/* normally, we wouldnt need to flush this. but we do for our
 	 * mock receiver since it is not doing it for us.
 	 */
-	iris_port_flush (port);
+	iris_port_flush (port, NULL);
 
 	g_assert_cmpint (iris_port_get_queue_count (port), ==, 0);
 }

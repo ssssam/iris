@@ -17,7 +17,6 @@ test_message_handler (IrisMessage *message,
 	g_assert (IRIS_IS_RECEIVER (global_receiver));
 }
 
-
 typedef struct {
 	GMainLoop           *main_loop;
 	IrisScheduler       *scheduler;
@@ -83,8 +82,71 @@ iris_wsscheduler_fixture_teardown (SchedulerFixture *fixture,
 }
 
 static void
-destruction1 (SchedulerFixture *fixture,
-              gconstpointer     user_data)
+yield (SchedulerFixture *fixture, int count)
+{
+	gint j;
+
+	if (fixture->main_loop != NULL) 
+		for (j = 0; j < count; j++)
+			g_main_context_iteration (NULL, FALSE);
+		else
+			g_usleep (count * 100);
+}
+
+static void
+message_handler (IrisMessage *message,
+                 gpointer     user_data)
+{
+	gint *counter_address = iris_message_get_pointer (message, "counter");
+	g_atomic_int_inc (counter_address);
+}
+
+
+/* live: general check for races etc., by sending lots of messages really fast.
+ * 
+ * There are two versions, the second using an arbiter to catch problems with
+ * queueing etc.*/
+static void
+test_live (SchedulerFixture *fixture,
+           gconstpointer     user_data)
+{
+	IrisPort      *port;
+	IrisReceiver  *receiver;
+	IrisMessage   *message;
+	gint           message_counter,
+	               n_tries, j;
+	const gboolean use_arbiter = GPOINTER_TO_INT (user_data);
+
+	for (n_tries=1; n_tries<=8; n_tries++) {
+		message_counter = 0;
+
+		port = iris_port_new ();
+		receiver = iris_arbiter_receive (fixture->scheduler,
+		                                 port,
+		                                 &message_handler, NULL, NULL);
+
+		if (use_arbiter)
+			iris_arbiter_coordinate (receiver, NULL, NULL);
+
+		for (j=0; j<1000; j++) {
+			message = iris_message_new (0);
+			iris_message_set_pointer (message, "counter", &message_counter);
+			iris_port_post (port, message);
+			iris_message_unref (message);
+		}
+
+		while (g_atomic_int_get (&message_counter) < 1000)
+			yield (fixture, 50);
+
+		g_object_unref (receiver);
+		g_object_unref (port);
+	}
+}
+
+
+static void
+test_destruction (SchedulerFixture *fixture,
+                  gconstpointer     user_data)
 {
 	IrisMessage  *msg;
 	IrisReceiver *r;
@@ -109,14 +171,11 @@ destruction1 (SchedulerFixture *fixture,
 	iris_receiver_abort (r);
 	g_object_unref (r);
 
-	if (fixture->main_loop != NULL) 
-		for (j = 0; j < 50; j++)
-			g_main_context_iteration (NULL, FALSE);
-	else
-		g_usleep (500);
+	yield (fixture, 50);
 
 	g_object_unref (p);
 }
+
 
 static void
 add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
@@ -125,8 +184,14 @@ add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
 {
 	char buf[256];
 
-	g_snprintf (buf, 255, "/receiver-scheduler/%s/destruction1", name);
-	g_test_add (buf, SchedulerFixture, NULL, setup, destruction1, teardown);
+	g_snprintf (buf, 255, "/receiver-scheduler/%s/live 1", name);
+	g_test_add (buf, SchedulerFixture, GINT_TO_POINTER (FALSE), setup, test_live, teardown);
+
+	g_snprintf (buf, 255, "/receiver-scheduler/%s/live 2", name);
+	g_test_add (buf, SchedulerFixture, GINT_TO_POINTER (TRUE), setup, test_live, teardown);
+
+	g_snprintf (buf, 255, "/receiver-scheduler/%s/destruction", name);
+	g_test_add (buf, SchedulerFixture, NULL, setup, test_destruction, teardown);
 }
 
 gint
@@ -143,6 +208,7 @@ main (int   argc,
 	add_tests_with_fixture (iris_gmainscheduler_fixture_setup,
 	                        iris_gmainscheduler_fixture_teardown,
 	                        "gmainscheduler");
+
 	add_tests_with_fixture (iris_lfscheduler_fixture_setup,
 	                        iris_lfscheduler_fixture_teardown,
 	                        "lockfree-scheduler");

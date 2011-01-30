@@ -85,7 +85,7 @@ iris_port_set_receiver_real (IrisPort     *port,
 	g_mutex_unlock (priv->mutex);
 
 	if (flush)
-		iris_port_flush (port);
+		iris_port_flush (port, NULL);
 }
 
 static void
@@ -137,7 +137,7 @@ iris_port_new (void)
  * Posts @message to the port.  Any receivers listening to the port will
  * receive the message.
  */
-void
+ void
 iris_port_post (IrisPort    *port,
                 IrisMessage *message)
 {
@@ -200,25 +200,6 @@ iris_port_post (IrisPort    *port,
 			g_warn_if_reached ();
 		}
 	}
-}
-
-/**
- * iris_port_repost:
- * @port: An #IrisPort
- * @message: An #IrisMessage
- *
- * Re-posts a message to the queue.  This should only ever be used by
- * receiver implementations that need to push their single-held message
- * back to the beginning of a port.  The receiver should also call
- * iris_port_flush() after calling this.
- */
-void
-iris_port_repost (IrisPort    *port,
-                  IrisMessage *message)
-{
-	g_return_if_fail (IRIS_IS_PORT (port));
-	g_return_if_fail (port->priv->repost == NULL);
-	port->priv->repost = iris_message_ref (message);
 }
 
 /**
@@ -300,17 +281,18 @@ iris_port_get_queue_count (IrisPort *port)
 /**
  * iris_port_flush:
  * @port: An #IrisPort
+ * @repost_message: An #IrisMessage, or %NULL.
  *
  * Flushes the port by trying to redeliver messages to a listening
- * #IrisReceiver.
+ * #IrisReceiver. @repost_message will be delivered before the port's queue.
  */
 void
-iris_port_flush (IrisPort *port)
+iris_port_flush (IrisPort    *port,
+                 IrisMessage *repost_message)
 {
 	IrisPortPrivate *priv;
 	GQueue          *queue   = NULL;
-	IrisMessage     *message = NULL,
-			*repost  = NULL;
+	IrisMessage     *message = NULL;
 
 	iris_debug (IRIS_DEBUG_PORT);
 
@@ -332,10 +314,6 @@ iris_port_flush (IrisPort *port)
 	/* Unpause if we are currently paused. */
 	priv->state = priv->state & ~IRIS_PORT_STATE_PAUSED;
 
-	/* Copy a potential repost for queue */
-	repost = priv->repost;
-	priv->repost = NULL;
-
 	/* Copy our current held message for queue */
 	message = priv->current;
 	queue = priv->queue;
@@ -348,10 +326,8 @@ iris_port_flush (IrisPort *port)
 
 	g_mutex_unlock (priv->mutex);
 
-	if (repost) {
-		iris_port_post (port, repost);
-		iris_message_unref (repost);
-	}
+	if (repost_message)
+		iris_port_post (port, repost_message);
 
 	if (message) {
 		iris_port_post (port, message);
@@ -360,7 +336,7 @@ iris_port_flush (IrisPort *port)
 
 	if (queue) {
 		while ((message = g_queue_pop_head (queue)) != NULL) {
-			iris_port_post (port, message);
+			iris_port_post(port, message);
 			iris_message_unref (message);
 		}
 
