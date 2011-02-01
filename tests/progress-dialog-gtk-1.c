@@ -18,7 +18,14 @@
  * 02110-1301 USA
  */
  
-/* progress-dialog-gtk-1: tests for IrisProgressDialog only. */
+/* progress-dialog-gtk-1: tests for IrisProgressDialog only.
+ * 
+ * FIXME: some of these tests may fail just because of computer slowness; eg. we call
+ * g_main_context_iteration() a bunch of times and then hope that UI updates have propagated.
+ * Although there may be a bug issue at work if they haven't, perhaps it would be better if these
+ * tests would never fail jus due to slowness, and if we need performance regression testing it
+ * could be achieved in a more reliable way.
+ */
  
 #include <stdlib.h>
 #include <gtk/gtk.h>
@@ -148,8 +155,9 @@ default_title (ProgressFixture *fixture,
 
 	g_atomic_int_set (&wait_state, 2);
 
-	while (!iris_process_is_finished (process))
-		main_loop_iteration_times (100);
+	do
+		main_loop_iteration_times (500);
+	while (!iris_process_is_finished (process));
 
 	/* Check default empty title returns after all processes complete */
 	title = gtk_window_get_title (GTK_WINDOW (fixture->monitor));
@@ -251,8 +259,10 @@ custom_dynamic_title (ProgressFixture *fixture,
 
 	g_atomic_int_set (&wait_state, 2);
 
-	while (!iris_process_is_finished (process))
-		main_loop_iteration_times (100);
+	do
+		main_loop_iteration_times (500);
+	while (!iris_process_is_finished (process));
+	main_loop_iteration_times (500);
 
 	/* Check default empty title returns after all processes complete */
 	title = gtk_window_get_title (GTK_WINDOW (fixture->monitor));
@@ -293,7 +303,11 @@ test_groups (ProgressFixture *fixture,
 
 	iris_process_run (process_head);
 
-	main_loop_iteration_times (1000);
+	while (g_atomic_int_get (&wait_state) != 1) {
+		main_loop_iteration_times (500);
+		g_thread_yield ();
+	}
+	main_loop_iteration_times (500);
 
 	/* Check group progress is shown */
 	title = gtk_window_get_title (GTK_WINDOW (fixture->monitor));
