@@ -2,44 +2,49 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-cancel button, reimplement this! Make it work in progress-tasks too!!
-Remember to doc. in iris-progress-monitor.c
+* Change all atomics to volatile
 
-* fix watch_chain using gtk_box_reorder_child
+* Fix iris_receiver_abort(), so tests pass more :) Especially: 
+    receiver-scheduler/*/destruction/
 
-Fix progress-tasks, current bugs include:
- - progress-tasks actually sometimes misses tasks or does 2 at once
- - the type of progress monitor should change as soon as the toggle box changes :)
- - cancelling does not work (probably not implemented :)
--> remember to write unit tests for any bugs identified!!
+* Rewrite iris_port_flush(), to fix the race condition there.
+  Race is currently triggered in:
+    receiver-scheduler/default/live 2
+    process-1/recurse
+    progress-dialog-gtk-1/recurse
+  where iris_receiver_resume() gets called but somehow iris_port_flush() races
+  with a call to iris_port_post() from another thread and the result is that
+  execution of the queue freezes up.
 
-Since STATUS_COMPLETE is sent when the task receives 'finish', why not rename it to 'finish'
-also???
-
-How much of tests/progress-monitor-gtk-1 could use wait-func instead of count-sheep-func???
-
-Note in docs that irisprocess will not send any progress messages until it is running,
-and that probably won't change (too difficult)
-
-Separate libiris from gtk, ie. create a libiris-gtk
+* Separate libiris from gtk, ie. create a libiris-gtk
   --> stress the point that all of libiris is MT-safe and all of libiris-gtk is not
   --> also don't forget you need gtk+-2.18 or better for gtkinfobar
 
-Tests should always use a fresh scheduler, no?
+* Prevent arbiters from being connected to receivers that have already processed
+  messages.
 
-Bump version to 0.3, and maybe give Iris a blog post :)
+* Cancel button, reimplement this! Make it work in progress-tasks too!!
+  Remember to doc. in iris-progress-monitor.c
 
+* fix watch_chain using gtk_box_reorder_child
 
----------------------------------------------------------------------------
-Buggy code
----------------------------------------------------------------------------
+* Fix progress-tasks, current bugs include:
+   - progress-tasks actually sometimes misses tasks or does 2 at once
+   - the type of progress monitor should change as soon as the toggle box changes :)
+   - cancelling does not work (probably not implemented :)
+  -> remember to write unit tests for any bugs identified!!
 
-The process tests occasionally hang. Other times they just go very slow, so
-this could just be the really poor implementation of the process work function
-at the moment. See below for improvement ideas.
+* Since STATUS_COMPLETE is sent when the task receives 'finish', why not rename it to 'finish'
+  also???
 
-Test /receiver-scheduler/*/destruction sometimes fails, this is (I think)
-because iris_receiver_abort() does not work perfectly.
+* How much of tests/progress-monitor-gtk-1 could use wait-func instead of count-sheep-func???
+
+* Note in docs that irisprocess will not send any progress messages until it is running,
+  and that probably won't change (too difficult)
+
+* Tests should always use a fresh scheduler, no?
+
+* Bump version to 0.3, and maybe give Iris a blog post :)
 
 ---------------------------------------------------------------------------
 Missing or Incompleteness
@@ -193,6 +198,7 @@ Finalisation: a few issues here.
 
   * All this needs thorough testing of course!
 
+There are other FIXME's lurking in the code no doubt :)
 
 ---------------------------------------------------------------------------
 Optimization TODO's
