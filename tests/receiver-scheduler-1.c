@@ -27,7 +27,7 @@ iris_scheduler_fixture_setup (SchedulerFixture *fixture,
                               gconstpointer     user_data)
 {
 	fixture->main_loop = NULL;
-	fixture->scheduler = iris_scheduler_new ();
+	fixture->scheduler = iris_scheduler_new_full (1, 2);
 }
 
 static void
@@ -104,8 +104,9 @@ message_handler (IrisMessage *message,
 
 /* live: general check for races etc., by sending lots of messages really fast.
  * 
- * There are two versions, the second using an arbiter to catch problems with
- * queueing etc.*/
+ * Called twice, the second time using an arbiter to catch problems with
+ * queueing etc.
+ */
 static void
 test_live (SchedulerFixture *fixture,
            gconstpointer     user_data)
@@ -114,35 +115,40 @@ test_live (SchedulerFixture *fixture,
 	IrisReceiver  *receiver;
 	IrisMessage   *message;
 	gint           message_counter,
-	               n_tries, j;
+	               j;
 	const gboolean use_arbiter = GPOINTER_TO_INT (user_data);
 
-	for (n_tries=1; n_tries<=8; n_tries++) {
-		message_counter = 0;
+	message_counter = 0;
 
-		port = iris_port_new ();
-		receiver = iris_arbiter_receive (fixture->scheduler,
-		                                 port,
-		                                 &message_handler, NULL, NULL);
+	port = iris_port_new ();
 
-		if (use_arbiter)
-			iris_arbiter_coordinate (receiver, NULL, NULL);
+	receiver = iris_arbiter_receive (fixture->scheduler,
+	                                 port,
+	                                 &message_handler, NULL, NULL);
 
-		for (j=0; j<1000; j++) {
-			message = iris_message_new (0);
-			iris_message_set_pointer (message, "counter", &message_counter);
-			iris_port_post (port, message);
-			iris_message_unref (message);
-		}
+	if (use_arbiter)
+		iris_arbiter_coordinate (receiver, NULL, NULL);
 
-		while (g_atomic_int_get (&message_counter) < 1000)
-			yield (fixture, 50);
-
-		g_object_unref (receiver);
-		g_object_unref (port);
+	for (j=0; j<50; j++) {
+		message = iris_message_new (0);
+		iris_message_set_pointer (message, "counter", &message_counter);
+		iris_port_post (port, message);
+		iris_message_unref (message);
 	}
-}
 
+	g_usleep (5000);
+
+	message = iris_message_new (0);
+	iris_message_set_pointer (message, "counter", &message_counter);
+	iris_port_post (port, message);
+	iris_message_unref (message);
+
+	while (g_atomic_int_get (&message_counter) < 51)
+		yield (fixture, 50);
+
+	g_object_unref (receiver);
+	g_object_unref (port);
+}
 
 static void
 test_destruction (SchedulerFixture *fixture,
@@ -177,6 +183,50 @@ test_destruction (SchedulerFixture *fixture,
 }
 
 
+/* Utility to run a test x times.
+ *
+ * FIXME: would this be useful merged into glib? 
+ */
+typedef struct {
+	gint          times;
+	gint          fixture_size;
+	gconstpointer tdata;
+	void (*fsetup)    (SchedulerFixture *, gconstpointer);
+	void (*ftest)     (SchedulerFixture *, gconstpointer);
+	void (*fteardown) (SchedulerFixture *, gconstpointer);
+} RepeatedTestCase;
+
+static void repeated_test (gconstpointer data)
+{
+	RepeatedTestCase *test_case = (gpointer)data;
+	gpointer fixture;
+	int i;
+
+	fixture = g_slice_alloc (test_case->fixture_size);
+
+	for (i=0; i<test_case->times; i++) {
+		test_case->fsetup (fixture, test_case->tdata);
+		test_case->ftest (fixture, test_case->tdata);
+		test_case->fteardown (fixture, test_case->tdata);
+	}
+
+	g_slice_free1 (test_case->fixture_size, fixture);
+	g_slice_free (RepeatedTestCase, test_case);
+}
+
+#define test_add_repeated(testpath, _times, Fixture, _tdata, _fsetup, _ftest, _fteardown) \
+  G_STMT_START { \
+      RepeatedTestCase *test_case = g_slice_new (RepeatedTestCase); \
+      test_case->times = _times;    \
+      test_case->fixture_size = sizeof(Fixture); \
+      test_case->tdata = _tdata; \
+      test_case->fsetup = _fsetup; \
+      test_case->ftest = _ftest; \
+      test_case->fteardown = _fteardown; \
+      g_test_add_data_func (testpath, test_case, repeated_test); \
+  } G_STMT_END
+
+
 static void
 add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
                         void (*teardown) (SchedulerFixture *, gconstpointer),
@@ -188,7 +238,7 @@ add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
 	g_test_add (buf, SchedulerFixture, GINT_TO_POINTER (FALSE), setup, test_live, teardown);
 
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/live 2", name);
-	g_test_add (buf, SchedulerFixture, GINT_TO_POINTER (TRUE), setup, test_live, teardown);
+	test_add_repeated (buf, 250, SchedulerFixture, GINT_TO_POINTER (TRUE), setup, test_live, teardown);
 
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/destruction", name);
 	g_test_add (buf, SchedulerFixture, NULL, setup, test_destruction, teardown);
@@ -205,6 +255,7 @@ main (int   argc,
 	add_tests_with_fixture (iris_scheduler_fixture_setup,
 	                        iris_scheduler_fixture_teardown,
 	                        "default");
+
 	add_tests_with_fixture (iris_gmainscheduler_fixture_setup,
 	                        iris_gmainscheduler_fixture_teardown,
 	                        "gmainscheduler");

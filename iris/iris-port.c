@@ -144,7 +144,6 @@ iris_port_post (IrisPort    *port,
 	IrisPortPrivate    *priv;
 	IrisReceiver       *receiver    = NULL;
 	IrisDeliveryStatus  delivered;
-	gint                state;
 
 	iris_debug (IRIS_DEBUG_PORT);
 
@@ -160,7 +159,6 @@ iris_port_post (IrisPort    *port,
 		}
 		else {
 			receiver = priv->receiver;
-			state = priv->state;
 		}
 		g_mutex_unlock (priv->mutex);
 	}

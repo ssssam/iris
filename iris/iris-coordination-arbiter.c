@@ -315,6 +315,10 @@ can_receive (IrisArbiter  *arbiter,
 		}
 	}
 
+	#if 0
+	/* This can never execute, because pending teardown/concurrent events are delayed in favour
+	 * of exclusive
+	 */
 	/* Current Receiver: EXCLUSIVE
 	 * Request Receiver: EXCLUSIVE
 	 * Has Active......: NO
@@ -332,7 +336,10 @@ can_receive (IrisArbiter  *arbiter,
 			}
 		}
 	}
+	#endif
 
+	#if 0
+	/* This is a duplicate !! */
 	/* Current Receiver: EXCLUSIVE
 	 * Request Receiver: EXCLUSIVE
 	 * Has Active......: YES
@@ -348,6 +355,7 @@ can_receive (IrisArbiter  *arbiter,
 			}
 		}
 	}
+	#endif
 
 	/* Current Receiver: EXCLUSIVE
 	 * Request Receiver: CONCURRENT
@@ -458,7 +466,7 @@ can_receive (IrisArbiter  *arbiter,
 		 "====================================\n"
 		 "Current.....: %s\n"
 		 "Receiver....: %s\n"
-		 "Active......: %lu\n"
+		 "Active......: %i\n"
 		 "Pending.....: %u\n",
 		 (priv->flags & IRIS_COORD_EXCLUSIVE) ? "EXCLUSIVE" : (priv->flags & IRIS_COORD_CONCURRENT) ? "CONCURRENT" : "TEARDOWN",
 		 (receiver == priv->exclusive)        ? "EXCLUSIVE" : (receiver == priv->concurrent)        ? "CONCURRENT" : "TEARDOWN",
@@ -469,7 +477,7 @@ finish:
 	if (decision == IRIS_RECEIVE_NOW) {
 		if (receiver == priv->teardown)
 			priv->flags |= IRIS_COORD_COMPLETE;
-		g_atomic_int_inc ((gint*)&priv->active);
+		priv->active ++;
 	}
 
 	/* It would be nice to hold on to this lock while we resume to make
@@ -501,7 +509,12 @@ receive_completed (IrisArbiter  *arbiter,
 
 	g_static_rec_mutex_lock (&priv->mutex);
 
-	if (g_atomic_int_dec_and_test ((gint*)&priv->active)) {
+	/* There must be at least one active message to call this function */
+	g_warn_if_fail (priv->active > 0);
+
+	priv->active --;
+
+	if (priv->active == 0) {
 		if (priv->flags & IRIS_COORD_COMPLETE) {
 		}
 		else if (priv->flags & IRIS_COORD_CONCURRENT) {
@@ -582,8 +595,9 @@ iris_coordination_arbiter_init (IrisCoordinationArbiter *arbiter)
 	                                             IRIS_TYPE_COORDINATION_ARBITER,
 	                                             IrisCoordinationArbiterPrivate);
 	g_static_rec_mutex_init (&arbiter->priv->mutex);
-	arbiter->priv->flags = IRIS_COORD_CONCURRENT;
+	arbiter->priv->active = 0;
 }
+
 
 static IrisArbiter*
 iris_coordination_arbiter_new (IrisReceiver *exclusive,
@@ -609,6 +623,11 @@ iris_coordination_arbiter_new (IrisReceiver *exclusive,
 	ATTACH_ARBITER (exclusive, arbiter);
 	ATTACH_ARBITER (concurrent, arbiter);
 	ATTACH_ARBITER (teardown, arbiter);
+
+	if (concurrent)
+		arbiter->priv->flags = IRIS_COORD_CONCURRENT;
+	else
+		arbiter->priv->flags = IRIS_COORD_EXCLUSIVE;
 
 	return IRIS_ARBITER (arbiter);
 }

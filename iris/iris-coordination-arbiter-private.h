@@ -52,7 +52,7 @@ struct _IrisCoordinationArbiterPrivate
 	IrisReceiver    *teardown;
 	GStaticRecMutex  mutex;
 	guint            flags;
-	glong            active;
+	gint             active;
 };
 
 #endif /* __IRIS_COORDINATION_ARBITER_PRIVATE_H__ */

@@ -69,17 +69,14 @@ iris_delivery_status_get_type (void)
 }
 
 static void
-iris_receiver_worker_cb (gpointer data)
+iris_receiver_worker_destroy (gpointer data)
 {
 	IrisReceiverPrivate *priv;
 	IrisWorkerData      *worker;
 
-	g_return_if_fail (data != NULL);
-
 	worker = data;
 	priv = worker->receiver->priv;
 
-	if (g_atomic_int_dec_and_test (&priv->active)) {}
 	iris_message_unref (worker->message);
 	g_slice_free (IrisWorkerData, worker);
 }
@@ -98,13 +95,14 @@ iris_receiver_worker (gpointer data)
 	/* Execute the callback */
 	priv->callback (worker->message, priv->data);
 
+	if (g_atomic_int_dec_and_test (&priv->active)) { }
+
 	/* notify the arbiter we are complete */
 	if (priv->arbiter)
 		iris_arbiter_receive_completed (priv->arbiter,
 		                                worker->receiver);
 
-	/* Call our destroy notify */
-	iris_receiver_worker_cb (data);
+	iris_receiver_worker_destroy (data);
 }
 
 static IrisDeliveryStatus
@@ -131,8 +129,20 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 	if (!priv->arbiter && !priv->max_active) {
 		execute = TRUE;
 		status = IRIS_DELIVERY_ACCEPTED;
+
+		/* Same code as below but outside the mutex, because without an arbiter
+		 * there's no need.
+		 */
+		if (!priv->persistent && execute)
+			if (!g_atomic_int_compare_and_exchange (&priv->completed, FALSE, TRUE))
+				execute = FALSE;
+
+		if (execute)
+			g_atomic_int_inc (&priv->active);
+
 		goto _post_decision;
 	}
+
 
 	g_static_rec_mutex_lock (&priv->mutex);
 
@@ -140,7 +150,8 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 		status = IRIS_DELIVERY_REMOVE;
 		execute = FALSE;
 	}
-	else if ((priv->max_active > 0 && priv->active == priv->max_active) || g_atomic_pointer_get (&priv->message))
+	else if ((priv->max_active > 0 && g_atomic_int_get (&priv->active) == priv->max_active)
+	          || priv->message)
 	{
 		/* We cannot accept an item at this time, so let
 		 * the port queue the item for us.
@@ -162,6 +173,7 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 		case IRIS_RECEIVE_LATER:
 			/* We queue this item ourselves */
 			execute = FALSE;
+			g_warn_if_fail (priv->message == NULL);
 			priv->message = iris_message_ref (message);
 			status = IRIS_DELIVERY_ACCEPTED_PAUSE;
 			break;
@@ -176,15 +188,6 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 		}
 	}
 
-	g_static_rec_mutex_unlock (&priv->mutex);
-
-_post_decision:
-
-	/* We do this before leaving the lock to prevent a potential
-	 * race condition where we could go over our max concurrent.
-	 */
-	if (execute)
-		g_atomic_int_inc (&priv->active);
 
 	/* If our execution will be the only execution allowed, so make
 	 * sure that we mark the receiver as it is completed.  Also, we
@@ -196,6 +199,16 @@ _post_decision:
 		if (!g_atomic_int_compare_and_exchange (&priv->completed, FALSE, TRUE))
 			execute = FALSE;
 
+	/* We do this before leaving the lock to prevent a potential
+	 * race condition where we could go over our max concurrent.
+	 */
+	if (execute)
+		g_atomic_int_inc (&priv->active);
+
+	g_static_rec_mutex_unlock (&priv->mutex);
+
+_post_decision:
+
 	if (execute) {
 		worker = g_slice_new0 (IrisWorkerData);
 		worker->receiver = receiver;
@@ -204,7 +217,7 @@ _post_decision:
 		iris_scheduler_queue (priv->scheduler,
 		                      iris_receiver_worker,
 		                      worker,
-		                      iris_receiver_worker_cb);
+		                      NULL);
 
 		if (!priv->persistent)
 			status = IRIS_DELIVERY_ACCEPTED_REMOVE;
@@ -447,7 +460,7 @@ iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
 	 * schedulers at the moment, the above isn't true. However, I don't like
 	 * depending on that fact ...
 	 */
-	iris_receiver_worker_cb (data);
+	iris_receiver_worker_destroy (data);
 	continue_flag = g_atomic_int_get (&priv->active) > 0;
 
 	return continue_flag | IRIS_SCHEDULER_REMOVE_ITEM;
