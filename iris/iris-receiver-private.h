@@ -57,10 +57,12 @@ struct _IrisReceiverPrivate
 	                            * We should really set the value to
 	                            * the default when initializing to
 	                            * avoid the costs of lookups and locks.
+	                            * Immutable after execution.
 	                            */
 
 	IrisArbiter   *arbiter;    /* The arbiter tells us if we can accept
-	                            * an incoming message.
+	                            * an incoming message. Immutable after
+	                            * execution.
 	                            */
 
 	IrisPort      *port;       /* Pointer to port for flushing */
@@ -87,7 +89,7 @@ struct _IrisReceiverPrivate
 	                            * accepted for execution.
 	                            */
 
-	gboolean       completed;  /* If we are a non-persistent receiver and
+	volatile gint  completed;  /* If we are a non-persistent receiver and
 	                            * have already received an item, we can
 	                            * be marked as completed so that we never
 	                            * accept another item.

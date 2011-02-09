@@ -48,21 +48,21 @@
 
 struct _IrisWSSchedulerPrivate
 {
-	GMutex      *mutex;        /* Synchronization for setting up the
+	GMutex       *mutex;       /* Synchronization for setting up the
 	                            * scheduler instance.  Provides for lazy
 	                            * instantiation.
 	                            */
 
-	IrisRRobin  *rrobin;       /* Round robin of per-thread queues used
+	IrisRRobin   *rrobin;      /* Round robin of per-thread queues used
 	                            * by threads for work-stealing.
 	                            */
 
-	IrisQueue   *queue;        /* Global Queue, used by work items
+	IrisQueue    *queue;       /* Global Queue, used by work items
 	                            * not originating from a thread within
 	                            * the scheduler.
 	                            */
 
-	gboolean     has_leader;   /* Is there a leader thread */
+	volatile gint has_leader;  /* Is there a leader thread */
 };
 
 G_DEFINE_TYPE (IrisWSScheduler, iris_wsscheduler, IRIS_TYPE_SCHEDULER)

@@ -59,18 +59,21 @@ struct _IrisProcessPrivate
 	/* Connections */
 	IrisProcess  *source, *sink;
 
-	gint processed_items,    /* updated atomically from the worker thread as
-	                            work items are completed */
-	     total_items,        /* updated atomically by iris_process_enqueue() */
-	     total_items_pushed; /* tracks the last value of total_items sent to
-	                            watchers */
+	volatile gint processed_items,    /* updated atomically from the worker
+	                                     thread as work items are completed */
+	              total_items;        /* updated atomically by
+	                                     iris_process_enqueue() */
+	                   
+	gint          total_items_pushed; /* tracks the last value of total_items
+	                                     sent to watchers (only accessed in the
+	                                     control message handler) */
 
 	/* For status indicators. */
-	gchar        *title;
+	volatile gchar *title;
 
 	/* Monitoring UI */
-	GList        *watch_port_list;  /* List of watchers */
-	GTimer       *watch_timer;      /* Timeouts to throttle status messages */
+	GList          *watch_port_list;  /* list of watchers */
+	GTimer         *watch_timer;      /* timeouts to throttle status messages */
 };
 
 #endif /* __IRIS_PROCESS_PRIVATE_H__ */

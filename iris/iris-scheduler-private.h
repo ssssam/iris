@@ -45,10 +45,10 @@ struct _IrisSchedulerPrivate
 	 *        they do not get nuked from the synchronizations above.
 	 */
 
-	guint        min_threads;
-	guint        max_threads;
-	gboolean     has_leader;
-	gboolean     initialized;
+	guint             min_threads;
+	guint             max_threads;
+	volatile gint     has_leader;
+	volatile gint     initialized;
 };
 
 IrisScheduler* iris_scheduler_new         (void);

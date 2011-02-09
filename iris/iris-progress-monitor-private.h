@@ -27,7 +27,7 @@ struct _IrisProgressGroup
 {
 	IrisProgressMonitor *progress_monitor;
 
-	gint   ref_count;
+	volatile gint ref_count;
 
 	GList *watch_list;
 

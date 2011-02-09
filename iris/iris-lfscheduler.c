@@ -41,7 +41,7 @@ struct _IrisLFSchedulerPrivate
 	                            * by threads for work-stealing.
 	                            */
 
-	gboolean     has_leader;   /* Is there a leader thread */
+	volatile gboolean has_leader;   /* Is there a leader thread */
 };
 
 G_DEFINE_TYPE (IrisLFScheduler, iris_lfscheduler, IRIS_TYPE_SCHEDULER)

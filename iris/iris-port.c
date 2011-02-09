@@ -66,10 +66,12 @@ iris_port_set_receiver_real (IrisPort     *port,
 
 	g_mutex_lock (priv->mutex);
 
+	/* priv->receiver is immutable after the first message is sent and not
+	 * accessed before. */
 	if (receiver != priv->receiver) {
 		if (priv->receiver) {
 			/* FIXME: Unhook current receiver */
-			g_object_unref (priv->receiver);
+			g_object_unref ((gpointer)priv->receiver);
 		}
 
 		if (receiver) {
@@ -152,6 +154,8 @@ iris_port_post (IrisPort    *port,
 
 	priv = port->priv;
 
+	/* FIXME: 'receiver' is handled bizarrely here. Note it is immutable
+	 * after the first call to post() */
 	if (PORT_PAUSED (port) || !(receiver = priv->receiver)) {
 		g_mutex_lock (priv->mutex);
 		if (PORT_PAUSED (port) || !priv->receiver) {

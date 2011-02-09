@@ -33,7 +33,7 @@ struct _IrisQueuePrivate
 	 * it is only set inside the GAsyncQueue mutex it is also read in
 	 * iris_queue_is_open().
 	 */
-	gint         open;
+	volatile gint open;
 };
 
 G_END_DECLS

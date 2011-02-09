@@ -88,7 +88,7 @@ struct _IrisScheduler
 
 	/*< private >*/
 	IrisSchedulerPrivate *priv;
-	gboolean              maxed;
+	volatile gint        maxed;
 };
 
 struct _IrisSchedulerClass
@@ -132,9 +132,9 @@ struct _IrisThread
 
 struct _IrisThreadWork
 {
-	IrisCallback callback;
-	gpointer     data;
-	gboolean     taken;
+	IrisCallback      callback;
+	gpointer          data;
+	volatile gint     taken;
 };
 
 GType           iris_thread_get_type           (void) G_GNUC_CONST;

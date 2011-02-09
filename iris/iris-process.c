@@ -414,15 +414,15 @@ iris_process_forward (IrisProcess *process,
                       IrisMessage *work_item)
 {
 	IrisProcessPrivate *priv;
-	IrisProcess        *sink;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_HAS_SINK));
 
 	priv = process->priv;
 
-	sink = g_atomic_pointer_get (&priv->sink);
-	iris_process_enqueue (sink, work_item);
+	/* 'sink' can only be changed before the process executes, and this
+	 * function can only be called while the process is executing */
+	iris_process_enqueue (priv->sink, work_item);
 }
 
 /**
@@ -721,7 +721,7 @@ iris_process_set_title (IrisProcess *process,
 
 	priv = process->priv;
 
-	old_title = priv->title;
+	old_title = g_atomic_pointer_get (&priv->title);
 	g_atomic_pointer_set (&priv->title, g_strdup (title));
 	g_free (old_title);
 
@@ -946,6 +946,9 @@ handle_add_sink (IrisProcess *process,
 	sink_process = g_value_get_object (data);
 
 	g_return_if_fail (IRIS_IS_PROCESS (sink_process));
+
+	g_warn_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_EXECUTING));
+	g_warn_if_fail (FLAG_IS_OFF (sink_process, IRIS_TASK_FLAG_EXECUTING));
 
 	priv = process->priv;
 	priv->sink = sink_process;
@@ -1187,7 +1190,7 @@ iris_process_finalize (GObject *object)
 	IrisProcessPrivate *priv = process->priv;
 	GList *node;
 
-	g_free (priv->title);
+	g_free ((gpointer)priv->title);
 
 	for (node=priv->watch_port_list; node; node=node->next)
 		g_object_unref (IRIS_PORT (node->data));
@@ -1309,7 +1312,7 @@ iris_process_init (IrisProcess *process)
 	iris_arbiter_coordinate (priv->work_receiver, NULL, NULL);
 
 	iris_task_set_work_scheduler (IRIS_TASK (process),
-	                              g_atomic_pointer_get (&process_scheduler));
+	                              process_scheduler);
 
 	priv->work_queue = iris_queue_new ();
 

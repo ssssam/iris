@@ -70,7 +70,8 @@ struct _IrisTaskPrivate
 	IrisPort      *port;          /* Message delivery port */
 	IrisReceiver  *receiver;      /* Receiver for port */
 
-	IrisScheduler *work_scheduler;
+	volatile IrisScheduler
+	              *work_scheduler;
 
 	GMutex        *mutex;         /* Mutex for result/error */
 	GValue         result;        /* Current task result */
@@ -80,7 +81,7 @@ struct _IrisTaskPrivate
 	                               */
 	GList         *dependencies;  /* Tasks we are depending on. */
 	GList         *observers;     /* Tasks observing our state changes */
-	glong          flags;
+	volatile gint  flags;
 	GMainContext  *context;       /* A main-context to execute our
 	                               * callbacks and async_result within.
 	                               */

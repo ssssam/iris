@@ -62,7 +62,7 @@ G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT)
 
 G_LOCK_DEFINE (default_scheduler);
 
-static IrisScheduler *default_scheduler = NULL;
+volatile static IrisScheduler *default_scheduler = NULL;
 
 static gboolean
 iris_scheduler_queue_rrobin_cb (gpointer data,
@@ -353,7 +353,7 @@ iris_scheduler_set_default (IrisScheduler *scheduler)
 	G_LOCK (default_scheduler);
 	scheduler = g_object_ref (scheduler);
 	if (default_scheduler)
-		g_object_unref (default_scheduler);
+		g_object_unref ((gpointer)default_scheduler);
 	g_atomic_pointer_set (&default_scheduler, scheduler);
 	G_UNLOCK (default_scheduler);
 }
@@ -374,7 +374,7 @@ iris_scheduler_default (void)
 			default_scheduler = iris_scheduler_new ();
 		G_UNLOCK (default_scheduler);
 	}
-	return default_scheduler;
+	return g_atomic_pointer_get (&default_scheduler);
 }
 
 /**

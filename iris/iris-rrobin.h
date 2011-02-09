@@ -57,11 +57,11 @@ typedef gboolean (*IrisRRobinForeachFunc) (IrisRRobin *rrobin, gpointer data, gp
 struct _IrisRRobin
 {
 	/*< private >*/
-	gint          size;
-	volatile gint ref_count;
-	gint          count;
-	guint         active;
-	gpointer      data[1];
+	gint              size;
+	volatile gint     ref_count;
+	volatile gint     count;
+	guint             active;
+	volatile gpointer data[1];
 };
 
 GType       iris_rrobin_get_type (void) G_GNUC_CONST;

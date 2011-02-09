@@ -1,8 +1,8 @@
+* Fix waf for nested project ...
+
 ---------------------------------------------------------------------------
 Iris 0.3.0
 ---------------------------------------------------------------------------
-
-* Change all atomics to volatile
 
 * Fix iris_receiver_abort(), so tests pass more :) Especially: 
     receiver-scheduler/*/destruction/

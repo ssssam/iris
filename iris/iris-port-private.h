@@ -28,30 +28,30 @@
 
 struct _IrisPortPrivate
 {
-	IrisMessage  *current;      /* Contains the current message in the
-	                             * port. This happens if the receiver
-	                             * did not accept our message and we
-	                             * removed the receiver, or if we have
-	                             * no receiver. After a message is in
-	                             * current, all future post's go into
-	                             * the queue.
-	                             */
+	IrisMessage *current;    /* Contains the current message in the
+	                          * port. This happens if the receiver
+	                          * did not accept our message and we
+	                          * removed the receiver, or if we have
+	                          * no receiver. After a message is in
+	                          * current, all future post's go into
+	                          * the queue.
+	                          */
 
-	GQueue       *queue;        /* Queue for incoming messages that
-	                             * cannot yet be delivered.
-	                             */
+	GQueue *queue;           /* Queue for incoming messages that
+	                          * cannot yet be delivered.
+	                          */
 
-	IrisReceiver *receiver;     /* Our receiver to deliver messages. */
+	IrisReceiver *receiver;  /* Our receiver to deliver messages. */
 
-	GMutex       *mutex;        /* Mutex for synchronizing port access.
-	                             * We try to avoid acquiring this lock
-	                             * unless we cannot deliver to the
-	                             * receiver.
-	                             */
+	GMutex *mutex;           /* Mutex for synchronizing port access.
+	                          * We try to avoid acquiring this lock
+	                          * unless we cannot deliver to the
+	                          * receiver.
+	                          */
 
-	gint          state;        /* Flags for our current state, such
-	                             * as if we are currently paused.
-	                             */
+	volatile gint state;     /* Flags for our current state, such
+	                          * as if we are currently paused.
+	                          */
 };
 
 #endif /* __IRIS_PORT_PRIVATE_H__ */
