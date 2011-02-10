@@ -283,6 +283,21 @@ iris_progress_monitor_add_watch_internal (IrisProgressMonitor             *progr
 	return watch;
 }
 
+/* Stop receiving status messages from a watch that is still running */
+void
+_iris_progress_watch_disconnect (IrisProgressWatch *watch)
+{
+	/* The process/task being watched owns the port, we don't have any
+	 * communication to it so it will just have to push useless messages
+	 * to a disconnected port ... which is a waste, but shouldn't happen
+	 * often because why close the dialog before the process is finished?
+	 * FIXME: perhaps we could give ports a 'closed' status which would
+	 * imply the watch has disconnected/whatever.
+	 */
+	iris_receiver_close (watch->receiver, NULL, FALSE);
+	g_object_unref (watch->receiver);
+}
+
 void
 _iris_progress_watch_free (IrisProgressWatch *watch)
 {
@@ -298,19 +313,6 @@ _iris_progress_watch_free (IrisProgressWatch *watch)
 	g_object_unref (watch->port);
 
 	g_slice_free (IrisProgressWatch, watch);
-}
-
-/* Stop receiving status messages from a watch that is still running */
-void
-_iris_progress_watch_disconnect (IrisProgressWatch *watch)
-{
-	/* Receiver must be freed, or we will get messages after we have
-	 * been freed .. */
-	iris_port_set_receiver (watch->port, NULL);
-
-	g_warn_if_fail (G_OBJECT (watch->receiver)->ref_count == 1);
-	iris_receiver_abort (watch->receiver);
-	g_object_unref (watch->receiver);
 }
 
 /**

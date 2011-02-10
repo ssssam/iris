@@ -95,12 +95,12 @@ iris_receiver_worker (gpointer data)
 	/* Execute the callback */
 	priv->callback (worker->message, priv->data);
 
-	if (g_atomic_int_dec_and_test (&priv->active)) { }
-
 	/* notify the arbiter we are complete */
 	if (priv->arbiter)
 		iris_arbiter_receive_completed (priv->arbiter,
 		                                worker->receiver);
+
+	if (g_atomic_int_dec_and_test (&priv->active)) { }
 
 	iris_receiver_worker_destroy (data);
 }
@@ -248,7 +248,11 @@ iris_receiver_dispose (GObject *object)
 	/* We can't be being disposed if a port still holds a reference */
 	g_warn_if_fail (priv->port != NULL);
 
-	g_warn_if_fail (g_atomic_int_get (&priv->active) == 0);
+	if (g_atomic_int_get (&priv->active) > 0)
+		g_warning ("receiver %lx was finalized with messages still active. "
+		           "This is likely to cause a crash. The owner of an "
+		           "IrisReceiver must always call iris_receiver_close() "
+		           "before unreferencing the receiver.", (gulong)object);
 
 	g_object_unref (priv->scheduler);
 
@@ -425,8 +429,9 @@ iris_receiver_resume (IrisReceiver *receiver)
 }
 
 
-static IrisSchedulerForeachAction
+static gboolean
 iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
+                                 gpointer       work_item,
                                  IrisCallback   callback,
                                  gpointer       data,
                                  gpointer       user_data)
@@ -434,7 +439,6 @@ iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
 	IrisWorkerData      *worker_data;
 	IrisReceiver        *receiver;
 	IrisReceiverPrivate *priv;
-	gboolean             continue_flag;
 
 	g_return_val_if_fail (IRIS_IS_RECEIVER (user_data), FALSE);
 
@@ -442,44 +446,64 @@ iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
 	priv = receiver->priv;
 
 	if (callback != iris_receiver_worker)
-		return IRIS_SCHEDULER_CONTINUE;
+		return TRUE;
 
 	worker_data = data;
 
 	if (worker_data->receiver != receiver)
-		return IRIS_SCHEDULER_CONTINUE;
+		return TRUE;
 
-	/* FIXME: because work item destroy notify's aren't called by the
-	 * scheduler, we have no way of freeing the data without risking a race
-	 * where the worker is executed just before we return.
+	/* FIXME: so here's a situation where actually, destroy notifications
+	 * are useful because they can be called even if the callback did not
+	 * actually execute. unqueue() returns FALSE if the work item executed
+	 * anyway.
 	 */
-	//continue_flag = !(g_atomic_int_dec_and_test (&priv->active));
+	if (iris_scheduler_unqueue (scheduler, work_item)) {
+		iris_receiver_worker_destroy (data);
+		if (g_atomic_int_dec_and_test (&priv->active)) { }
+	}
 
-
-	/* COUNTERPOINT: because of the way foreach is implemented in all of the
-	 * schedulers at the moment, the above isn't true. However, I don't like
-	 * depending on that fact ...
-	 */
-	iris_receiver_worker_destroy (data);
-	continue_flag = g_atomic_int_get (&priv->active) > 0;
-
-	return continue_flag | IRIS_SCHEDULER_REMOVE_ITEM;
+	return (g_atomic_int_get (&priv->active) > 0);
 }
 
 /**
- * iris_receiver_abort:
+ * iris_receiver_close:
  * @receiver: An #IrisReceiver
+ * @main_context: A #GMainContext (if %NULL, the default context will be used)
+ * @iterate_main_context: Whether to run @main_context while waiting for the
+ *                        messages to process (default: %FALSE).
  *
- * Cancels execution of all pending messages. Note that any or all of the
- * messages may still execute before the function returns, so you should only
- * begin destruction of shared data once this function completes.
+ * Disconnects the port connected to @receiver and cancels any messages that
+ * are still pending. Note that any or all of the messages may still execute
+ * before the function returns, so you should only begin destruction of shared
+ * data once this function completes. This function must be called by the owner
+ * of @receiver before it is unreferenced, to prevent messages executing after
+ * the receiver has been destroyed.
  *
- * You may only call this function when there are no ports connected to the
- * receiver, because if a port is still connected there can be no guarantee that
- * more messages will not be queued during or after execution of this function.
+ * Because iris_receiver_close() involves flushing queued events from the
+ * scheduler, users of the GLib main loop may need to pass their application's
+ * #GMainContext (%NULL for the default one) as @main_context and %TRUE to
+ * @iterate_main_context. This is necessary when you are calling
+ * iris_receiver_close() from the main loop thread <emphasis>and</emphasis> any
+ * of the following are true:
+ * <itemizedlist>
+ * <listitem>@receiver's scheduler is an #IrisGMainScheduler running
+ *           in the same main loop</listitem>
+ * <listitem>The message handling callback for @receiver may take a long time
+ *           to execute and you would like to keep processing other event
+ *           sources (such as a GUI)</listitem>
+ * <listitem>The message handling callback for @receiver depends on the main
+ *           loop in some way (although that would be weird)</listitem>
+ * </itemizedlist>
+ */
+/* FIXME: it might be nice if we could set a flag on 'port' so that the owner
+ * knows (if they had no other way of knowing) that the communication channel
+ * has closed and they should stop sending messages and unref the port.
  */
 void
-iris_receiver_abort (IrisReceiver  *receiver)
+iris_receiver_close (IrisReceiver *receiver,
+                     GMainContext *main_context,
+                     gboolean      iterate_main_context)
 {
 	IrisReceiverPrivate *priv;
 
@@ -487,14 +511,22 @@ iris_receiver_abort (IrisReceiver  *receiver)
 
 	priv = receiver->priv;
 
-	g_warn_if_fail (priv->port != NULL);
+	/* Close off the port to avoid getting more messages */
+	iris_port_set_receiver (priv->port, NULL);
 
-	/* Unqueue any callbacks still queued */
-	if (g_atomic_int_get (&priv->active)) {
+	/* Unqueue any callbacks still queued. */
+	while (g_atomic_int_get (&priv->active) > 0) {
 		iris_scheduler_foreach (priv->scheduler,
 		                        iris_receiver_worker_unqueue_cb,
 		                        receiver);
-	}
 
-	g_warn_if_fail (g_atomic_int_get (&priv->active) == 0);
+		/* HANG ALERT! iris_scheduler_unqueue() does not abort work items that are
+		 * already running, so here we wait for these to complete.
+		 */
+
+		g_thread_yield ();
+
+		if (iterate_main_context)
+			g_main_context_iteration (main_context, FALSE);
+	}
 }

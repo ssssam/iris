@@ -61,26 +61,27 @@ typedef struct _IrisThread           IrisThread;
 typedef struct _IrisThreadWork       IrisThreadWork;
 typedef void   (*IrisCallback)       (gpointer data);
 
-
 /**
- * IrisSchedulerForeachAction:
- * @IRIS_SCHEDULER_STOP: stop iterating
- * @IRIS_SCHEDULER_CONTINUE: carry on iterating
- * @IRIS_SCHEDULER_REMOVE_ITEM: remove the current item
- *
- * These flags control iris_scheduler_foreach().
- *
- **/
-typedef enum {
-	IRIS_SCHEDULER_STOP         = 0,
-	IRIS_SCHEDULER_CONTINUE     = 1,
-	IRIS_SCHEDULER_REMOVE_ITEM  = 2
-} IrisSchedulerForeachAction;
-
-typedef IrisSchedulerForeachAction (*IrisSchedulerForeachFunc) (IrisScheduler *scheduler,
-                                                                IrisCallback callback,
-                                                                gpointer data,
-                                                                gpointer user_data);
+ * IrisSchedulerForeachFunc:
+ * @scheduler: the #IrisScheduler executing the foreach
+ * @work_item: internal pointer to the work, suitable for passing to
+ *             iris_scheduler_unqueue()
+ * @callback: callback for the work item
+ * @data: data for the work item
+ * @user_data: user data passed to iris_scheduler_foreach()
+ * 
+ * Callback for each work item during iris_scheduler_foreach(). Remember that
+ * this function will be called for every piece of work in the scheduler's
+ * queue, and it is up to the caller to filter for only their items using
+ * the information in @callback and @data.
+ * 
+ * Returns: %FALSE to abort the foreach, %TRUE to continue.
+ */
+typedef gboolean (*IrisSchedulerForeachFunc) (IrisScheduler *scheduler,
+                                              gpointer work_item,
+                                              IrisCallback callback,
+                                              gpointer data,
+                                              gpointer user_data);
 
 struct _IrisScheduler
 {
@@ -98,18 +99,20 @@ struct _IrisSchedulerClass
 	gint  (*get_max_threads) (IrisScheduler  *scheduler);
 	gint  (*get_min_threads) (IrisScheduler  *scheduler);
 
-	void  (*queue)           (IrisScheduler  *scheduler,
+	void     (*queue)        (IrisScheduler  *scheduler,
 	                          IrisCallback    func,
 	                          gpointer        data,
 	                          GDestroyNotify  notify);
-	void  (*foreach)         (IrisScheduler            *scheduler,
+	gboolean (*unqueue)      (IrisScheduler  *scheduler,
+	                          gpointer        work_item);
+	void     (*foreach)      (IrisScheduler            *scheduler,
 	                          IrisSchedulerForeachFunc  callback,
 	                          gpointer                  user_data);
 
-	void (*add_thread)       (IrisScheduler  *scheduler,
+	void    (*add_thread)    (IrisScheduler  *scheduler,
 	                          IrisThread     *thread,
 	                          gboolean        exclusive);
-	void (*remove_thread)    (IrisScheduler  *scheduler,
+	void    (*remove_thread) (IrisScheduler  *scheduler,
 	                          IrisThread     *thread);
 };
 
@@ -134,7 +137,10 @@ struct _IrisThreadWork
 {
 	IrisCallback      callback;
 	gpointer          data;
+
+	/* FIXME: would be nice to make these flags, but need to stay atomic */
 	volatile gint     taken;
+	volatile gint     remove;
 };
 
 GType           iris_thread_get_type           (void) G_GNUC_CONST;
@@ -153,6 +159,8 @@ void            iris_scheduler_queue           (IrisScheduler  *scheduler,
                                                 IrisCallback    func,
                                                 gpointer        data,
                                                 GDestroyNotify  notify);
+gboolean        iris_scheduler_unqueue         (IrisScheduler  *scheduler,
+                                                gpointer        work_item);
 void            iris_scheduler_foreach         (IrisScheduler            *scheduler,
                                                 IrisSchedulerForeachFunc  callback,
                                                 gpointer                  user_data);

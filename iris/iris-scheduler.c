@@ -106,6 +106,31 @@ iris_scheduler_queue_real (IrisScheduler  *scheduler,
 	iris_rrobin_apply (priv->rrobin, iris_scheduler_queue_rrobin_cb, thread_work);
 }
 
+static gboolean
+iris_scheduler_unqueue_real (IrisScheduler *scheduler,
+                             gpointer       work_item)
+{
+	IrisThreadWork *thread_work = (IrisThreadWork *)work_item;
+	gboolean        work_claimed;
+
+	g_return_val_if_fail (scheduler != NULL, FALSE);
+	g_return_val_if_fail (work_item != NULL, FALSE);
+
+	g_atomic_int_set (&thread_work->remove, TRUE);
+
+	work_claimed = g_atomic_int_compare_and_exchange (&thread_work->taken, FALSE, TRUE);
+
+	if (!work_claimed) {
+		/* Thread has claimed the work; the thread will free the work. */
+		return FALSE;
+	} else {
+		/* Work will be freed when found by a foreach, or by a thread when it
+		 * is popped. Either way we can guarantee the work will not run.
+		 */
+		return TRUE;
+	}
+}
+
 typedef struct {
 	IrisScheduler            *scheduler;
 	IrisSchedulerForeachFunc  callback;
@@ -119,30 +144,31 @@ iris_scheduler_foreach_rrobin_cb (IrisRRobin *rrobin,
 {
 	IrisQueue                    *queue   = data;
 	IrisSchedulerForeachClosure  *closure = user_data;
-	gboolean continue_flag = TRUE;
+	gboolean continue_flag;
 	gint i;
 
-	/* Foreach the queue in a really hacky way. FIXME: be neater! */
+	/* Foreach the queue in a really hacky way. FIXME: be neater!
+	 * And make sure the order of work is preserved!!!
+	 * In particular, avoid calling queue_length() each time! */
 	for (i=0; i<iris_queue_length(queue); i++) {
-		IrisSchedulerForeachAction  action;
-		IrisThreadWork             *thread_work = iris_queue_try_pop (queue);
+		IrisThreadWork *thread_work = iris_queue_try_pop (queue);
+		/* By removing the work from the queue, we know now it can't be executed */
 
 		if (!thread_work) break;
 
-		action = closure->callback (closure->scheduler,
-		                            thread_work->callback,
-		                            thread_work->data,
-		                            closure->user_data);
+		continue_flag = closure->callback (closure->scheduler,
+		                                   thread_work,
+		                                   thread_work->callback,
+		                                   thread_work->data,
+		                                   closure->user_data);
 
-		if (!(action & IRIS_SCHEDULER_REMOVE_ITEM))
+		if (g_atomic_int_get (&thread_work->remove) == FALSE)
 			iris_queue_push (queue, thread_work);
 		else
-			i --;
+			iris_thread_work_free (thread_work);
 
-		if (!(action & IRIS_SCHEDULER_CONTINUE)) {
-			continue_flag = FALSE;
+		if (!continue_flag)
 			break;
-		}
 	}
 
 	return continue_flag;
@@ -279,6 +305,7 @@ iris_scheduler_class_init (IrisSchedulerClass *klass)
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
 	klass->queue = iris_scheduler_queue_real;
+	klass->unqueue = iris_scheduler_unqueue_real;
 	klass->foreach = iris_scheduler_foreach_real;
 	klass->get_min_threads = iris_scheduler_get_min_threads_real;
 	klass->get_max_threads = iris_scheduler_get_max_threads_real;
@@ -382,18 +409,21 @@ iris_scheduler_default (void)
  * @scheduler: An #IrisScheduler
  * @func: An #IrisCallback
  * @data: data for @func
- * @notify: an optional callback after execution
+ * @destroy_notify: an optional callback after execution to free data
  *
- * NOTE: notify will probably disappear soon
- *
- * Queues a new work item to be executed by one of the schedulers work
+ * Queues a new work item to be executed by one of the scheduler's work
  * threads.
+ *
+ * @destroy_notify should <emphasis>only</emphasis> handle freeing data. If the
+ * work is unqueued and does not run, @notify will still be called, and
+ * theoretically this call may not execute for a long time after @func was
+ * called.
  */
 void
 iris_scheduler_queue (IrisScheduler  *scheduler,
                       IrisCallback    func,
                       gpointer        data,
-                      GDestroyNotify  notify)
+                      GDestroyNotify  destroy_notify)
 {
 	IrisSchedulerPrivate *priv;
 
@@ -414,26 +444,54 @@ iris_scheduler_queue (IrisScheduler  *scheduler,
 		g_mutex_unlock (priv->mutex);
 	}
 
-	IRIS_SCHEDULER_GET_CLASS (scheduler)->queue (scheduler, func, data, notify);
+	IRIS_SCHEDULER_GET_CLASS (scheduler)->queue (scheduler, func, data, destroy_notify);
+}
+
+/**
+ * iris_scheduler_unqueue:
+ * @scheduler: An #IrisScheduler
+ * @work_item: An opaque pointer identifying the work item. This can currently
+ *             only be obtained using iris_scheduler_foreach().
+ *
+ * Tries to abort and free a piece of work that was previously queued. This may
+ * or may not be possible. The work will not execute after this function
+ * returns, but may already be in progress, in which case it is up to the
+ * caller to wait for it to finish.
+ *
+ * FIXME: the following is not yet true. This function guarantees that the work
+ * will be freed (including calling its destroy notification), but this may occur
+ * at any point in the future. 
+ *
+ * Return value: %TRUE if the attempt to unqueue was successful, %FALSE if the
+ *               work ran or is still running.
+ */
+gboolean
+iris_scheduler_unqueue (IrisScheduler  *scheduler,
+                        gpointer        work_item)
+{
+	IrisSchedulerPrivate *priv;
+
+	g_return_val_if_fail (scheduler != NULL, FALSE);
+
+	priv = scheduler->priv;
+
+	g_return_val_if_fail (priv->initialized, FALSE);
+
+	return IRIS_SCHEDULER_GET_CLASS (scheduler)->unqueue (scheduler, work_item);
 }
 
 /**
  * iris_scheduler_foreach:
  * @scheduler: An #IrisScheduler
- * @callback: An #IrisSchedulerForeachCallback
+ * @callback: An #IrisSchedulerForeachFunc
  * @user_data: data for @func
  *
  * Calls @callback for each piece of queued work in @scheduler. @callback
  * receives as its parameters the callback function and data for the work item,
  * plus @user_data.
  *
- * The return value of @callback should be from the #IrisSchedulerForeachAction
- * flags. This mirrors normal glib foreach behaviour - %TRUE continues and
- * %FALSE stops - but you may | these with IRIS_SCHEDULER_REMOVE_ITEM to unqueue
- * the work item.
- *
- * This function is useful if you need to unqueue work, for example due to an
- * object's destruction.
+ * The return value of @callback should be %FALSE to stop the foreach or %TRUE
+ * to continue execution.
  */
 void iris_scheduler_foreach (IrisScheduler            *scheduler,
                              IrisSchedulerForeachFunc  callback,

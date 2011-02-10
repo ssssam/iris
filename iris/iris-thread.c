@@ -47,7 +47,6 @@
 #define MSG_SHUTDOWN          (2)
 #define QUANTUM_USECS         (G_USEC_PER_SEC / 1)
 #define POP_WAIT_TIMEOUT      (G_USEC_PER_SEC * 2)
-#define VERIFY_THREAD_WORK(t) (g_atomic_int_compare_and_exchange(&t->taken, FALSE, TRUE))
 
 #if LINUX
 __thread IrisThread* my_thread = NULL;
@@ -80,6 +79,7 @@ iris_thread_worker_exclusive (IrisThread  *thread,
 	                                      * last quanta. */
 	guint           queued      = 0;     /* Items left in the queue at */
 	gboolean        has_resized = FALSE;
+	gboolean        remove_work;
 
 	iris_debug (IRIS_DEBUG_THREAD);
 
@@ -99,20 +99,34 @@ iris_thread_worker_exclusive (IrisThread  *thread,
 get_next_item:
 
 	if (G_LIKELY ((thread_work = iris_queue_pop (queue)) != NULL)) {
-		if (!VERIFY_THREAD_WORK (thread_work)) {
-			g_warning ("Invalid thread_work %lx\n", (gulong)thread_work);
-			goto get_next_item;
+		if (!g_atomic_int_compare_and_exchange(&thread_work->taken, FALSE, TRUE)) {
+			remove_work = g_atomic_int_get (&thread_work->remove);
+
+			if (!remove_work)
+				/* We lost a race with another thread (remember a lockfree
+				 * queue may pop the same item twice). 
+				 */
+				goto get_next_item;
+			/* else: We lost a race with iris_scheduler_unqueue() */
+		} else
+			/* We won the race. 'remove' is honoured anyway if we can. */
+			remove_work = g_atomic_int_get (&thread_work->remove);
+
+		if (!remove_work) {
+			iris_thread_work_run (thread_work);
+			per_quanta++;
 		}
 
-		iris_thread_work_run (thread_work);
 		iris_thread_work_free (thread_work);
-		per_quanta++;
 	}
 	else {
 		/* This should not be possible since iris_queue_pop cannot return NULL */
 		g_warning ("Exclusive thread is done managing, received NULL");
 		return;
 	}
+
+	if (remove_work)
+		goto get_next_item;
 
 	if (G_UNLIKELY (!thread->scheduler->maxed && leader)) {
 		g_get_current_time (&tv_now);
@@ -155,6 +169,7 @@ iris_thread_worker_transient (IrisThread  *thread,
 {
 	IrisThreadWork *thread_work = NULL;
 	GTimeVal        tv_timeout = {0,0};
+	gboolean        remove_work;
 
 	iris_debug (IRIS_DEBUG_THREAD);
 
@@ -169,10 +184,19 @@ iris_thread_worker_transient (IrisThread  *thread,
 		g_get_current_time (&tv_timeout);
 		g_time_val_add (&tv_timeout, POP_WAIT_TIMEOUT);
 
-		if ((thread_work = iris_queue_timed_pop_or_close (queue, &tv_timeout)) != NULL) {
-			if (!VERIFY_THREAD_WORK (thread_work))
-				continue;
-			iris_thread_work_run (thread_work);
+		thread_work = iris_queue_timed_pop_or_close (queue, &tv_timeout);
+		if (thread_work != NULL) {
+			if (!g_atomic_int_compare_and_exchange(&thread_work->taken, FALSE, TRUE)) {
+				remove_work = g_atomic_int_get (&thread_work->remove);
+
+				if (!remove_work)
+					continue;
+			} else
+				remove_work = g_atomic_int_get (&thread_work->remove);
+
+			if (!remove_work)
+				iris_thread_work_run (thread_work);
+
 			iris_thread_work_free (thread_work);
 		}
 	} while (thread_work != NULL);
@@ -468,6 +492,7 @@ iris_thread_work_new (IrisCallback callback,
 	thread_work->callback = callback;
 	thread_work->data = data;
 	thread_work->taken = FALSE;
+	thread_work->remove = FALSE;
 
 	return thread_work;
 }

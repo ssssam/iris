@@ -117,30 +117,28 @@ iris_wsscheduler_foreach_rrobin_cb (IrisRRobin *rrobin,
 {
 	IrisQueue                    *queue   = data;
 	IrisSchedulerForeachClosure  *closure = user_data;
-	gboolean continue_flag = TRUE;
+	gboolean continue_flag;
 	gint i;
 
 	/* Foreach the queue in a really hacky way. FIXME: be neater! */
 	for (i=0; i<iris_queue_length(queue); i++) {
-		IrisSchedulerForeachAction  action;
-		IrisThreadWork             *thread_work = iris_queue_try_pop (queue);
+		IrisThreadWork *thread_work = iris_queue_try_pop (queue);
 
 		if (!thread_work) break;
 
-		action = closure->callback (closure->scheduler,
-		                            thread_work->callback,
-		                            thread_work->data,
-		                            closure->user_data);
+		continue_flag = closure->callback (closure->scheduler,
+		                                   thread_work,
+		                                   thread_work->callback,
+		                                   thread_work->data,
+		                                   closure->user_data);
 
-		if (!(action & IRIS_SCHEDULER_REMOVE_ITEM))
+		if (g_atomic_int_get (&thread_work->remove) == FALSE)
 			iris_queue_push (queue, thread_work);
 		else
-			i --;
+			iris_thread_work_free (thread_work);
 
-		if (!(action & IRIS_SCHEDULER_CONTINUE)) {
-			continue_flag = FALSE;
+		if (!continue_flag)
 			break;
-		}
 	}
 
 	return continue_flag;
