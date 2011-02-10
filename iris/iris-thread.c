@@ -284,13 +284,17 @@ next_message:
 		return NULL;
 
 	switch (message->what) {
-	case MSG_MANAGE:
-		iris_thread_handle_manage (thread,
-		                           iris_message_get_pointer (message, "queue"),
-		                           iris_message_get_boolean (message, "exclusive"),
-		                           iris_message_get_boolean (message, "leader"));
+	case MSG_MANAGE: {
+		IrisQueue *queue = iris_message_get_pointer (message, "queue");
+		gboolean exclusive = iris_message_get_boolean (message, "exclusive");
+		gboolean leader = iris_message_get_boolean (message, "leader");
+		iris_message_unref (message);
+
+		iris_thread_handle_manage (thread, queue, exclusive, leader);
 		break;
+	}
 	case MSG_SHUTDOWN:
+		iris_message_unref (message);
 		iris_thread_handle_shutdown (thread);
 		break;
 	default:
