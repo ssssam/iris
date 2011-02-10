@@ -3,6 +3,8 @@
 
 #include "iris/iris-process-private.h"
 
+/* FIXME: maybe call this scheduler-process-1 .. ? Is it really needed? */
+
 static void
 slow_counter_callback (IrisProcess *process,
                        IrisMessage *work_item,

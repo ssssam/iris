@@ -35,9 +35,9 @@ work_register_cb (gpointer data)
 	g_usleep (500);
 }
 
-/* live: test all work queued items execute */
+/* queue: test all work queued items execute */
 static void
-test_live (void)
+test_queue (void)
 {
 	IrisScheduler *scheduler;
 	gint           n_threads,
@@ -65,6 +65,7 @@ test_live (void)
 				break;
 
 			/*g_print ("Missing work: ");
+			GList *node;
 			for (node=missing_list; node; node=node->next)
 				g_print ("%i ", GPOINTER_TO_INT (node->data));
 			g_print ("\n");*/
@@ -89,7 +90,7 @@ main (int   argc,
 	g_test_add_func ("/scheduler/get_min_threads1", test2);
 	g_test_add_func ("/scheduler/get_max_threads1", test3);
 
-	g_test_add_func ("/scheduler/live", test_live);
+	g_test_add_func ("/scheduler/queue", test_queue);
 
 	return g_test_run ();
 }
