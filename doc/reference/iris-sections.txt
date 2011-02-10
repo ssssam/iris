@@ -36,14 +36,12 @@ IRIS_GMAINSCHEDULER_GET_CLASS
 
 <SECTION>
 <FILE>iris-task</FILE>
-IRIS_TASK_CONST
 IRIS_TASK_THROW_NEW
 IRIS_TASK_THROW
 IRIS_TASK_CATCH
 IRIS_TASK_RETURN_VALUE
 IRIS_TASK_RETURN_TASK
 IRIS_TASK_RETURN_TASK_NEW
-IrisTaskPrivate
 IrisTaskFunc
 <TITLE>IrisTask</TITLE>
 IrisTask
@@ -85,12 +83,15 @@ iris_task_vany_of
 iris_task_any_of
 <SUBSECTION Standard>
 IRIS_TASK
+IRIS_TASK_CONST
 IRIS_IS_TASK
 IRIS_TYPE_TASK
 iris_task_get_type
 IRIS_TASK_CLASS
 IRIS_IS_TASK_CLASS
 IRIS_TASK_GET_CLASS
+<SUBSECTION Private>
+IrisTaskPrivate
 </SECTION>
 
 <SECTION>
@@ -121,26 +122,25 @@ IrisQueuePrivate
 
 <SECTION>
 <FILE>iris-wsscheduler</FILE>
-IRIS_WSSCHEDULER_CONST
-IrisWSSchedulerPrivate
 <TITLE>IrisWSScheduler</TITLE>
 IrisWSScheduler
 iris_wsscheduler_new
 iris_wsscheduler_new_full
 <SUBSECTION Standard>
 IRIS_WSSCHEDULER
+IRIS_WSSCHEDULER_CONST
 IRIS_IS_WSSCHEDULER
 IRIS_TYPE_WSSCHEDULER
 iris_wsscheduler_get_type
 IRIS_WSSCHEDULER_CLASS
 IRIS_IS_WSSCHEDULER_CLASS
 IRIS_WSSCHEDULER_GET_CLASS
+<SUBSECTION Private>
+IrisWSSchedulerPrivate
 </SECTION>
 
 <SECTION>
 <FILE>iris-service</FILE>
-IRIS_SERVICE_CONST
-IrisServicePrivate
 <TITLE>IrisService</TITLE>
 IrisService
 iris_service_start
@@ -150,12 +150,15 @@ iris_service_send_concurrent
 iris_service_is_started
 <SUBSECTION Standard>
 IRIS_SERVICE
+IRIS_SERVICE_CONST
 IRIS_IS_SERVICE
 IRIS_TYPE_SERVICE
 iris_service_get_type
 IRIS_SERVICE_CLASS
 IRIS_IS_SERVICE_CLASS
 IRIS_SERVICE_GET_CLASS
+<SUBSECTION Private>
+IrisServicePrivate
 </SECTION>
 
 <SECTION>
@@ -171,16 +174,10 @@ iris_arbiter_get_type
 
 <SECTION>
 <FILE>iris-scheduler</FILE>
-IRIS_TYPE_THREAD
-IRIS_SCHEDULER_CONST
-IrisSchedulerPrivate
-IrisThread
-IrisThreadWork
 IrisCallback
 IrisSchedulerForeachFunc
 <TITLE>IrisScheduler</TITLE>
 IrisScheduler
-iris_scheduler_get_type
 iris_scheduler_new
 iris_scheduler_new_full
 iris_scheduler_default
@@ -204,23 +201,27 @@ iris_thread_work_run
 iris_scheduler_get_n_cpu
 <SUBSECTION Standard>
 IRIS_SCHEDULER
+IRIS_SCHEDULER_CONST
 IRIS_IS_SCHEDULER
 IRIS_TYPE_SCHEDULER
-iris_thread_get_type
+iris_scheduler_get_type
 IRIS_SCHEDULER_CLASS
 IRIS_IS_SCHEDULER_CLASS
 IRIS_SCHEDULER_GET_CLASS
+IRIS_TYPE_THREAD
+iris_thread_get_type
+<SUBSECTION Private>
+IrisSchedulerPrivate
+IrisThread
+IrisThreadWork
 </SECTION>
 
 <SECTION>
 <FILE>iris-port</FILE>
-IRIS_PORT_CONST
-IrisPortPrivate
 <TITLE>IrisPort</TITLE>
 IrisPort
 iris_port_new
 iris_port_post
-iris_port_repost
 iris_port_flush
 iris_port_is_paused
 iris_port_has_receiver
@@ -229,34 +230,36 @@ iris_port_set_receiver
 iris_port_get_queue_count
 <SUBSECTION Standard>
 IRIS_PORT
+IRIS_PORT_CONST
 IRIS_IS_PORT
 IRIS_TYPE_PORT
 iris_port_get_type
 IRIS_PORT_CLASS
 IRIS_IS_PORT_CLASS
 IRIS_PORT_GET_CLASS
+<SUBSECTION Private>
+IrisPortPrivate
 </SECTION>
 
 <SECTION>
 <FILE>iris-receiver</FILE>
-IRIS_RECEIVER_CONST
 IrisReceiver
 IrisReceiverClass
-IrisReceiverPrivate
 iris_receiver_get_scheduler
 iris_receiver_set_scheduler
 iris_receiver_close
 <SUBSECTION Standard>
 IRIS_RECEIVER
+IRIS_RECEIVER_CONST
 IRIS_IS_RECEIVER
 IRIS_TYPE_RECEIVER
 iris_receiver_get_type
+<SUBSECTION Private>
+IrisReceiverPrivate
 </SECTION>
 
 <SECTION>
 <FILE>iris-wsqueue</FILE>
-IRIS_WSQUEUE_CONST
-IrisWSQueuePrivate
 <TITLE>IrisWSQueue</TITLE>
 IrisWSQueue
 iris_wsqueue_new
@@ -265,33 +268,32 @@ iris_wsqueue_local_push
 iris_wsqueue_local_pop
 <SUBSECTION Standard>
 IRIS_WSQUEUE
+IRIS_WSQUEUE_CONST
 IRIS_IS_WSQUEUE
 IRIS_TYPE_WSQUEUE
 iris_wsqueue_get_type
 IRIS_WSQUEUE_CLASS
 IRIS_IS_WSQUEUE_CLASS
 IRIS_WSQUEUE_GET_CLASS
+<SUBSECTION Private>
+IrisWSQueuePrivate
 </SECTION>
 
 <SECTION>
 <FILE>iris-lfqueue</FILE>
-IRIS_LFQUEUE_CONST
-IrisLFQueuePrivate
 <TITLE>IrisLFQueue</TITLE>
 IrisLFQueue
 iris_lfqueue_new
 <SUBSECTION Standard>
 IRIS_LFQUEUE
+IRIS_LFQUEUE_CONST
 IRIS_IS_LFQUEUE
 IRIS_TYPE_LFQUEUE
 iris_lfqueue_get_type
 IRIS_LFQUEUE_CLASS
 IRIS_IS_LFQUEUE_CLASS
 IRIS_LFQUEUE_GET_CLASS
-</SECTION>
-
-<SECTION>
-<FILE>iris-lfqueue-private</FILE>
+<SUBSECTION Private>
 IrisLFQueuePrivate
 </SECTION>
 
@@ -305,10 +307,8 @@ iris_scheduler_manager_print_stat
 
 <SECTION>
 <FILE>iris-message</FILE>
-IRIS_TYPE_MESSAGE
 IrisMessage
 IrisMessageHandler
-iris_message_get_type
 iris_message_new
 iris_message_new_data
 iris_message_new_full
@@ -346,6 +346,9 @@ iris_message_get_pointer
 iris_message_set_pointer
 iris_message_get_object
 iris_message_set_object
+<SUBSECTION Standard>
+IRIS_TYPE_MESSAGE
+iris_message_get_type
 </SECTION>
 
 <SECTION>
@@ -364,22 +367,11 @@ IRIS_CHECK_VERSION
 </SECTION>
 
 <SECTION>
-<FILE>iris-link</FILE>
-IrisLink
-</SECTION>
-
-<SECTION>
-<FILE>iris-gsource</FILE>
-iris_gsource_new
-</SECTION>
-
-<SECTION>
 <FILE>iris-rrobin</FILE>
 IRIS_TYPE_RROBIN
 IrisRRobin
 IrisRRobinFunc
 IrisRRobinForeachFunc
-iris_rrobin_get_type
 iris_rrobin_new
 iris_rrobin_ref
 iris_rrobin_unref
@@ -387,25 +379,12 @@ iris_rrobin_append
 iris_rrobin_remove
 iris_rrobin_apply
 iris_rrobin_foreach
-</SECTION>
-
-<SECTION>
-<FILE>iris-free-list</FILE>
-IrisFreeList
-iris_free_list_new
-iris_free_list_free
-iris_free_list_get
-iris_free_list_put
-</SECTION>
-
-<SECTION>
-<FILE>iris-wsqueue-private</FILE>
-IrisWSQueuePrivate
+<SUBSECTION Standard>
+iris_rrobin_get_type
 </SECTION>
 
 <SECTION>
 <FILE>iris-stack</FILE>
-IRIS_TYPE_STACK
 IrisStack
 iris_stack_get_type
 iris_stack_new
@@ -413,11 +392,8 @@ iris_stack_push
 iris_stack_pop
 iris_stack_ref
 iris_stack_unref
-</SECTION>
-
-<SECTION>
-<FILE>iris-stack-private</FILE>
-IrisStack
+<SUBSECTION Standard>
+IRIS_TYPE_STACK
 </SECTION>
 
 <SECTION>
@@ -527,3 +503,32 @@ IRIS_PROGRESS_INFO_BAR_GET_CLASS
 <SUBSECTION Private>
 IrisProgressInfoBarPrivate
 </SECTION>
+
+<SECTION>
+<SUBSECTION Private>
+<FILE>iris-coordination-arbiter</FILE>
+<SUBSECTION Standard>
+IrisCoordinationArbiter
+IrisCoordinationArbiterClass
+IrisCoordinationArbiterPrivate
+IRIS_COORDINATION_ARBITER
+IRIS_COORDINATION_ARBITER_CONST
+IRIS_IS_COORDINATION_ARBITER
+IRIS_TYPE_COORDINATION_ARBITER
+iris_coordination_arbiter_get_type
+IRIS_COORDINATION_ARBITER_CLASS
+IRIS_IS_COORDINATION_ARBITER_CLASS
+IRIS_COORDINATION_ARBITER_GET_CLASS
+<FILE>iris-free-list</FILE>
+IrisFreeList
+iris_free_list_new
+iris_free_list_free
+iris_free_list_get
+iris_free_list_put
+<FILE>iris-gsource</FILE>
+iris_gsource_new
+<FILE>iris-link</FILE>
+IrisLink
+<FILE>iris-thread</FILE>
+</SECTION>
+

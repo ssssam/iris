@@ -29,6 +29,13 @@ G_BEGIN_DECLS
 
 typedef struct _IrisMessage IrisMessage;
 
+/**
+ * IrisMessageHandler:
+ * @message: #IrisMessage to be processed
+ * @data: user data passed when the callback was connected.
+ *
+ * This type of function is used for message handlers.
+ */
 typedef void (*IrisMessageHandler) (IrisMessage *message, gpointer data);
 
 struct _IrisMessage

@@ -169,7 +169,7 @@ iris_task_new_with_func (IrisTaskFunc   func,
  * if the task is asynchronous with @async.  An asynchronous task has the
  * ability to not complete during the execution of the task's execution
  * method (in this case @func).  To mark the task's execution as completed,
- * g_task_complete() must be called for the task.
+ * iris_task_complete() must be called for the task.
  *
  * If you want errbacks and callbacks to complete within a #GMainContext,
  * you may specify @context or %NULL for the callbacks to happen within
@@ -854,6 +854,7 @@ iris_task_set_result (IrisTask     *task,
  * iris_task_set_result_gtype:
  * @task: An #IrisTask
  * @type: A #GType
+ * @Varargs: the value in the format appropriate for @type
  *
  * Sets the current value for the task without needing to use a #GValue
  * container.  You can pass a single value after @type.
@@ -1366,26 +1367,26 @@ handle_remove_dependency (IrisTask    *task,
 /**
  * iris_task_remove_dependency_sync:
  * @task: An #IrisTask
- * @dep: An #IrisTask
+ * @dependency: An #IrisTask
  *
- * Synchronously removes @dep from @task<!-- -->'s list of dependencies.
+ * Synchronously removes @dependency from @task<!-- -->'s list of dependencies.
  * See iris_task_remove_dependency().
  */
 void
 iris_task_remove_dependency_sync (IrisTask *task,
-                                  IrisTask *dep)
+                                  IrisTask *dependency)
 {
 	IrisTaskPrivate *priv;
 	GList           *node;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
-	g_return_if_fail (IRIS_IS_TASK (dep));
+	g_return_if_fail (IRIS_IS_TASK (dependency));
 
 	priv = task->priv;
 
-	if ((node = g_list_find (priv->dependencies, dep)) != NULL) {
+	if ((node = g_list_find (priv->dependencies, dependency)) != NULL) {
 		priv->dependencies = g_list_delete_link (priv->dependencies, node);
-		g_object_unref (dep);
+		g_object_unref (dependency);
 	}
 
 	if (!PROGRESS_BLOCKED (task)) {

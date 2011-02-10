@@ -33,7 +33,7 @@
 	} G_STMT_END
 
 /**
- * SECTION:iris-coordination-receiver
+ * SECTION:iris-coordination-arbiter
  * @short_description: #IrisArbiter to manage exclusive vs concurrent messages
  *
  * The #IrisCoordinationArbiter provides management over how incoming messages

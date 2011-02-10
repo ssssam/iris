@@ -102,7 +102,7 @@ struct _IrisSchedulerClass
 	void     (*queue)        (IrisScheduler  *scheduler,
 	                          IrisCallback    func,
 	                          gpointer        data,
-	                          GDestroyNotify  notify);
+	                          GDestroyNotify  destroy_notify);
 	gboolean (*unqueue)      (IrisScheduler  *scheduler,
 	                          gpointer        work_item);
 	void     (*foreach)      (IrisScheduler            *scheduler,
@@ -158,7 +158,7 @@ gint            iris_scheduler_get_max_threads (IrisScheduler  *scheduler);
 void            iris_scheduler_queue           (IrisScheduler  *scheduler,
                                                 IrisCallback    func,
                                                 gpointer        data,
-                                                GDestroyNotify  notify);
+                                                GDestroyNotify  destroy_notify);
 gboolean        iris_scheduler_unqueue         (IrisScheduler  *scheduler,
                                                 gpointer        work_item);
 void            iris_scheduler_foreach         (IrisScheduler            *scheduler,

@@ -34,7 +34,11 @@
  * from an #IrisPort.  See iris_arbiter_receive() for how to create
  * a new receiver for an #IrisPort to perform a given action.
  *
- * #IrisReceiver<!-- -->'s can be attached to an arbiter to provide
+ * Before an #IrisReceiver is destroyed it must be closed, using
+ * iris_receiver_close(). This is to avoid messages that are queued in the
+ * scheduler running after the destruction of the receiver.
+ *
+ * #IrisReceiver objects can be attached to an arbiter to provide
  * additional control over when actions can be performed.  See
  * iris_arbiter_coordinate() for how to use the Coordination Arbiter.
  * It provides a feature similar to a ReaderWriter lock using an

@@ -170,6 +170,7 @@ iris_message_new (gint what)
  * iris_message_new_data:
  * @what: The message type
  * @type: the #GType of the data element
+ * @Varargs: the value of the data element, in the appropriate form for @type
  *
  * Creates a new #IrisMessage instance with the data value initialized.
  * The ellipsis parameter is used so you may pass any type of value or

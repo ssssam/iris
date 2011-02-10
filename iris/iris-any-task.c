@@ -126,7 +126,8 @@ iris_task_any_of (GList *tasks)
 
 /**
  * iris_task_vany_of:
- * @first_task: An #IrisTask
+ * @first_task: The first #IrisTask to watch
+ * @Varargs: A %NULL-terminated list of further tasks to watch
  *
  * Creates a new task that will complete when one of the passed #IrisTask
  * instances completes.

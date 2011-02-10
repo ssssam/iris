@@ -115,25 +115,25 @@ iris_arbiter_receive_completed (IrisArbiter  *arbiter,
  * iris_arbiter_receive:
  * @scheduler: An #IrisScheduler or %NULL
  * @port: An #IrisPort
- * @callback: An #IrisMessageHandler to execute when a message is received
+ * @handler: An #IrisMessageHandler to execute when a message is received
  * @user_data: data for @callback
- * @notify: A #GDestroyNotify or %NULL
+ * @destroy_notify: A #GDestroyNotify or %NULL
  *
- * Creates a new #IrisReceiver instance that executes @callback when a message
+ * Creates a new #IrisReceiver instance that executes @handler when a message
  * is received on the receiver.  Note that if you attach this to an arbiter,
  * a message posted to @port may not result in @callback being executed right
  * away.
  *
- * If not %NULL, @notify will be called when the receiver is destroyed.
+ * If not %NULL, @destroy_notify will be called when the receiver is destroyed.
  *
  * Return value: the newly created #IrisReceiver instance
  */
 IrisReceiver*
 iris_arbiter_receive (IrisScheduler      *scheduler,
                       IrisPort           *port,
-                      IrisMessageHandler  callback,
+                      IrisMessageHandler  handler,
                       gpointer            user_data,
-                      GDestroyNotify      notify)
+                      GDestroyNotify      destroy_notify)
 {
 	IrisReceiver *receiver;
 
@@ -141,9 +141,9 @@ iris_arbiter_receive (IrisScheduler      *scheduler,
 		scheduler = iris_scheduler_default ();
 
 	receiver = g_object_new (IRIS_TYPE_RECEIVER, NULL);
-	receiver->priv->callback = callback;
+	receiver->priv->callback = handler;
 	receiver->priv->data = user_data;
-	receiver->priv->notify = notify;
+	receiver->priv->notify = destroy_notify;
 	receiver->priv->scheduler = g_object_ref (scheduler);
 	receiver->priv->port = g_object_ref (port);
 	iris_port_set_receiver (port, receiver);

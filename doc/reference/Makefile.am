@@ -53,7 +53,6 @@ IGNORE_HFILES=						\
 	iris.h						\
 	iris-util.h					\
 	iris-arbiter-private.h				\
-	iris-coordination-arbiter.h			\
 	iris-coordination-arbiter-private.h		\
 	iris-debug.h					\
 	iris-port-private.h				\

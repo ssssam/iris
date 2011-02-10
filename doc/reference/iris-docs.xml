@@ -36,6 +36,8 @@
 
   <part>
     <title>API Reference</title>
+    <xi:include href="xml/iris-version.xml"/>
+
     <chapter>
       <title>Data Structures</title>
       <xi:include href="xml/iris-queue.xml"/>
@@ -56,6 +58,7 @@
     <chapter>
       <title>Schedulers</title>
       <xi:include href="xml/iris-scheduler.xml"/>
+      <xi:include href="xml/iris-gmainscheduler.xml"/>
       <xi:include href="xml/iris-wsscheduler.xml"/>
       <xi:include href="xml/iris-lfscheduler.xml"/>
       <xi:include href="xml/iris-scheduler-manager.xml"/>

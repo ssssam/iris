@@ -450,7 +450,6 @@ iris_thread_shutdown (IrisThread *thread)
  * @thread: An #IrisThread
  *
  * Prints the stats of an #IrisThread to standard output for analysis.
- * See iris_thread_stat() for programmatically access the statistics.
  */
 void
 iris_thread_print_stat (IrisThread *thread)

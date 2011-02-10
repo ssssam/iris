@@ -1,3 +1,4 @@
+iris_scheduler_get_type
 iris_lfscheduler_get_type
 iris_gmainscheduler_get_type
 iris_queue_get_type
@@ -5,8 +6,8 @@ iris_wsscheduler_get_type
 iris_service_get_type
 iris_message_get_type
 iris_arbiter_get_type
+iris_coordination_arbiter_get_type
 iris_thread_get_type
-iris_scheduler_get_type
 iris_port_get_type
 iris_receiver_get_type
 iris_rrobin_get_type

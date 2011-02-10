@@ -549,22 +549,25 @@ iris_progress_monitor_watch_process_chain_in_group (IrisProgressMonitor         
  *                       IrisProgressGroup stuff                          *
  *************************************************************************/
 
-/** iris_progress_group_ref:
- * @group: an #IrisProgressGroup
+/**
+ * iris_progress_group_ref:
+ * @progress_group: an #IrisProgressGroup
  *
- * Increases the reference count of @group.
+ * Increases the reference count of @progress_group.
  */
 void
-iris_progress_group_ref (IrisProgressGroup *group) {
-	g_atomic_int_inc (&group->ref_count);
+iris_progress_group_ref (IrisProgressGroup *progress_group) {
+	g_atomic_int_inc (&progress_group->ref_count);
 }
 
-/** iris_progress_group_unref:
- * @group: an #IrisProgressGroup
+/**
+ * iris_progress_group_unref:
+ * @progress_group: an #IrisProgressGroup
  *
- * Removes a reference to @group and frees the object if there are no
- * references remaining. Any watch which is a member of @group will also hold a
- * reference, so @group will never be freed until it is not needed any more.
+ * Removes a reference to @progress_group and frees the object if there are no
+ * references remaining. Any watch which is a member of @progress_group will
+ * also hold a reference, so @progress_group will never be freed until it is no
+ * longer needed.
  */
 void
 iris_progress_group_unref (IrisProgressGroup *group) {

@@ -23,7 +23,8 @@
 
 /**
  * iris_task_vall_of:
- * @first_task: An #IrisTask
+ * @first_task: the first task to watch, which must not be %NULL
+ * @Varargs: a %NULL-terminated list of further #IrisTask objects to watch
  *
  * Creates a new task that will complete when each of the passed
  * #IrisTask<!-- -->'s complete.
@@ -57,7 +58,7 @@ iris_task_vall_of (IrisTask *first_task, ...)
 
 /**
  * iris_task_all_of:
- * @first_task: An #IrisTask
+ * @tasks: A #GList of #IrisTask objects
  *
  * Creates a new task that will complete when each of the passed
  * #IrisTask<!-- -->'s complete.

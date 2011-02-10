@@ -39,7 +39,7 @@ IrisReceiver* iris_arbiter_receive    (IrisScheduler      *scheduler,
                                        IrisPort           *port,
                                        IrisMessageHandler  handler,
                                        gpointer            user_data,
-                                       GDestroyNotify      notify);
+                                       GDestroyNotify      destroy_notify);
 IrisArbiter*  iris_arbiter_coordinate (IrisReceiver       *exclusive,
                                        IrisReceiver       *concurrent,
                                        IrisReceiver       *teardown);
