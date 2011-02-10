@@ -73,7 +73,7 @@ iris_delivery_status_get_type (void)
 }
 
 static void
-iris_receiver_worker_destroy (gpointer data)
+iris_receiver_worker_destroy_cb (gpointer data)
 {
 	IrisReceiverPrivate *priv;
 	IrisWorkerData      *worker;
@@ -105,8 +105,6 @@ iris_receiver_worker (gpointer data)
 		                                worker->receiver);
 
 	if (g_atomic_int_dec_and_test (&priv->active)) { }
-
-	iris_receiver_worker_destroy (data);
 }
 
 static IrisDeliveryStatus
@@ -221,7 +219,7 @@ _post_decision:
 		iris_scheduler_queue (priv->scheduler,
 		                      iris_receiver_worker,
 		                      worker,
-		                      NULL);
+		                      iris_receiver_worker_destroy_cb);
 
 		if (!priv->persistent)
 			status = IRIS_DELIVERY_ACCEPTED_REMOVE;
@@ -457,15 +455,9 @@ iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
 	if (worker_data->receiver != receiver)
 		return TRUE;
 
-	/* FIXME: so here's a situation where actually, destroy notifications
-	 * are useful because they can be called even if the callback did not
-	 * actually execute. unqueue() returns FALSE if the work item executed
-	 * anyway.
-	 */
-	if (iris_scheduler_unqueue (scheduler, work_item)) {
-		iris_receiver_worker_destroy (data);
+	if (iris_scheduler_unqueue (scheduler, work_item))
+		/* 'unqueue' returns TRUE if the item did not execute */
 		if (g_atomic_int_dec_and_test (&priv->active)) { }
-	}
 
 	return (g_atomic_int_get (&priv->active) > 0);
 }

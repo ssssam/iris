@@ -71,7 +71,7 @@ static void
 iris_wsscheduler_queue_real (IrisScheduler  *scheduler,
                              IrisCallback    func,
                              gpointer        data,
-                             GDestroyNotify  notify)
+                             GDestroyNotify  destroy_notify)
 {
 	IrisWSSchedulerPrivate *priv;
 	IrisThread             *thread;
@@ -83,7 +83,7 @@ iris_wsscheduler_queue_real (IrisScheduler  *scheduler,
 	priv = IRIS_WSSCHEDULER (scheduler)->priv;
 
 	thread = iris_thread_get ();
-	thread_work = iris_thread_work_new (func, data);
+	thread_work = iris_thread_work_new (func, data, destroy_notify);
 
 	/* If the current thread is an iris-thread and it is a member of our
 	 * scheduler, then we will queue it to its own lock-free queue.  This

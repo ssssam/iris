@@ -137,6 +137,7 @@ struct _IrisThreadWork
 {
 	IrisCallback      callback;
 	gpointer          data;
+	GDestroyNotify    notify;
 
 	/* FIXME: would be nice to make these flags, but need to stay atomic */
 	volatile gint     taken;
@@ -180,8 +181,9 @@ void            iris_thread_manage             (IrisThread *thread,
                                                 gboolean    leader);
 void            iris_thread_shutdown           (IrisThread *thread);
 void            iris_thread_print_stat         (IrisThread *thread);
-IrisThreadWork* iris_thread_work_new           (IrisCallback callback,
-                                                gpointer data);
+IrisThreadWork* iris_thread_work_new           (IrisCallback    callback,
+                                                gpointer        data,
+                                                GDestroyNotify  destroy_notify);
 void            iris_thread_work_free          (IrisThreadWork *thread_work);
 void            iris_thread_work_run           (IrisThreadWork *thread_work);
 

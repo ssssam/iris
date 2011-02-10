@@ -479,6 +479,7 @@ iris_thread_print_stat (IrisThread *thread)
  * iris_thread_work_new:
  * @callback: An #IrisCallback
  * @data: user supplied data
+ * @destroy_notify: callback to free @data
  *
  * Creates a new instance of #IrisThreadWork, which is the negotiated contract
  * between schedulers and the thread workers themselves.
@@ -486,14 +487,16 @@ iris_thread_print_stat (IrisThread *thread)
  * Return value: The newly created #IrisThreadWork instance.
  */
 IrisThreadWork*
-iris_thread_work_new (IrisCallback callback,
-                      gpointer     data)
+iris_thread_work_new (IrisCallback   callback,
+                      gpointer       data,
+                      GDestroyNotify destroy_notify)
 {
 	IrisThreadWork *thread_work;
 
 	thread_work = g_slice_new (IrisThreadWork);
 	thread_work->callback = callback;
 	thread_work->data = data;
+	thread_work->notify = destroy_notify;
 	thread_work->taken = FALSE;
 	thread_work->remove = FALSE;
 
@@ -525,6 +528,10 @@ void
 iris_thread_work_free (IrisThreadWork *thread_work)
 {
 	thread_work->callback = NULL;
+
+	if (thread_work->notify != NULL)
+		thread_work->notify (thread_work->data);
+
 	g_slice_free (IrisThreadWork, thread_work);
 }
 

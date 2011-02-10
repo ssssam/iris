@@ -91,7 +91,7 @@ static void
 iris_scheduler_queue_real (IrisScheduler  *scheduler,
                            IrisCallback    func,
                            gpointer        data,
-                           GDestroyNotify  notify)
+                           GDestroyNotify  destroy_notify)
 {
 	IrisSchedulerPrivate *priv;
 	IrisThreadWork       *thread_work;
@@ -101,7 +101,7 @@ iris_scheduler_queue_real (IrisScheduler  *scheduler,
 
 	priv = scheduler->priv;
 
-	thread_work = iris_thread_work_new (func, data);
+	thread_work = iris_thread_work_new (func, data, destroy_notify);
 
 	iris_rrobin_apply (priv->rrobin, iris_scheduler_queue_rrobin_cb, thread_work);
 }
@@ -414,10 +414,10 @@ iris_scheduler_default (void)
  * Queues a new work item to be executed by one of the scheduler's work
  * threads.
  *
- * @destroy_notify should <emphasis>only</emphasis> handle freeing data. If the
- * work is unqueued and does not run, @notify will still be called, and
- * theoretically this call may not execute for a long time after @func was
- * called.
+ * @destroy_notify, if non-%NULL, should <emphasis>only</emphasis> handle
+ * freeing data. If the work is unqueued and does not run, @destroy_notify will
+ * still be called, and could potentially not execute for a long time after
+ * @func completes.
  */
 void
 iris_scheduler_queue (IrisScheduler  *scheduler,
@@ -458,9 +458,8 @@ iris_scheduler_queue (IrisScheduler  *scheduler,
  * returns, but may already be in progress, in which case it is up to the
  * caller to wait for it to finish.
  *
- * FIXME: the following is not yet true. This function guarantees that the work
- * will be freed (including calling its destroy notification), but this may occur
- * at any point in the future. 
+ * This function guarantees that the work item will be freed (including calling
+ * its destroy notify) but this might not occur immediately.
  *
  * Return value: %TRUE if the attempt to unqueue was successful, %FALSE if the
  *               work ran or is still running.

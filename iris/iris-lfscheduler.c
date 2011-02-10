@@ -68,7 +68,7 @@ static void
 iris_lfscheduler_queue_real (IrisScheduler  *scheduler,
                              IrisCallback    func,
                              gpointer        data,
-                             GDestroyNotify  notify)
+                             GDestroyNotify  destroy_notify)
 {
 	IrisLFSchedulerPrivate *priv;
 	IrisThreadWork         *thread_work;
@@ -78,7 +78,7 @@ iris_lfscheduler_queue_real (IrisScheduler  *scheduler,
 
 	priv = IRIS_LFSCHEDULER (scheduler)->priv;
 
-	thread_work = iris_thread_work_new (func, data);
+	thread_work = iris_thread_work_new (func, data, destroy_notify);
 
 	/* deliver to next round robin */
 	iris_rrobin_apply (IRIS_LFSCHEDULER (scheduler)->priv->rrobin,

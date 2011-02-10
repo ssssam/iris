@@ -2,16 +2,6 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-* Reimplement scheduler work destroy notifications, since then we can call them
-  even if the work item gets cancelled!
-
-* Write some quick tests that receivers and schedulers don't run work items
-  out of order. Maybe include a foreach (abort one scheduler with two
-  receivers?) to check this doesn't break the order.
-
-* Add iris_scheduler_manager_reset(), to avoid having 3000 threads in gdb
-  (better still, free them properly :)
-
 * Rewrite iris_port_flush(), to fix the race condition there.
   Race is currently triggered in:
     receiver-scheduler/default/live 2
@@ -20,6 +10,13 @@ Iris 0.3.0
   where iris_receiver_resume() gets called but somehow iris_port_flush() races
   with a call to iris_port_post() from another thread and the result is that
   execution of the queue freezes up.
+
+* Write some quick tests that receivers and schedulers don't run work items
+  out of order. Maybe include a foreach (abort one scheduler with two
+  receivers?) to check this doesn't break the order.
+
+* Add iris_scheduler_manager_reset(), to avoid having 3000 threads in gdb
+  (better still, free them properly :)
 
 * Separate libiris from gtk, ie. create a libiris-gtk
   --> stress the point that all of libiris is MT-safe and all of libiris-gtk is not

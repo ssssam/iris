@@ -48,7 +48,7 @@ static void
 iris_gmainscheduler_queue_real (IrisScheduler  *scheduler,
                                 IrisCallback    func,
                                 gpointer        data,
-                                GDestroyNotify  notify)
+                                GDestroyNotify  destroy_notify)
 {
 	IrisGMainSchedulerPrivate *priv;
 	IrisThreadWork            *thread_work;
@@ -60,7 +60,7 @@ iris_gmainscheduler_queue_real (IrisScheduler  *scheduler,
 
 	g_return_if_fail (priv->source != 0);
 
-	thread_work = iris_thread_work_new (func, data);
+	thread_work = iris_thread_work_new (func, data, destroy_notify);
 	iris_queue_push (priv->queue, thread_work);
 	g_main_context_wakeup (priv->context);
 }
