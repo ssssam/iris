@@ -61,6 +61,12 @@ def options (opt):
 	                default = False,
 	                help = 'Do not build static version of library')
 
+	opt.add_option ('--profile',
+	                dest = 'profile',
+	                action = 'store_true',
+	                default = False,
+	                help = 'Enable profiling')
+
 def configure (conf):
 	conf.load ('compiler_c')
 
@@ -78,6 +84,10 @@ def configure (conf):
 
 	#FIXME: make optional
 	conf.env.append_value ('CFLAGS', cflags_maintainer)
+
+	if Options.options.profile:
+		conf.env.append_value ('CFLAGS', '-pg')
+		conf.env.append_value ('LINKFLAGS', '-pg')
 
 	conf.check_cfg (package = 'gobject-2.0',
 	                uselib_store = 'GOBJECT',
@@ -118,7 +128,7 @@ def configure (conf):
 
 	print "   Debug level..............:  not supported in waf"
 	print "   Maintainer Compiler flags:  forced in waf"
-	print "   Profiling................:  not supported in waf"
+	print "   Profiling................: ", Options.options.profile and 'yes' or 'no'
 	print "   Build API reference......:  not supported in waf"
 	print "   Enable GTK+ widgets......:  forced in waf"
 	print ""
