@@ -136,32 +136,6 @@ queue2 (void)
 	port = iris_port_new ();
 	receiver = mock_callback_receiver_new (G_CALLBACK (queue1_cb), &counter);
 	iris_port_set_receiver (port, receiver);
-	mock_callback_receiver_pause (MOCK_CALLBACK_RECEIVER (receiver));
-
-	for (i = 0; i < SHORT_ITER_COUNT; i++) {
-		msg = iris_message_new (1);
-		iris_port_post (port, msg);
-	}
-
-	/* queue1_cb should get called once since we queue immediately after that. */
-	g_assert_cmpint (counter, ==, 1);
-
-	/* receiver is in accept and pause, so total queued should be total-1 */
-	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT - 1);
-}
-
-static void
-queue3 (void)
-{
-	IrisMessage  *msg;
-	IrisPort     *port;
-	IrisReceiver *receiver;
-	gint          counter = 0;
-	gint          i = 0;
-
-	port = iris_port_new ();
-	receiver = mock_callback_receiver_new (G_CALLBACK (queue1_cb), &counter);
-	iris_port_set_receiver (port, receiver);
 	mock_callback_receiver_oneshot (MOCK_CALLBACK_RECEIVER (receiver));
 
 	for (i = 0; i < SHORT_ITER_COUNT; i++) {
@@ -183,45 +157,9 @@ flush1_cb (gpointer data)
 	g_atomic_int_inc (counter);
 }
 
+
 static void
 flush1 (void)
-{
-	IrisMessage  *msg;
-	IrisPort     *port;
-	IrisReceiver *receiver;
-	gint          counter = 0;
-	gint          i;
-
-	port = iris_port_new ();
-	receiver = mock_callback_receiver_new (G_CALLBACK (flush1_cb), &counter);
-	mock_callback_receiver_pause (MOCK_CALLBACK_RECEIVER (receiver));
-	iris_port_set_receiver (port, receiver);
-
-	g_assert (port != NULL);
-	g_assert (receiver != NULL);
-
-	for (i = 0; i < SHORT_ITER_COUNT; i++) {
-		msg = iris_message_new (1);
-		g_assert (msg != NULL);
-		iris_port_post (port, msg);
-	}
-
-	/* the first item is delivered, the rest pause. */
-	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT - 1);
-	mock_callback_receiver_reset (MOCK_CALLBACK_RECEIVER (receiver));
-
-	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT - 1);
-
-	/* normally, we wouldnt need to flush this. but we do for our
-	 * mock receiver since it is not doing it for us.
-	 */
-	iris_port_flush (port, NULL);
-
-	g_assert_cmpint (iris_port_get_queue_count (port), ==, 0);
-}
-
-static void
-flush2 (void)
 {
 	IrisMessage  *msg;
 	IrisPort     *port;
@@ -271,9 +209,7 @@ main (int   argc,
 	g_test_add_func ("/port/many_deliver1", many_deliver1);
 	g_test_add_func ("/port/queue1", queue1);
 	g_test_add_func ("/port/queue2", queue2);
-	g_test_add_func ("/port/queue3", queue3);
 	g_test_add_func ("/port/flush1", flush1);
-	g_test_add_func ("/port/flush2", flush2);
 
 	return g_test_run ();
 }

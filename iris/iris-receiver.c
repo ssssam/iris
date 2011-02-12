@@ -145,7 +145,6 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 		goto _post_decision;
 	}
 
-
 	g_static_rec_mutex_lock (&priv->mutex);
 
 	if (g_atomic_int_get (&priv->completed) == TRUE) {
@@ -225,10 +224,6 @@ _post_decision:
 			status = IRIS_DELIVERY_ACCEPTED_REMOVE;
 	}
 
-	if (unpause && iris_port_is_paused (priv->port)) {
-		iris_port_flush (priv->port, NULL);
-	}
-
 	return status;
 }
 
@@ -285,6 +280,7 @@ iris_receiver_init (IrisReceiver *receiver)
 
 	g_static_rec_mutex_init (&receiver->priv->mutex);
 	receiver->priv->persistent = TRUE;
+	receiver->priv->message = NULL;
 }
 
 /**

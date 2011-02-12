@@ -2,14 +2,10 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-* Rewrite iris_port_flush(), to fix the race condition there.
-  Race is currently triggered in:
-    receiver-scheduler/default/live 2
-    process-1/recurse
-    progress-dialog-gtk-1/recurse
-  where iris_receiver_resume() gets called but somehow iris_port_flush() races
-  with a call to iris_port_post() from another thread and the result is that
-  execution of the queue freezes up.
+* Performance has gone waaay down in /receiver-scheduler-1/live 2/ since I
+  fixed the race condition :(
+  How about instead of locking the port mutex, have the receiver re-confirm
+  delivery after the message has been queued.
 
 * Write some quick tests that receivers and schedulers don't run work items
   out of order. Maybe include a foreach (abort one scheduler with two
@@ -47,6 +43,8 @@ Iris 0.3.0
   and that probably won't change (too difficult)
 
 * Tests should always use a fresh scheduler, no?
+
+* Valgrind it a bit
 
 * Bump version to 0.3, and maybe give Iris a blog post :)
 
@@ -201,6 +199,9 @@ Finalisation: a few issues here.
     is cancelled or it completes.
 
   * All this needs thorough testing of course!
+
+Introspection. See:
+  http://live.gnome.org/GObjectIntrospection/WritingBindingableAPIs
 
 There are other FIXME's lurking in the code no doubt :)
 

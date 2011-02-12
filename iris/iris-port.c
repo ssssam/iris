@@ -45,7 +45,7 @@
 		else {                                            \
 			if (!p->queue)                            \
 				p->queue = g_queue_new ();        \
-			g_queue_push_head (p->queue,              \
+			g_queue_push_tail (p->queue,              \
 					iris_message_ref (m));    \
 		}                                                 \
 	} G_STMT_END
@@ -93,6 +93,15 @@ iris_port_set_receiver_real (IrisPort     *port,
 static void
 iris_port_finalize (GObject *object)
 {
+	IrisPort        *port;
+	IrisPortPrivate *priv;
+
+	port = IRIS_PORT (port);
+	priv = port->priv;
+
+	if (priv->queue != NULL)
+		g_queue_free (priv->queue);
+
 	G_OBJECT_CLASS (iris_port_parent_class)->finalize (object);
 }
 
@@ -116,6 +125,7 @@ iris_port_init (IrisPort *port)
 	                                          IrisPortPrivate);
 
 	port->priv->mutex = g_mutex_new ();
+	port->priv->state = 0;
 }
 
 /**
@@ -131,6 +141,56 @@ iris_port_new (void)
 	return g_object_new (IRIS_TYPE_PORT, NULL);
 }
 
+static IrisDeliveryStatus
+iris_port_pause (IrisPort     *port,
+                 IrisReceiver *receiver,
+                 IrisMessage  *message)
+{
+	IrisPortPrivate    *priv;
+	IrisDeliveryStatus  delivered;
+
+	priv = port->priv;
+
+	g_mutex_lock (priv->mutex);
+
+	/* Between getting IRIS_DELIVERY_PAUSE and actually receiving the mutex,
+	 * all of the active messages could have completed. This would mean no more
+	 * calls to iris_receiver_resume(), so if we just queue the message anyway
+	 * the port will stay paused forever. We must recheck the delivery state
+	 * within the mutex, where no more messages can complete because they will
+	 * block in iris_port_flush().
+	 */
+	delivered = iris_receiver_deliver (receiver, message);
+
+	switch (delivered) {
+		case IRIS_DELIVERY_ACCEPTED: break;
+		case IRIS_DELIVERY_ACCEPTED_PAUSE:
+			priv->state |= IRIS_PORT_STATE_PAUSED;
+			break;
+		case IRIS_DELIVERY_PAUSE:
+			/* Further attempts to stop the port freezing up */
+			g_warn_if_fail (g_atomic_int_get (&priv->receiver->priv->active) > 0);
+
+			priv->state |= IRIS_PORT_STATE_PAUSED;
+			STORE_MESSAGE (priv, message);
+			break;
+		case IRIS_DELIVERY_REMOVE:
+			STORE_MESSAGE (priv, message);
+			g_atomic_pointer_compare_and_exchange ((gpointer *)&priv->receiver, receiver, NULL);
+			break;
+		case IRIS_DELIVERY_ACCEPTED_REMOVE:
+			g_atomic_pointer_compare_and_exchange ((gpointer *)&priv->receiver, receiver, NULL);
+			break;
+		default:
+			g_warn_if_reached ();
+	}
+
+	g_mutex_unlock (priv->mutex);
+
+	return delivered;
+}
+
+
 /**
  * iris_port_post:
  * @port: An #IrisPort
@@ -139,12 +199,12 @@ iris_port_new (void)
  * Posts @message to the port.  Any receivers listening to the port will
  * receive the message.
  */
- void
+void
 iris_port_post (IrisPort    *port,
                 IrisMessage *message)
 {
 	IrisPortPrivate    *priv;
-	IrisReceiver       *receiver    = NULL;
+	IrisReceiver       *receiver;
 	IrisDeliveryStatus  delivered;
 
 	iris_debug (IRIS_DEBUG_PORT);
@@ -153,24 +213,41 @@ iris_port_post (IrisPort    *port,
 	g_return_if_fail (message != NULL);
 
 	priv = port->priv;
+	receiver = g_atomic_pointer_get (&priv->receiver);
 
-	/* FIXME: 'receiver' is handled bizarrely here. Note it is immutable
-	 * after the first call to post() */
-	if (PORT_PAUSED (port) || !(receiver = priv->receiver)) {
+	if (PORT_PAUSED (port) || !receiver) {
 		g_mutex_lock (priv->mutex);
-		if (PORT_PAUSED (port) || !priv->receiver) {
+
+		if (receiver == NULL) {
 			STORE_MESSAGE (priv, message);
+			g_mutex_unlock (priv->mutex);
+			return;
 		}
-		else {
-			receiver = priv->receiver;
+
+		if (priv->current != NULL) {
+			if (priv->queue == NULL)
+				priv->queue = g_queue_new ();
+
+			g_queue_push_tail (priv->queue, iris_message_ref (message));
+			g_mutex_unlock (priv->mutex);
+			return;
 		}
+
+		/* If we are paused but nothing is queued, let's unpause and try
+		 * delivering the message. This fixes a problem with synchronous
+		 * schedulers where a message triggers another one, but because this
+		 * all happens inside the receiver worker function the receiver hasn't
+		 * had a chance to unpause our queue yet.
+		 */
 		g_mutex_unlock (priv->mutex);
 	}
 
-	if (receiver) {
-		delivered = iris_receiver_deliver (receiver, message);
+	/* No locking here, so that the case of a receiver with no arbiter executes
+	 * very fast.
+	 */
+	delivered = iris_receiver_deliver (receiver, message);
 
-		switch (delivered) {
+	switch (delivered) {
 		case IRIS_DELIVERY_ACCEPTED:
 			break;
 		case IRIS_DELIVERY_ACCEPTED_PAUSE:
@@ -179,28 +256,20 @@ iris_port_post (IrisPort    *port,
 			g_mutex_unlock (priv->mutex);
 			break;
 		case IRIS_DELIVERY_PAUSE:
-			g_mutex_lock (priv->mutex);
-			priv->state |= IRIS_PORT_STATE_PAUSED;
-			STORE_MESSAGE (priv, message);
-			g_mutex_unlock (priv->mutex);
+			iris_port_pause (port, receiver, message);
 			break;
 		case IRIS_DELIVERY_REMOVE:
 			/* store message and fall-through */
 			g_mutex_lock (priv->mutex);
 			STORE_MESSAGE (priv, message);
-			if (priv->receiver == receiver)
-				priv->receiver = NULL;
+			g_atomic_pointer_compare_and_exchange ((gpointer *)&priv->receiver, receiver, NULL);
 			g_mutex_unlock (priv->mutex);
 			break;
 		case IRIS_DELIVERY_ACCEPTED_REMOVE:
-			g_mutex_lock (priv->mutex);
-			if (priv->receiver == receiver)
-				priv->receiver = NULL;
-			g_mutex_unlock (priv->mutex);
+			g_atomic_pointer_compare_and_exchange ((gpointer *)&priv->receiver, receiver, NULL);
 			break;
 		default:
 			g_warn_if_reached ();
-		}
 	}
 }
 
@@ -288,62 +357,87 @@ iris_port_get_queue_count (IrisPort *port)
  * Flushes the port by trying to redeliver messages to a listening
  * #IrisReceiver. @repost_message will be delivered before the port's queue.
  */
+/* FIXME: would this function be better called iris_port_resume() ? There's never a reason
+ * to actually flush the port, unless you are closing it ... */
 void
 iris_port_flush (IrisPort    *port,
                  IrisMessage *repost_message)
 {
-	IrisPortPrivate *priv;
-	GQueue          *queue   = NULL;
-	IrisMessage     *message = NULL;
+	IrisPortPrivate    *priv;
+	IrisMessage        *message;
+	IrisReceiver       *receiver;
+	IrisDeliveryStatus  delivered;
 
 	iris_debug (IRIS_DEBUG_PORT);
 
 	g_return_if_fail (IRIS_IS_PORT (port));
 
 	priv = port->priv;
+	receiver = g_atomic_pointer_get (&priv->receiver);
 
-	/* FIXME: To save time while prototyping, I'm going to do a bad
-	 *   bad thing.  We will pull all of the items out of the port
-	 *   that currently exist and simply try to post them again to
-	 *   the port.  This is bad because if many one-shot receivers
-	 *   are used then we could potentially have a LOT of extra
-	 *   queue's created and time spent locking to re-push back in.
-	 *   However, there should not contention on the locks.
-	 */
+	if (receiver == NULL)
+		return;
 
 	g_mutex_lock (priv->mutex);
 
-	/* Unpause if we are currently paused. */
-	priv->state = priv->state & ~IRIS_PORT_STATE_PAUSED;
-
-	/* Copy our current held message for queue */
-	message = priv->current;
-	queue = priv->queue;
-
-	/* Unset them, they will get recreated by iris_port_post() if
-	 * needed during our flush.
+	/* Port should probably be paused anyway. We leave it set, to force
+	 * iris_port_post() to queue all items while we are working.
 	 */
-	priv->current = NULL;
-	priv->queue = NULL;
+	priv->state &= IRIS_PORT_STATE_PAUSED;
 
-	g_mutex_unlock (priv->mutex);
-
-	if (repost_message)
-		iris_port_post (port, repost_message);
-
-	if (message) {
-		iris_port_post (port, message);
-		iris_message_unref (message);
-	}
-
-	if (queue) {
-		while ((message = g_queue_pop_head (queue)) != NULL) {
-			iris_port_post(port, message);
-			iris_message_unref (message);
+	do {
+		if (repost_message != NULL) {
+			iris_message_ref (repost_message);
+			message = repost_message;
+			repost_message = NULL;
+		} else
+		if (priv->queue != NULL && g_queue_get_length (priv->queue) > 0) {
+			/* 'current' is effectively the head of the queue */
+			g_warn_if_fail (priv->current != NULL);
+			message = priv->current;
+			priv->current = g_queue_pop_head (priv->queue);
+		} else {
+			message = priv->current;
+			priv->current = NULL;
 		}
 
-		g_queue_free (queue);
-	}
+		if (message == NULL) {
+			/* Unpause now the queue is empty */
+			priv->state &= ~IRIS_PORT_STATE_PAUSED;
+			g_mutex_unlock (priv->mutex);
+			break;
+		}
+		g_mutex_unlock (priv->mutex);
+
+		delivered = iris_receiver_deliver (receiver, message);
+
+		switch (delivered) {
+			case IRIS_DELIVERY_ACCEPTED: break;
+			case IRIS_DELIVERY_ACCEPTED_PAUSE: break;
+			case IRIS_DELIVERY_PAUSE:
+				delivered = iris_port_pause (port, receiver, message);
+				break;
+			case IRIS_DELIVERY_REMOVE:
+				g_mutex_lock (priv->mutex);
+				STORE_MESSAGE (priv, message);
+				g_atomic_pointer_compare_and_exchange ((gpointer *)&priv->receiver, receiver, NULL);
+				g_mutex_unlock (priv->mutex);
+				break;
+			case IRIS_DELIVERY_ACCEPTED_REMOVE:
+				g_atomic_pointer_compare_and_exchange ((gpointer *)&priv->receiver, receiver, NULL);
+				break;
+			default: g_warn_if_reached ();
+		}
+
+		iris_message_unref (message);
+
+		if (delivered != IRIS_DELIVERY_ACCEPTED && delivered != IRIS_DELIVERY_ACCEPTED_PAUSE)
+			break;
+
+		g_mutex_lock (priv->mutex);
+	} while (1);
+
+	/* Don't free the queue even if it's empty. We will probably need it again. */
 }
 
 /**

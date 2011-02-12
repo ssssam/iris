@@ -238,10 +238,8 @@ add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/live 1", name);
 	g_test_add (buf, SchedulerFixture, GINT_TO_POINTER (FALSE), setup, test_live, teardown);
 
-	if (0) {
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/live 2", name);
 	test_add_repeated (buf, 250, SchedulerFixture, GINT_TO_POINTER (TRUE), setup, test_live, teardown);
-}
 
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/destruction", name);
 	g_test_add (buf, SchedulerFixture, NULL, setup, test_destruction, teardown);

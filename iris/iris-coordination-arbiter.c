@@ -548,7 +548,7 @@ receive_completed (IrisArbiter  *arbiter,
 				priv->flags |= IRIS_COORD_TEARDOWN;
 				resume = priv->teardown;
 			}
-			else if (!priv->exclusive->priv->active) {
+			else if (priv->exclusive->priv->active <= 1) {
 				resume = priv->exclusive;
 			}
 		}
