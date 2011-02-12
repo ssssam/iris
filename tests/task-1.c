@@ -380,24 +380,35 @@ test20_skip (IrisTask *task,
 	*((gboolean*)user_data) = TRUE;
 }
 
+/* callback-errback-2: test throwing errors in callbacks */
 static void
 test20 (void)
 {
-	gboolean cb1 = FALSE;
-	gboolean cb2 = FALSE;
-	gboolean cb3 = FALSE;
-	gboolean cb4 = FALSE;
+	gboolean cb1 = FALSE, cb2 = FALSE, cb3 = FALSE, cb4 = FALSE;
 	gboolean skip = FALSE;
+
 	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
 	iris_task_set_control_scheduler (task, mock_scheduler_new ());
 	iris_task_set_work_scheduler (task, mock_scheduler_new ());
+
+	/* Throw an error */
 	iris_task_add_callback (task, test20_cb1, &cb1, NULL);
+
+	/* Catch the error and throw another one, twice */
 	iris_task_add_errback (task, test20_cb2, &cb2, NULL);
 	iris_task_add_errback (task, test20_cb2, &cb2, NULL);
+
+	/* This should be skipped because an error condition is active */
 	iris_task_add_callback (task, test20_skip, &skip, NULL);
+
+	/* Catch the error */
 	iris_task_add_errback (task, test20_cb3, &cb3, NULL);
+
+	/* This should be called, because the error is no longer active */
 	iris_task_add_callback (task, test20_cb4, &cb4, NULL);
+
 	iris_task_run (task);
+	
 	g_assert (cb1 == TRUE);
 	g_assert (cb2 == TRUE);
 	g_assert (cb3 == TRUE);
