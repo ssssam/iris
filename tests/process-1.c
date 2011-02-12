@@ -20,7 +20,7 @@
  
 /* process-1: tests for iris-process.c. */
  
-#include <iris/iris.h>
+#include <iris.h>
 
 #include "iris/iris-process-private.h"
 

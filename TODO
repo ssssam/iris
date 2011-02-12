@@ -2,21 +2,12 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-* Performance has gone waaay down in /receiver-scheduler-1/live 2/ since I
-  fixed the race condition :(
-  How about instead of locking the port mutex, have the receiver re-confirm
-  delivery after the message has been queued.
-
 * Write some quick tests that receivers and schedulers don't run work items
   out of order. Maybe include a foreach (abort one scheduler with two
   receivers?) to check this doesn't break the order.
 
 * Add iris_scheduler_manager_reset(), to avoid having 3000 threads in gdb
   (better still, free them properly :)
-
-* Separate libiris from gtk, ie. create a libiris-gtk
-  --> stress the point that all of libiris is MT-safe and all of libiris-gtk is not
-  --> also don't forget you need gtk+-2.18 or better for gtkinfobar
 
 * Prevent arbiters from being connected to receivers that have already processed
   messages.
@@ -47,6 +38,8 @@ Iris 0.3.0
 * Valgrind it a bit
 
 * Bump version to 0.3, and maybe give Iris a blog post :)
+
+* What to do about gtk2/gtk3?
 
 ---------------------------------------------------------------------------
 Missing or Incompleteness
@@ -239,6 +232,8 @@ it is, that was why I recommended it.
 ---------------------------------------------------------------------------
 Niceties
 ---------------------------------------------------------------------------
+
+Stress the point that all of libiris is MT-safe and all of libiris-gtk is not
 
 Processes should 'feed forward' the totals when hooked up - makes no
 sense for B to have its total as A's processed count. It's normally the

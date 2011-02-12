@@ -29,11 +29,11 @@
  
 #include <stdlib.h>
 #include <gtk/gtk.h>
-#include <iris/iris.h>
-#include <iris/iris-gtk.h>
+#include <iris.h>
+#include <iris-gtk.h>
 
 #include "iris/iris-process-private.h"
-#include "iris/iris-progress-dialog-private.h"
+#include "iris-gtk/iris-progress-dialog-private.h"
 
 static void
 push_next_func (IrisProcess *process,

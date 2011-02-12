@@ -1,4 +1,4 @@
-#include <iris/iris.h>
+#include <iris.h>
 
 static void
 test1 (void)

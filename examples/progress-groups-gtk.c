@@ -25,8 +25,8 @@
 #include <glib.h>
 #include <glib/gthread.h>
 
-#include <iris/iris.h>
-#include <iris/iris-gtk.h>
+#include <iris.h>
+#include <iris-gtk.h>
 
 #include <iris/iris-progress-monitor-private.h>
 

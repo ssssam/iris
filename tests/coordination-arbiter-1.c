@@ -1,4 +1,4 @@
-#include <iris/iris.h>
+#include <iris.h>
 #include <iris/iris-coordination-arbiter.h>
 #include <iris/iris-coordination-arbiter-private.h>
 #include <iris/iris-receiver-private.h>

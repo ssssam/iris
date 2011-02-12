@@ -21,12 +21,9 @@
 /* process-2: nastier test for process. */
  
 #include <stdlib.h>
-#include <gtk/gtk.h>
-#include <iris/iris.h>
-#include <iris/iris-gtk.h>
+#include <iris.h>
 
 #include "iris/iris-process-private.h"
-#include "iris/iris-progress-dialog-private.h"
 
 /* wait_func: hold up the process until a flag is set to continue; useful for
  *            testing progress UI and also for breaking the scheduler

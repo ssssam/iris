@@ -1,20 +1,25 @@
-SUBDIRS = iris bindings doc examples
+SUBDIRS = iris 
+
+if ENABLE_GTK
+SUBDIRS += iris-gtk
+endif
+
+SUBDIRS += bindings doc examples
 
 if ENABLE_GLIB_TEST
 SUBDIRS += tests
 endif
 
-DIST_SUBDIRS = iris bindings doc tests examples
+DIST_SUBDIRS = iris iris-gtk bindings doc tests examples
 
-pcfiles = iris-$(IRIS_API_VERSION).pc
-
-iris-$(IRIS_API_VERSION).pc: iris.pc
-	@cp -f $< $@
+pcfiles = iris-1.0.pc \
+          iris-gtk-1.0.pc
 
 pkgconfig_DATA = $(pcfiles)
 pkgconfigdir = $(libdir)/pkgconfig
 
-EXTRA_DIST = iris.pc.in
+EXTRA_DIST = iris-1.0.pc.in \
+             iris-gtk-1.0.pc.in
 
 CLEANFILES = $(pcfiles) test-report.xml
 

@@ -1,4 +1,4 @@
-#include <iris/iris.h>
+#include <iris.h>
 #include <string.h>
 
 static void

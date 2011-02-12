@@ -1,4 +1,4 @@
-#include <iris/iris.h>
+#include <iris.h>
 #include <string.h>
 
 #include <iris/iris-arbiter-private.h>

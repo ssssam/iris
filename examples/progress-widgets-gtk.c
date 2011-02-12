@@ -25,8 +25,8 @@
 #include <glib.h>
 #include <glib/gthread.h>
 
-#include <iris/iris.h>
-#include <iris/iris-gtk.h>
+#include <iris.h>
+#include <iris-gtk.h>
 
 GtkWidget *demo_window = NULL,
           *title_entry = NULL;

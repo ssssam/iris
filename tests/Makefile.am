@@ -63,11 +63,19 @@ endif
 noinst_PROGRAMS += $(NULL)
 TEST_PROGS += $(NULL)
 
-INCLUDES = -I$(top_srcdir)
+INCLUDES = -I$(top_srcdir)/iris
 LDADD = $(top_builddir)/iris/libiris-1.0.la
 
 AM_CFLAGS = $(IRIS_CFLAGS)
 AM_LDFLAGS = $(IRIS_LIBS)
+
+if ENABLE_GTK
+INCLUDES += -I$(top_srcdir)/iris-gtk
+LDADD += $(top_builddir)/iris-gtk/libiris-gtk-1.0.la
+
+AM_CFLAGS += $(GTK_CFLAGS)
+AM_LDFLAGS += $(GTK_LIBS)
+endif
 
 arbiter_1_sources = arbiter-1.c
 message_1_sources = message-1.c

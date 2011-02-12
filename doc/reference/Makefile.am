@@ -17,7 +17,7 @@ DOC_MAIN_SGML_FILE=$(DOC_MODULE)-docs.xml
 # gtk-doc will search all .c & .h files beneath here for inline comments
 # documenting the functions and macros.
 # e.g. DOC_SOURCE_DIR=../../../gtk
-DOC_SOURCE_DIR=../../iris
+DOC_SOURCE_DIR=${top_srcdir}
 
 # Extra options to pass to gtkdoc-scangobj. Not normally needed.
 SCANGOBJ_OPTIONS=--type-init-func="g_type_init()"
@@ -43,8 +43,13 @@ FIXXREF_OPTIONS=\
 # Used for dependencies. The docs will be rebuilt if any of these change.
 # e.g. HFILE_GLOB=$(top_srcdir)/gtk/*.h
 # e.g. CFILE_GLOB=$(top_srcdir)/gtk/*.c
-HFILE_GLOB=$(top_srcdir)/iris/iris-*.h
-CFILE_GLOB=$(top_srcdir)/iris/iris-*.c
+HFILE_GLOB = \
+	$(top_srcdir)/iris/iris-*.h \
+	$(top_srcdir)/iris-gtk/iris-*.h
+
+CFILE_GLOB = \
+	$(top_srcdir)/iris/iris-*.c \
+	$(top_srcdir)/iris-gtk/iris-*.c
 
 # Header files to ignore when scanning.
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h
@@ -58,13 +63,13 @@ IGNORE_HFILES=						\
 	iris-port-private.h				\
 	iris-process-private.h				\
 	iris-progress-monitor-private.h		\
-	iris-progress-dialog-private.h		\
-	iris-progress-info-bar-private.h	\
 	iris-receiver-private.h				\
 	iris-scheduler-manager-private.h		\
 	iris-scheduler-private.h			\
 	iris-service-private.h				\
 	iris-task-private.h				\
+	iris-progress-dialog-private.h		\
+	iris-progress-info-bar-private.h	\
 	$(NULL)
 
 EXTRA_HFILES=
@@ -88,8 +93,10 @@ expand_content_files=
 # e.g. INCLUDES=-I$(top_srcdir) -I$(top_builddir) $(GTK_DEBUG_FLAGS)
 # e.g. GTKDOC_LIBS=$(top_builddir)/gtk/$(gtktargetlib)
 
-INCLUDES=-I$(top_srcdir) $(IRIS_CFLAGS)
-GTKDOC_LIBS=$(top_builddir)/iris/libiris-1.0.la $(IRIS_LIBS)
+INCLUDES=-I$(top_srcdir) $(IRIS_CFLAGS) $(IRIS_GTK_CFLAGS)
+GTKDOC_LIBS = \
+	$(top_builddir)/iris/libiris-1.0.la $(IRIS_LIBS) \
+	$(top_builddir)/iris-gtk/libiris-gtk-1.0.la $(IRIS_GTK_LIBS)
 
 # This includes the standard gtk-doc make rules, copied by gtkdocize.
 include $(top_srcdir)/gtk-doc.make

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <glib.h>
 #include <glib/gthread.h>
-#include <iris/iris.h>
+#include <iris.h>
 
 #define ITER_MAX 1000000
 #define MSG_DO_SMTHNG 1

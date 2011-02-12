@@ -1,4 +1,4 @@
-#include <iris/iris.h>
+#include <iris.h>
 #include <string.h>
 
 /* A less hacky solution is to link mock source files into a libtestutils, and

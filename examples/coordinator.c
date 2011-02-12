@@ -1,4 +1,4 @@
-#include <iris/iris.h>
+#include <iris.h>
 
 #define ITER_MAX      1000
 #define EXCLUSIVE_MOD 100

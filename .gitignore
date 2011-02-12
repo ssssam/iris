@@ -17,7 +17,8 @@ depcomp
 doc/reference/version.xml
 gtk-doc.make
 install-sh
-iris.pc
+iris-1.0.pc
+iris-gtk-1.0.pc
 .deps
 iris/iris-version.h
 libtool
@@ -96,10 +97,10 @@ autotools/shave
 autotools/shave-libtool
 examples/basic
 examples/basic.o
-examples/progress-tasks
-examples/progress-widgets
-examples/progress-groups
-examples/progress-chains
+examples/progress-tasks-gtk
+examples/progress-widgets-gtk
+examples/progress-groups-gtk
+examples/progress-chains-gtk
 examples/recursive
 examples/recursive.o
 examples/coordinator

@@ -85,27 +85,25 @@ AC_MSG_RESULT(ok)
 AM_CONDITIONAL(PLATFORM_WIN32, test x$platform_win32 = xyes)
 AM_CONDITIONAL(PLATFORM_DARWIN, test x$platform_darwin = xyes)
 
-dnl = Enable GTK+ widgets ==================================================
+dnl = Build iris-gtk ========================================================
+
 AC_ARG_ENABLE([gtk],
-              AS_HELP_STRING([--disable-gtk],[Disable GTK+ widgets]),
-              [], [enable_gtk=yes])
-PKG_CHECK_MODULES(GTK, [gtk+-2.0 >= gtk_req_version], , enable_gtk=no)
+              AS_HELP_STRING([--enable-gtk],[Enable iris-gtk widget library]),
+              [enablegtk=$enableval],
+              [enable_gtk=yes])
+    
+if test "x$enable_gtk" = "xyes"; then
+	PKG_CHECK_MODULES(GTK, gtk+-2.0 >= $gtk_req_version)
+fi
+
 AC_DEFINE([ENABLE_GTK],[1],[Define to compile with GTK+ support])
 AM_CONDITIONAL(ENABLE_GTK, [test "x$enable_gtk" = "xyes"])
 
-IRIS_CFLAGS="$IRIS_CFLAGS $GTK_CFLAGS"
-IRIS_LIBS="$IRIS_LIBS $GTK_LIBS"
+IRIS_GTK_CFLAGS="$IRIS_CFLAGS $GTK_CFLAGS"
+IRIS_GTK_LIBS="$IRIS_LIBS $GTK_LIBS"
 
-if test "x$enable_gtk" = "xyes"; then
-	IRIS_EXTRA_PACKAGES=gtk+-2.0
-	IRIS_EXTRA_LIBS=$GTK_LIBS
-	IRIS_EXTRA_CFLAGS=$GTK_CFLAGS
-fi
-
-
-AC_SUBST(GTK_PACKAGES)
-AC_SUBST(GTK_EXTRA_LIBS)
-AC_SUBST(GTK_EXTRA_CFLAGS)
+AC_SUBST(IRIS_GTK_CFLAGS)
+AC_SUBST(IRIS_GTK_LIBS)
 
 
 dnl = Enable Vala ==========================================================
@@ -200,7 +198,7 @@ AC_MSG_CHECKING([whether Python support is requested])
 AC_ARG_ENABLE([python],
 	AS_HELP_STRING([--enable-python],[Enable python support]),
 	[enable_python=$enableval enable_python=$enableval],
-	[enable_python=autodetect enable_python=yes])
+	[enable_python=autodetect enable_python=no])
 AC_MSG_RESULT([$enable_python])
 if test "x$enable_python" != "xno"; then
 	AM_PATH_PYTHON([2.3],[],[no])
@@ -313,6 +311,7 @@ AC_CONFIG_FILES([
         Makefile
         iris/Makefile
         iris/iris-version.h
+        iris-gtk/Makefile
         bindings/Makefile
         bindings/vala/Makefile
         bindings/python/Makefile
@@ -321,7 +320,8 @@ AC_CONFIG_FILES([
         doc/Makefile
         doc/reference/Makefile
         doc/reference/version.xml
-        iris.pc
+        iris-1.0.pc
+        iris-gtk-1.0.pc
 ])
 
 AC_OUTPUT

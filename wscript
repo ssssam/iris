@@ -140,24 +140,40 @@ def configure (conf):
 	print ""
 
 
-def build (bld):
-	# Build libiris
-	#
-	src_dir = bld.path.find_dir ('iris')
-	libiris_source = src_dir.ant_glob('*.c', src=True, dir=False)
-	libiris_uselib = 'GOBJECT GTHREAD GIO GTK'
-
+def build_library (bld, source='', target='', uselib='', includes=''):
 	if bld.env['IRIS_SHARED']:
-		libiris_sh = bld (features = 'c cshlib',
-		                  source   = libiris_source,
-		                  target   = 'iris',
-		                  uselib   = libiris_uselib)
+		bld (features = 'c cshlib',
+		     source   = source,
+		     target   = target,
+		     uselib   = uselib,
+		     includes = includes)
 
 	if bld.env['IRIS_STATIC']:
-		libiris_st = bld (features = 'c cstlib',
-		                  source   = libiris_source,
-		                  target   = 'iris',
-		                  uselib   = libiris_uselib)
+		bld (features = 'c cstlib',
+		     source   = source,
+		     target   = target,
+		     uselib   = uselib,
+		     includes = includes)
+
+def build (bld):
+	# Build libraries
+	#
+	uselib = 'GOBJECT GTHREAD GIO GTK'
+
+	src_dir = bld.path.find_dir ('iris')
+	build_library (bld,
+	               source = src_dir.ant_glob('*.c', src=True, dir=False),
+	               target = 'iris',
+	               uselib = uselib)
+	               
+
+	src_dir = bld.path.find_dir ('iris-gtk')
+	build_library (bld,
+	               source = src_dir.ant_glob('*.c', src=True, dir=False),
+	               target = 'iris-gtk',
+	               uselib = uselib,
+	               includes = 'iris')
+
 
 	# Build examples
 	#
@@ -166,9 +182,9 @@ def build (bld):
 		example = bld (features = 'c cprogram',
 		               source = file,
 		               target = file.change_ext('').get_bld(),
-		               uselib = libiris_uselib,
-		               includes = '.',
-		               use = 'iris',
+		               uselib = uselib,
+		               includes = '. iris iris-gtk',
+		               use = 'iris iris-gtk',
 		               install_path = None)
 
 	# Build tests
@@ -178,9 +194,9 @@ def build (bld):
 		test = bld (features = 'c cprogram',
 		            source = file,
 		            target = file.change_ext('').get_bld(),
-		            uselib = libiris_uselib,
-		            includes = '. tests',
-		            use = 'iris',
+		            uselib = uselib,
+		            includes = '. iris iris-gtk tests',
+		            use = 'iris iris-gtk',
 		            install_path = None)
 
 		# Set unit_test flag selectively so user can call:

@@ -1,4 +1,4 @@
-#include <iris/iris.h>
+#include <iris.h>
 #include "mocks/mock-scheduler.h"
 #include <iris/iris-task-private.h>
 #include <iris/iris-receiver-private.h>

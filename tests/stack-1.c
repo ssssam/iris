@@ -1,4 +1,4 @@
-#include <iris/iris.h>
+#include <iris.h>
 #include <iris/iris-stack-private.h>
 
 static void

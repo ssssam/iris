@@ -80,30 +80,9 @@ sources_c = 							\
 	iris-wsscheduler.c					\
 	$(NULL)
 
-
-sources_gtk_public_h =									\
-	$(top_srcdir)/iris/iris-gtk.h						\
-	$(top_srcdir)/iris/iris-progress-dialog.h			\
-	$(top_srcdir)/iris/iris-progress-info-bar.h			\
-	$(NULL)
-
-sources_gtk_private_h =									\
-	$(top_srcdir)/iris/iris-progress-dialog-private.h	\
-	iris-progress-info-bar-private.h					\
-	$(NULL)
-
-sources_gtk_c = 				\
-	iris-progress-dialog.c		\
-	iris-progress-info-bar.c	\
-	$(NULL)
-
-
 irisincludedir = $(includedir)/iris-$(IRIS_API_VERSION)/iris
 
 irisinclude_DATA = $(sources_public_h)
-if ENABLE_GTK
-irisinclude_DATA += $(sources_gtk_public_h)
-endif
 irisinclude_DATA += $(NULL)
 
 lib_LTLIBRARIES = libiris-@IRIS_API_VERSION@.la
@@ -114,9 +93,6 @@ libiris_@IRIS_API_VERSION@_la_SOURCES = 			\
 	$(sources_c) 						\
 	$(BUILT_SOURCES) 					\
 	iris.h
-if ENABLE_GTK
-libiris_@IRIS_API_VERSION@_la_SOURCES += $(sources_gtk_c)
-endif
 libiris_@IRIS_API_VERSION@_la_SOURCES += $(NULL)
 
 
