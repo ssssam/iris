@@ -115,7 +115,7 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 	IrisDeliveryStatus   status = IRIS_DELIVERY_PAUSE;
 	IrisReceiveDecision  decision;
 	gboolean             execute = TRUE;
-	gboolean             unpause = FALSE;
+	gboolean             message_was_unset;
 	IrisWorkerData      *worker;
 
 	g_return_val_if_fail (message != NULL, IRIS_DELIVERY_REMOVE);
@@ -152,7 +152,7 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 		execute = FALSE;
 	}
 	else if ((priv->max_active > 0 && g_atomic_int_get (&priv->active) == priv->max_active)
-	          || priv->message)
+	          || g_atomic_pointer_get (&priv->message))
 	{
 		/* We cannot accept an item at this time, so let
 		 * the port queue the item for us.
@@ -168,14 +168,14 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 			/* We can execute this now */
 			execute = TRUE;
 			status = IRIS_DELIVERY_ACCEPTED;
-			/* We also need to unpause the port */
-			unpause = TRUE;
 			break;
 		case IRIS_RECEIVE_LATER:
 			/* We queue this item ourselves */
 			execute = FALSE;
-			g_warn_if_fail (priv->message == NULL);
-			priv->message = iris_message_ref (message);
+			message_was_unset = g_atomic_pointer_compare_and_exchange
+			                      ((gpointer *)&priv->message, NULL, message);
+			g_warn_if_fail (message_was_unset);
+			iris_message_ref (message);
 			status = IRIS_DELIVERY_ACCEPTED_PAUSE;
 			break;
 		case IRIS_RECEIVE_NEVER:
@@ -188,7 +188,6 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 			break;
 		}
 	}
-
 
 	/* If our execution will be the only execution allowed, so make
 	 * sure that we mark the receiver as it is completed.  Also, we
@@ -410,14 +409,10 @@ iris_receiver_resume (IrisReceiver *receiver)
 
 	priv = receiver->priv;
 
-	g_static_rec_mutex_lock (&priv->mutex);
-
-	if (priv->message) {
-		message = priv->message;
-		priv->message = NULL;
-	}
-
-	g_static_rec_mutex_unlock (&priv->mutex);
+	do
+		message = g_atomic_pointer_get (&priv->message);
+	while (!g_atomic_pointer_compare_and_exchange 
+	          ((gpointer *)&priv->message, message, NULL));
 
 	/* Our held message is posted at the front of the queue */
 	iris_port_flush (priv->port, message);
