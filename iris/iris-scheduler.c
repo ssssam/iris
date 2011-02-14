@@ -418,6 +418,13 @@ iris_scheduler_default (void)
  * freeing data. If the work is unqueued and does not run, @destroy_notify will
  * still be called, and could potentially not execute for a long time after
  * @func completes.
+ *
+ * The order in which the items will be executed is impossible to
+ * guarantee, since threads can preempt each other at any point. One way to
+ * ensure ordered processing is to use an #IrisReceiver that has been set as
+ * 'exclusive' using iris_arbiter_coordinate(), so that only one message will
+ * be processed at a time (and in the order that they were posted).
+ *
  */
 void
 iris_scheduler_queue (IrisScheduler  *scheduler,

@@ -2,10 +2,6 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-* Write some quick tests that receivers and schedulers don't run work items
-  out of order. Maybe include a foreach (abort one scheduler with two
-  receivers?) to check this doesn't break the order.
-
 * Add iris_scheduler_manager_reset(), to avoid having 3000 threads in gdb
   (better still, free them properly :)
 

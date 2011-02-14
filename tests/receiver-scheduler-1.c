@@ -97,23 +97,44 @@ static void
 message_handler (IrisMessage *message,
                  gpointer     user_data)
 {
-	gint *counter_address = iris_message_get_pointer (message, "counter");
-	g_atomic_int_inc (counter_address);
+	gint      message_number = message->what;
+	gint     *p_counter = iris_message_get_pointer (message, "counter");
+	gboolean  check_order = iris_message_get_boolean (message, "check-order");
+
+	if (check_order) {
+		/*g_print ("Executing %i...\n", message_number);*/
+		g_assert_cmpint (g_atomic_int_get (p_counter), ==, message_number);
+	}
+
+	g_atomic_int_inc (p_counter);
+}
+
+static void
+post_test_message (IrisPort *port,
+                   gint     *p_counter,
+                   gint      message_number,
+                   gboolean  check_order)
+{
+	IrisMessage *message = iris_message_new (message_number);
+	iris_message_set_pointer (message, "counter", p_counter);
+	iris_message_set_boolean (message, "check-order", check_order);
+
+	iris_port_post (port, message);
+	iris_message_unref (message);
 }
 
 
-/* live: general check for races etc., by sending lots of messages really fast.
+/* integrity: general check for races etc. by sending lots of messages really fast.
  * 
  * Called twice, the second time using an arbiter to catch problems with
  * queueing etc.
  */
 static void
-test_live (SchedulerFixture *fixture,
-           gconstpointer     user_data)
+test_integrity (SchedulerFixture *fixture,
+                gconstpointer     user_data)
 {
 	IrisPort      *port;
 	IrisReceiver  *receiver;
-	IrisMessage   *message;
 	gint           message_counter,
 	               j;
 	const gboolean use_arbiter = GPOINTER_TO_INT (user_data);
@@ -121,7 +142,6 @@ test_live (SchedulerFixture *fixture,
 	message_counter = 0;
 
 	port = iris_port_new ();
-
 	receiver = iris_arbiter_receive (fixture->scheduler,
 	                                 port,
 	                                 &message_handler, NULL, NULL);
@@ -129,19 +149,42 @@ test_live (SchedulerFixture *fixture,
 	if (use_arbiter)
 		iris_arbiter_coordinate (receiver, NULL, NULL);
 
-	for (j=0; j<50; j++) {
-		message = iris_message_new (0);
-		iris_message_set_pointer (message, "counter", &message_counter);
-		iris_port_post (port, message);
-		iris_message_unref (message);
-	}
+	for (j=0; j<50; j++)
+		post_test_message (port, &message_counter, j, FALSE);
 
 	g_usleep (5000);
+	post_test_message (port, &message_counter, 50, FALSE);
 
-	message = iris_message_new (0);
-	iris_message_set_pointer (message, "counter", &message_counter);
-	iris_port_post (port, message);
-	iris_message_unref (message);
+	while (g_atomic_int_get (&message_counter) < 51)
+		yield (fixture, 50);
+
+	g_object_unref (receiver);
+	g_object_unref (port);
+}
+
+/* order: Ensure exclusive receivers work properly. */
+static void
+test_order (SchedulerFixture *fixture,
+            gconstpointer     user_data)
+{
+	IrisPort      *port;
+	IrisReceiver  *receiver;
+	gint           message_counter,
+	               j;
+
+	message_counter = 0;
+
+	port = iris_port_new ();
+	receiver = iris_arbiter_receive (fixture->scheduler,
+	                                 port,
+	                                 &message_handler, NULL, NULL);
+	iris_arbiter_coordinate (receiver, NULL, NULL);
+
+	for (j=0; j<50; j++)
+		post_test_message (port, &message_counter, j, TRUE);
+
+	g_usleep (5000);
+	post_test_message (port, &message_counter, 50, TRUE);
 
 	while (g_atomic_int_get (&message_counter) < 51)
 		yield (fixture, 50);
@@ -182,6 +225,7 @@ test_destruction (SchedulerFixture *fixture,
 
 	g_object_unref (p);
 }
+
 
 
 /* Utility to run a test x times.
@@ -235,11 +279,17 @@ add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
 {
 	char buf[256];
 
-	g_snprintf (buf, 255, "/receiver-scheduler/%s/live 1", name);
-	g_test_add (buf, SchedulerFixture, GINT_TO_POINTER (FALSE), setup, test_live, teardown);
+	g_snprintf (buf, 255, "/receiver-scheduler/%s/integrity 1", name);
+	g_test_add (buf, SchedulerFixture, GINT_TO_POINTER (FALSE), setup,
+	            test_integrity, teardown);
 
-	g_snprintf (buf, 255, "/receiver-scheduler/%s/live 2", name);
-	test_add_repeated (buf, 250, SchedulerFixture, GINT_TO_POINTER (TRUE), setup, test_live, teardown);
+	g_snprintf (buf, 255, "/receiver-scheduler/%s/integrity 2", name);
+	test_add_repeated (buf, 250, SchedulerFixture, GINT_TO_POINTER (TRUE), setup,
+	                   test_integrity, teardown);
+
+	g_snprintf (buf, 255, "/receiver-scheduler/%s/order", name);
+	test_add_repeated (buf, 250, SchedulerFixture, NULL, setup, test_order,
+	                   teardown);
 
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/destruction", name);
 	g_test_add (buf, SchedulerFixture, NULL, setup, test_destruction, teardown);

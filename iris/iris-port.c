@@ -32,23 +32,18 @@
  * #IrisPort is a structure used for delivering messages.  When a port is
  * connected to a receiver they can be used to perform actions when a message
  * is delivered.  See iris_arbiter_receive() for more information.
+ *
+ * The order in which the messages were posted is guaranteed to be preserved,
+ * but by default #IrisReceiver may call the message handler simultaneously in
+ * different threads. If the order is important, use iris_arbiter_coordinate()
+ * to make the receiver <firstterm>exclusive</firstterm>, which guarantees that
+ * the messages will be processed one at a time.
  */
 
 #define IRIS_PORT_STATE_PAUSED 1 << 0
 #define PORT_PAUSED(port)                                         \
 	((g_atomic_int_get (&port->priv->state)                   \
 	  & IRIS_PORT_STATE_PAUSED) != 0)
-#define STORE_MESSAGE(p,m)                                        \
-	G_STMT_START {                                            \
-		if (!p->current)                                  \
-			p->current = iris_message_ref (m);        \
-		else {                                            \
-			if (!p->queue)                            \
-				p->queue = g_queue_new ();        \
-			g_queue_push_tail (p->queue,              \
-					iris_message_ref (m));    \
-		}                                                 \
-	} G_STMT_END
 
 G_DEFINE_TYPE (IrisPort, iris_port, G_TYPE_OBJECT)
 
@@ -141,10 +136,44 @@ iris_port_new (void)
 	return g_object_new (IRIS_TYPE_PORT, NULL);
 }
 
+static void
+store_message_at_head_ul (IrisPort    *port, 
+                          IrisMessage *message)
+{
+	IrisPortPrivate *priv = port->priv;
+
+	if (priv->current) {
+		if (!priv->queue)
+			priv->queue = g_queue_new ();
+
+		g_queue_push_head (priv->queue, priv->current);
+	}
+
+	priv->current = iris_message_ref (message);
+}
+
+static void
+store_message_at_tail_ul (IrisPort    *port, 
+                          IrisMessage *message) {
+	IrisPortPrivate *priv = port->priv;
+
+	if (!priv->current) {
+		g_warn_if_fail (!priv->queue || g_queue_get_length (priv->queue)==0);
+
+		priv->current = iris_message_ref (message);
+	} else {
+		if (!priv->queue)
+			priv->queue = g_queue_new();
+
+		g_queue_push_tail (priv->queue, iris_message_ref (message));
+	}
+}
+
 static IrisDeliveryStatus
-iris_port_pause (IrisPort     *port,
-                 IrisReceiver *receiver,
-                 IrisMessage  *message)
+pause (IrisPort     *port,
+       IrisReceiver *receiver,
+       IrisMessage  *message,
+       gboolean      queue_at_head)
 {
 	IrisPortPrivate    *priv;
 	IrisDeliveryStatus  delivered;
@@ -172,10 +201,12 @@ iris_port_pause (IrisPort     *port,
 			g_warn_if_fail (g_atomic_int_get (&priv->receiver->priv->active) > 0);
 
 			priv->state |= IRIS_PORT_STATE_PAUSED;
-			STORE_MESSAGE (priv, message);
+			queue_at_head ? store_message_at_head_ul (port, message):
+			                store_message_at_tail_ul (port, message);
 			break;
 		case IRIS_DELIVERY_REMOVE:
-			STORE_MESSAGE (priv, message);
+			queue_at_head ? store_message_at_head_ul (port, message):
+			                store_message_at_tail_ul (port, message);
 			g_atomic_pointer_compare_and_exchange ((gpointer *)&priv->receiver, receiver, NULL);
 			break;
 		case IRIS_DELIVERY_ACCEPTED_REMOVE:
@@ -198,6 +229,11 @@ iris_port_pause (IrisPort     *port,
  *
  * Posts @message to the port.  Any receivers listening to the port will
  * receive the message.
+ *
+ * The order that the messages are posted in will be preserved, but the
+ * scheduler may call the #IrisReceiver<!-- -->'s message handler from multiple
+ * threads. To avoid this, use iris_arbiter_coordinate() to make the receiver
+ * <firstterm>exclusive</firstterm>.
  */
 void
 iris_port_post (IrisPort    *port,
@@ -219,25 +255,22 @@ iris_port_post (IrisPort    *port,
 		g_mutex_lock (priv->mutex);
 
 		if (receiver == NULL) {
-			STORE_MESSAGE (priv, message);
+			store_message_at_tail_ul (port, message);
 			g_mutex_unlock (priv->mutex);
 			return;
 		}
 
 		if (priv->current != NULL) {
-			if (priv->queue == NULL)
-				priv->queue = g_queue_new ();
-
-			g_queue_push_tail (priv->queue, iris_message_ref (message));
+			store_message_at_tail_ul (port, message);
 			g_mutex_unlock (priv->mutex);
 			return;
 		}
 
-		/* If we are paused but nothing is queued, let's unpause and try
-		 * delivering the message. This fixes a problem with synchronous
-		 * schedulers where a message triggers another one, but because this
-		 * all happens inside the receiver worker function the receiver hasn't
-		 * had a chance to unpause our queue yet.
+		/* If we are paused but nothing/only 1 message is queued, let's unpause
+		 * and try delivering the message. This fixes a problem with
+		 * synchronous schedulers where a message triggers another one, but
+		 * because this all happens inside the receiver worker function the
+		 * receiver hasn't had a chance to unpause our queue yet.
 		 */
 		g_mutex_unlock (priv->mutex);
 	}
@@ -256,12 +289,12 @@ iris_port_post (IrisPort    *port,
 			g_mutex_unlock (priv->mutex);
 			break;
 		case IRIS_DELIVERY_PAUSE:
-			iris_port_pause (port, receiver, message);
+			pause (port, receiver, message, FALSE);
 			break;
 		case IRIS_DELIVERY_REMOVE:
 			/* store message and fall-through */
 			g_mutex_lock (priv->mutex);
-			STORE_MESSAGE (priv, message);
+			store_message_at_tail_ul (port, message);
 			g_atomic_pointer_compare_and_exchange ((gpointer *)&priv->receiver, receiver, NULL);
 			g_mutex_unlock (priv->mutex);
 			break;
@@ -415,11 +448,14 @@ iris_port_flush (IrisPort    *port,
 			case IRIS_DELIVERY_ACCEPTED: break;
 			case IRIS_DELIVERY_ACCEPTED_PAUSE: break;
 			case IRIS_DELIVERY_PAUSE:
-				delivered = iris_port_pause (port, receiver, message);
+				/* Passing TRUE so if delivery is deferred, the item goes back
+				 * to the head of the queue not the tail
+				 */
+				delivered = pause (port, receiver, message, TRUE);
 				break;
 			case IRIS_DELIVERY_REMOVE:
 				g_mutex_lock (priv->mutex);
-				STORE_MESSAGE (priv, message);
+				store_message_at_head_ul (port, message);
 				g_atomic_pointer_compare_and_exchange ((gpointer *)&priv->receiver, receiver, NULL);
 				g_mutex_unlock (priv->mutex);
 				break;
