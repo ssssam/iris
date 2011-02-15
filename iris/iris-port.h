@@ -53,7 +53,6 @@ struct _IrisPortClass
 	GObjectClass  parent_class;
 
 	void          (*post)         (IrisPort *port, IrisMessage *message);
-	void          (*repost)       (IrisPort *port, IrisMessage *message);
 
 	IrisReceiver* (*get_receiver) (IrisPort *port);
 	void          (*set_receiver) (IrisPort *port, IrisReceiver *receiver);
