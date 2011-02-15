@@ -2,8 +2,16 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
+* Remove stale port->repost member
+
+* IrisGtk stuff should be in irisgtk namespace :)
+
 * Add iris_scheduler_manager_reset(), to avoid having 3000 threads in gdb
   (better still, free them properly :)
+
+* Fix atomic access of port->state
+
+* Fix all tests, receiver-scheduler has been pretty sketchy :)
 
 * Prevent arbiters from being connected to receivers that have already processed
   messages.

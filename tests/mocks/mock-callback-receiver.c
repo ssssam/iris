@@ -38,7 +38,7 @@ deliver_impl (IrisReceiver *receiver,
 		return IRIS_DELIVERY_REMOVE;
 
 	if (g_atomic_int_get (&cbr->priv->pause))
-		return IRIS_DELIVERY_ACCEPTED_PAUSE;
+		return IRIS_DELIVERY_PAUSE;
 
 	if (g_atomic_int_get (&cbr->priv->oneshot))
 		return IRIS_DELIVERY_ACCEPTED_REMOVE;

@@ -43,10 +43,9 @@ G_BEGIN_DECLS
 typedef enum
 {
 	IRIS_DELIVERY_ACCEPTED          = 1,
-	IRIS_DELIVERY_ACCEPTED_PAUSE    = 2,
-	IRIS_DELIVERY_ACCEPTED_REMOVE   = 3,
-	IRIS_DELIVERY_PAUSE             = 4,
-	IRIS_DELIVERY_REMOVE            = 5
+	IRIS_DELIVERY_ACCEPTED_REMOVE   = 2,
+	IRIS_DELIVERY_PAUSE             = 3,
+	IRIS_DELIVERY_REMOVE            = 4
 } IrisDeliveryStatus;
 
 struct _IrisReceiverPrivate
@@ -93,10 +92,6 @@ struct _IrisReceiverPrivate
 	                            * have already received an item, we can
 	                            * be marked as completed so that we never
 	                            * accept another item.
-	                            */
-
-	IrisMessage   *message;    /* A message that we are holding onto
-	                            * until an arbiter says we can execute.
 	                            */
 
 	volatile gint  active;     /* The current number of processing

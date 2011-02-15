@@ -60,7 +60,6 @@ iris_delivery_status_get_type (void)
 	static GEnumValue values[] = {
 		{ IRIS_DELIVERY_ACCEPTED,        "IRIS_DELIVERY_ACCEPTED",        "ACCEPTED" },
 		{ IRIS_DELIVERY_PAUSE,           "IRIS_DELIVERY_PAUSE",           "PAUSE" },
-		{ IRIS_DELIVERY_ACCEPTED_PAUSE,  "IRIS_DELIVERY_ACCEPTED_PAUSE",  "ACCEPTED_PAUSE" },
 		{ IRIS_DELIVERY_REMOVE,          "IRIS_DELIVERY_REMOVE",          "REMOVE" },
 		{ IRIS_DELIVERY_ACCEPTED_REMOVE, "IRIS_DELIVERY_ACCEPTED_REMOVE", "ACCEPTED_REMOVE" },
 		{ 0, NULL, NULL }
@@ -99,12 +98,16 @@ iris_receiver_worker (gpointer data)
 	/* Execute the callback */
 	priv->callback (worker->message, priv->data);
 
+	/* Decrement before we notify the arbiter so it will always notice if
+	 * priv->active==0 and call iris_receiver_resume(). We could be even more
+	 * atomic and do dec_and_test() inside the arbiter, but it's not actually
+	 * necessary.
+	 */
+	if (g_atomic_int_dec_and_test (&priv->active)) { }
+
 	/* notify the arbiter we are complete */
 	if (priv->arbiter)
-		iris_arbiter_receive_completed (priv->arbiter,
-		                                worker->receiver);
-
-	if (g_atomic_int_dec_and_test (&priv->active)) { }
+		iris_arbiter_receive_completed (priv->arbiter, worker->receiver);
 }
 
 static IrisDeliveryStatus
@@ -115,7 +118,6 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 	IrisDeliveryStatus   status = IRIS_DELIVERY_PAUSE;
 	IrisReceiveDecision  decision;
 	gboolean             execute = TRUE;
-	gboolean             message_was_unset;
 	IrisWorkerData      *worker;
 
 	g_return_val_if_fail (message != NULL, IRIS_DELIVERY_REMOVE);
@@ -151,8 +153,7 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 		status = IRIS_DELIVERY_REMOVE;
 		execute = FALSE;
 	}
-	else if ((priv->max_active > 0 && g_atomic_int_get (&priv->active) == priv->max_active)
-	          || g_atomic_pointer_get (&priv->message))
+	else if (priv->max_active > 0 && g_atomic_int_get (&priv->active) == priv->max_active)
 	{
 		/* We cannot accept an item at this time, so let
 		 * the port queue the item for us.
@@ -170,13 +171,9 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 			status = IRIS_DELIVERY_ACCEPTED;
 			break;
 		case IRIS_RECEIVE_LATER:
-			/* We queue this item ourselves */
+			/* Port must queue this */
 			execute = FALSE;
-			message_was_unset = g_atomic_pointer_compare_and_exchange
-			                      ((gpointer *)&priv->message, NULL, message);
-			g_warn_if_fail (message_was_unset);
-			iris_message_ref (message);
-			status = IRIS_DELIVERY_ACCEPTED_PAUSE;
+			status = IRIS_DELIVERY_PAUSE;
 			break;
 		case IRIS_RECEIVE_NEVER:
 			/* The port should queue the item and remove us */
@@ -279,7 +276,6 @@ iris_receiver_init (IrisReceiver *receiver)
 
 	g_static_rec_mutex_init (&receiver->priv->mutex);
 	receiver->priv->persistent = TRUE;
-	receiver->priv->message = NULL;
 }
 
 /**
@@ -401,7 +397,6 @@ void
 iris_receiver_resume (IrisReceiver *receiver)
 {
 	IrisReceiverPrivate *priv;
-	IrisMessage         *message = NULL;
 
 	iris_debug (IRIS_DEBUG_RECEIVER);
 
@@ -409,16 +404,7 @@ iris_receiver_resume (IrisReceiver *receiver)
 
 	priv = receiver->priv;
 
-	do
-		message = g_atomic_pointer_get (&priv->message);
-	while (!g_atomic_pointer_compare_and_exchange 
-	          ((gpointer *)&priv->message, message, NULL));
-
-	/* Our held message is posted at the front of the queue */
-	iris_port_flush (priv->port, message);
-
-	if (message != NULL)
-		iris_message_unref (message);
+	iris_port_flush (priv->port);
 }
 
 

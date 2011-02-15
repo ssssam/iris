@@ -548,7 +548,7 @@ receive_completed (IrisArbiter  *arbiter,
 				priv->flags |= IRIS_COORD_TEARDOWN;
 				resume = priv->teardown;
 			}
-			else if (priv->exclusive->priv->active <= 1) {
+			else if (g_atomic_int_get (&priv->exclusive->priv->active) == 0) { 
 				resume = priv->exclusive;
 			}
 		}

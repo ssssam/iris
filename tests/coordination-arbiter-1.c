@@ -85,14 +85,12 @@ test2 (void)
 	iris_port_post (exc, iris_message_new (1));
 	g_assert (exc->priv->current == NULL);
 	g_assert (exc->priv->queue == NULL);
-	g_assert (exc_r->priv->message == NULL);
 	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,1);
 
 	/* Send another message for exclusive, this should NOT get executed
 	 * right away since the other exclusive is active */
 	iris_port_post (exc, iris_message_new (2));
 	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,1);
-	g_assert (exc_r->priv->message != NULL);
 	g_assert (iris_port_is_paused (exc));
 
 	/* Make sure the other thread is blocked, and holds the active, we will
@@ -102,7 +100,6 @@ test2 (void)
 	g_cond_wait (cond [1], mutex [1]);
 	g_assert (exc_b == TRUE);
 	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,1);
-	g_assert (exc_r->priv->message != NULL);
 	g_assert (iris_port_is_paused (exc));
 
 	/*****************************************************************/
@@ -117,7 +114,6 @@ test2 (void)
 	g_assert_cmpint (IRIS_COORDINATION_ARBITER (arbiter)->priv->active,==,1);
 	g_assert_cmpint ((IRIS_COORDINATION_ARBITER (arbiter)->priv->flags & IRIS_COORD_NEEDS_ANY),==,IRIS_COORD_NEEDS_CONCURRENT | IRIS_COORD_NEEDS_EXCLUSIVE);
 	g_static_rec_mutex_unlock (&IRIS_COORDINATION_ARBITER (arbiter)->priv->mutex); // allow first exclusive to finish
-	g_assert (cnc_r->priv->message != NULL);
 	g_assert (iris_port_is_paused (cnc));
 
 	/* Signal the second exclusive thread, allowing it to complete and then
