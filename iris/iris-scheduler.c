@@ -291,8 +291,6 @@ iris_scheduler_remove_thread_real (IrisScheduler *scheduler,
 	g_mutex_unlock (thread->mutex);
 }
 
-#include <stdio.h>
-
 static void
 release_thread (gpointer data,
                 gpointer user_data)
