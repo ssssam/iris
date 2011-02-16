@@ -118,7 +118,7 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 	gboolean             execute = TRUE;
 	IrisWorkerData      *worker;
 
-	g_return_val_if_fail (message != NULL, IRIS_DELIVERY_REMOVE);
+	g_return_val_if_fail (message != NULL, IRIS_DELIVERY_ACCEPTED);
 
 	priv = receiver->priv;
 

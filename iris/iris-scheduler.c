@@ -143,7 +143,7 @@ iris_scheduler_foreach_rrobin_cb (IrisRRobin *rrobin,
 {
 	IrisQueue                    *queue   = data;
 	IrisSchedulerForeachClosure  *closure = user_data;
-	gboolean continue_flag;
+	gboolean continue_flag = FALSE;
 	gint i;
 
 	/* Foreach the queue in a really hacky way. FIXME: be neater!
@@ -153,7 +153,8 @@ iris_scheduler_foreach_rrobin_cb (IrisRRobin *rrobin,
 		IrisThreadWork *thread_work = iris_queue_try_pop (queue);
 		/* By removing the work from the queue, we know now it can't be executed */
 
-		if (!thread_work) break;
+		if (!thread_work)
+			break;
 
 		continue_flag = closure->callback (closure->scheduler,
 		                                   thread_work,

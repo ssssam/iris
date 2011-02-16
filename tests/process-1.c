@@ -108,9 +108,9 @@ simple (void)
 static void
 titles (void)
 {
-	gint        counter = 0,
-	            i;
-	const char *title;
+	gint  counter = 0,
+	      i;
+	char *title;
 
 	IrisProcess *process = iris_process_new_with_func (counter_callback, NULL, NULL);
 	iris_process_set_title (process, "Title 1");
@@ -118,6 +118,7 @@ titles (void)
 
 	g_object_get (G_OBJECT (process), "title", &title, NULL);
 	g_assert_cmpstr (title, ==, "Title 1");
+	g_free (title);
 
 	g_object_set (G_OBJECT (process), "title", NULL, NULL);
 
@@ -127,7 +128,7 @@ titles (void)
 		iris_process_enqueue (process, work_item);
 	}
 
-	title = iris_process_get_title (process);
+	title = (char *)iris_process_get_title (process);
 	g_assert_cmpstr (title, ==, NULL);
 
 	iris_process_no_more_work (process);
@@ -159,7 +160,6 @@ recurse_1 (void)
 
 	while (!iris_process_is_finished (recursive_process))
 		g_thread_yield ();
-
 
 	g_assert_cmpint (counter, ==, 101);
 
