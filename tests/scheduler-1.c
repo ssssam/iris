@@ -82,19 +82,22 @@ static void
 test_finalize (void)
 {
 	IrisScheduler *scheduler;
-	int            i,
+	int            i, n_threads,
 	               spare_threads;
 
-	scheduler = iris_scheduler_new_full (4, 4);
+	for (n_threads=1; n_threads<20; n_threads++) {
+		scheduler = iris_scheduler_new_full (n_threads, n_threads);
 
-	for (i=0; i<WORK_COUNT; i++)
-		iris_scheduler_queue (scheduler, (IrisCallback)g_usleep, GINT_TO_POINTER (500), NULL);
+		for (i=0; i<WORK_COUNT; i++)
+			iris_scheduler_queue (scheduler, (IrisCallback)g_usleep, GINT_TO_POINTER (500), NULL);
 
-	spare_threads = iris_scheduler_manager_get_spare_thread_count ();
+		spare_threads = iris_scheduler_manager_get_spare_thread_count ();
 
-	g_object_unref (scheduler);
+		g_object_unref (scheduler);
 
-	g_assert_cmpint (iris_scheduler_manager_get_spare_thread_count (), ==, spare_threads + 4);
+		g_assert_cmpint (iris_scheduler_manager_get_spare_thread_count (), ==,
+		                 spare_threads + n_threads);
+	}
 }
 
 gint

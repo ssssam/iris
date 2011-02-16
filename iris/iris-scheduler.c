@@ -290,24 +290,41 @@ iris_scheduler_remove_thread_real (IrisScheduler *scheduler,
 	g_mutex_unlock (thread->mutex);
 }
 
+#include <stdio.h>
+
 static void
 release_thread (gpointer data,
                 gpointer user_data)
 {
-	IrisThread *thread = data;
+	IrisThread    *thread = data;
+	IrisScheduler *scheduler = IRIS_SCHEDULER (user_data);
+	IrisQueue     *work_queue;
 
 	g_mutex_lock (thread->mutex);
-	if (thread->active != NULL) {
-		iris_queue_close (thread->active);
-		g_object_unref (thread->active);
-	}
+
+	/* thread->active could == NULL if the thread has been added but not yet
+	 * started work */
+	work_queue = thread->user_data;
+
+	/* If the thread has stopped working for us it should have called
+	 * iris_scheduler_remove_thread() already
+	 */
+	g_warn_if_fail (g_atomic_pointer_get (&thread->scheduler) == scheduler);
+
+	iris_queue_close (work_queue);
+
 	g_mutex_unlock (thread->mutex);
 
 	/* Wait for the thread to recognise its removal, to avoid it accessing
 	 * freed memory.
 	 */
-	while (g_atomic_pointer_get (&thread->scheduler) != NULL)
+	while (g_atomic_pointer_get (&thread->scheduler) != NULL) {
+		g_warn_if_fail (iris_queue_is_closed (work_queue));
+
 		g_thread_yield ();
+	}
+
+	g_object_unref (work_queue);
 }
 
 static void
@@ -325,7 +342,7 @@ iris_scheduler_finalize (GObject *object)
 	g_mutex_lock (priv->mutex);
 
 	/* Release all of our threads */
-	g_list_foreach (priv->thread_list, release_thread, NULL);
+	g_list_foreach (priv->thread_list, release_thread, scheduler);
 	g_list_free (priv->thread_list);
 
 	g_mutex_unlock (priv->mutex);
