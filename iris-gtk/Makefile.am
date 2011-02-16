@@ -1,17 +1,17 @@
 sources_public_h =										\
 	$(top_srcdir)/iris-gtk/iris-gtk.h					\
-	$(top_srcdir)/iris-gtk/iris-progress-dialog.h		\
-	$(top_srcdir)/iris-gtk/iris-progress-info-bar.h		\
+	$(top_srcdir)/iris-gtk/gtk-iris-progress-dialog.h		\
+	$(top_srcdir)/iris-gtk/gtk-iris-progress-info-bar.h		\
 	$(NULL)
 
 sources_private_h =											\
-	$(top_srcdir)/iris-gtk/iris-progress-dialog-private.h	\
-	iris-progress-info-bar-private.h						\
+	$(top_srcdir)/iris-gtk/gtk-iris-progress-dialog-private.h	\
+	gtk-iris-progress-info-bar-private.h						\
 	$(NULL)
 
 sources_c = 					\
-	iris-progress-dialog.c		\
-	iris-progress-info-bar.c	\
+	gtk-iris-progress-dialog.c		\
+	gtk-iris-progress-info-bar.c	\
 	$(NULL)
 
 

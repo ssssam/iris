@@ -1,6 +1,6 @@
 /* iris-gtk.h
  *
- * Copyright (C) 2009 Christian Hergert <chris@dronelabs.com>
+ * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,7 +22,7 @@
 #define __IRIS_GTK_H__
 
 /* GTK monitoring widgets */
-#include "iris-progress-dialog.h"
-#include "iris-progress-info-bar.h"
+#include "gtk-iris-progress-dialog.h"
+#include "gtk-iris-progress-info-bar.h"
 
 #endif /* __IRIS_GTK_H__ */

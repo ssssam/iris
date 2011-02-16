@@ -45,11 +45,11 @@ FIXXREF_OPTIONS=\
 # e.g. CFILE_GLOB=$(top_srcdir)/gtk/*.c
 HFILE_GLOB = \
 	$(top_srcdir)/iris/iris-*.h \
-	$(top_srcdir)/iris-gtk/iris-*.h
+	$(top_srcdir)/iris-gtk/gtk-iris-*.h
 
 CFILE_GLOB = \
 	$(top_srcdir)/iris/iris-*.c \
-	$(top_srcdir)/iris-gtk/iris-*.c
+	$(top_srcdir)/iris-gtk/gtk-iris-*.c
 
 # Header files to ignore when scanning.
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h

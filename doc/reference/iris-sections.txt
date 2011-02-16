@@ -477,40 +477,40 @@ IRIS_PROGRESS_MONITOR_GET_INTERFACE
 </SECTION>
 
 <SECTION>
-<FILE>iris-progress-dialog</FILE>
-<TITLE>IrisProgressDialog</TITLE>
-IrisProgressDialog
-iris_progress_dialog_new
-iris_progress_dialog_set_title
+<FILE>gtk-iris-progress-dialog</FILE>
+<TITLE>GtkIrisProgressDialog</TITLE>
+GtkIrisProgressDialog
+gtk_iris_progress_dialog_new
+gtk_iris_progress_dialog_set_title
 <SUBSECTION Standard>
-IRIS_PROGRESS_DIALOG
-IRIS_PROGRESS_DIALOG_CONST
-IRIS_IS_PROGRESS_DIALOG
-IRIS_TYPE_PROGRESS_DIALOG
-iris_progress_dialog_get_type
-IRIS_PROGRESS_DIALOG_CLASS
-IRIS_IS_PROGRESS_DIALOG_CLASS
-IRIS_PROGRESS_DIALOG_GET_CLASS
+GTK_IRIS_PROGRESS_DIALOG
+GTK_IRIS_PROGRESS_DIALOG_CONST
+GTK_IRIS_IS_PROGRESS_DIALOG
+GTK_IRIS_TYPE_PROGRESS_DIALOG
+gtk_iris_progress_dialog_get_type
+GTK_IRIS_PROGRESS_DIALOG_CLASS
+GTK_IRIS_IS_PROGRESS_DIALOG_CLASS
+GTK_IRIS_PROGRESS_DIALOG_GET_CLASS
 <SUBSECTION Private>
-IrisProgressDialogPrivate
+GtkIrisProgressDialogPrivate
 </SECTION>
 
 <SECTION>
-<FILE>iris-progress-info-bar</FILE>
-<TITLE>IrisProgressInfoBar</TITLE>
-IrisProgressInfoBar
-iris_progress_info_bar_new
+<FILE>gtk-iris-progress-info-bar</FILE>
+<TITLE>GtkIrisProgressInfoBar</TITLE>
+GtkIrisProgressInfoBar
+gtk_iris_progress_info_bar_new
 <SUBSECTION Standard>
-IRIS_PROGRESS_INFO_BAR
-IRIS_PROGRESS_INFO_BAR_CONST
-IRIS_IS_PROGRESS_INFO_BAR
-IRIS_TYPE_PROGRESS_INFO_BAR
-iris_progress_info_bar_get_type
-IRIS_PROGRESS_INFO_BAR_CLASS
-IRIS_IS_PROGRESS_INFO_BAR_CLASS
-IRIS_PROGRESS_INFO_BAR_GET_CLASS
+GTK_IRIS_PROGRESS_INFO_BAR
+GTK_IRIS_PROGRESS_INFO_BAR_CONST
+GTK_IRIS_IS_PROGRESS_INFO_BAR
+GTK_IRIS_TYPE_PROGRESS_INFO_BAR
+gtk_iris_progress_info_bar_get_type
+GTK_IRIS_PROGRESS_INFO_BAR_CLASS
+GTK_IRIS_IS_PROGRESS_INFO_BAR_CLASS
+GTK_IRIS_PROGRESS_INFO_BAR_GET_CLASS
 <SUBSECTION Private>
-IrisProgressInfoBarPrivate
+GtkIrisProgressInfoBarPrivate
 </SECTION>
 
 <SECTION>

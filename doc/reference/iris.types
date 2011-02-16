@@ -18,5 +18,5 @@ iris_queue_get_type
 iris_task_get_type
 iris_process_get_type
 iris_progress_monitor_get_type
-iris_progress_dialog_get_type
-iris_progress_info_bar_get_type
+gtk_iris_progress_dialog_get_type
+gtk_iris_progress_info_bar_get_type

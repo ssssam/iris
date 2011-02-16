@@ -76,8 +76,8 @@
       <title>Progress Monitors</title>
       <xi:include href="xml/iris-progress.xml"/>
       <xi:include href="xml/iris-progress-monitor.xml"/>
-      <xi:include href="xml/iris-progress-dialog.xml"/>
-      <xi:include href="xml/iris-progress-info-bar.xml"/>
+      <xi:include href="xml/gtk-iris-progress-dialog.xml"/>
+      <xi:include href="xml/gtk-iris-progress-info-bar.xml"/>
     </chapter>
 
     <chapter id="object-tree">

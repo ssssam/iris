@@ -18,19 +18,19 @@
  * 02110-1301 USA
  */
 
-#ifndef __IRIS_PROGRESS_INFO_BAR_PRIVATE_H__
-#define __IRIS_PROGRESS_INFO_BAR_PRIVATE_H__
+#ifndef __GTK_IRIS_PROGRESS_INFO_BAR_PRIVATE_H__
+#define __GTK_IRIS_PROGRESS_INFO_BAR_PRIVATE_H__
 
 G_BEGIN_DECLS
 
 #include "iris-scheduler.h"
 #include "iris-progress-monitor-private.h"
 
-#define IRIS_PROGRESS_INFO_BAR_GET_PRIVATE(object)                  \
+#define GTK_IRIS_PROGRESS_INFO_BAR_GET_PRIVATE(object)                  \
           (G_TYPE_INSTANCE_GET_PRIVATE((object),                  \
-           IRIS_TYPE_PROGRESS_INFO_BAR, IrisProgressInfoBarPrivate))
+           GTK_IRIS_TYPE_PROGRESS_INFO_BAR, GtkIrisProgressInfoBarPrivate))
 
-struct _IrisProgressInfoBarPrivate
+struct _GtkIrisProgressInfoBarPrivate
 {
 	IrisScheduler *scheduler;
 
@@ -47,4 +47,4 @@ struct _IrisProgressInfoBarPrivate
 
 G_END_DECLS
 
-#endif /* __IRIS_PROGRESS_INFO_BAR_PRIVATE_H__ */
+#endif /* __GTK_IRIS_PROGRESS_INFO_BAR_PRIVATE_H__ */

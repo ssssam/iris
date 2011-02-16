@@ -18,7 +18,7 @@
  * 02110-1301 USA
  */
  
-/* progress-dialog-gtk-1: tests for IrisProgressDialog only.
+/* progress-dialog-gtk-1: tests for GtkIrisProgressDialog only.
  * 
  * FIXME: some of these tests may fail just because of computer slowness; eg. we call
  * g_main_context_iteration() a bunch of times and then hope that UI updates have propagated.
@@ -33,7 +33,7 @@
 #include <iris-gtk.h>
 
 #include "iris/iris-process-private.h"
-#include "iris-gtk/iris-progress-dialog-private.h"
+#include "iris-gtk/gtk-iris-progress-dialog-private.h"
 
 static void
 push_next_func (IrisProcess *process,
@@ -80,7 +80,7 @@ typedef struct {
 } ProgressFixture;
 
 static void
-iris_progress_dialog_fixture_setup (ProgressFixture *fixture,
+gtk_iris_progress_dialog_fixture_setup (ProgressFixture *fixture,
                                     gconstpointer    user_data)
 {
 	GtkWidget *dialog;
@@ -88,9 +88,9 @@ iris_progress_dialog_fixture_setup (ProgressFixture *fixture,
 	fixture->main_loop = g_main_loop_new (NULL, TRUE);
 	fixture->container = NULL;
 
-	dialog = iris_progress_dialog_new (NULL);
+	dialog = gtk_iris_progress_dialog_new (NULL);
 
-	g_assert (IRIS_IS_PROGRESS_DIALOG (dialog));
+	g_assert (GTK_IRIS_IS_PROGRESS_DIALOG (dialog));
 
 	fixture->monitor = IRIS_PROGRESS_MONITOR (dialog);
 
@@ -98,7 +98,7 @@ iris_progress_dialog_fixture_setup (ProgressFixture *fixture,
 }
 
 static void
-iris_progress_dialog_fixture_teardown (ProgressFixture *fixture,
+gtk_iris_progress_dialog_fixture_teardown (ProgressFixture *fixture,
                                        gconstpointer    user_data)
 {
 	if (fixture->monitor != NULL)
@@ -176,7 +176,7 @@ custom_static_title (ProgressFixture *fixture,
 	gint         wait_state = 0;
 	const gchar *title;
 
-	iris_progress_dialog_set_title (IRIS_PROGRESS_DIALOG (fixture->monitor),
+	gtk_iris_progress_dialog_set_title (GTK_IRIS_PROGRESS_DIALOG (fixture->monitor),
 	                                "Test");
 
 	/* Check default empty title */
@@ -220,7 +220,7 @@ custom_dynamic_title (ProgressFixture *fixture,
 	gint         wait_state = 0;
 	const gchar *title;
 
-	iris_progress_dialog_set_title (IRIS_PROGRESS_DIALOG (fixture->monitor),
+	gtk_iris_progress_dialog_set_title (GTK_IRIS_PROGRESS_DIALOG (fixture->monitor),
 	                                "Test %s Test");
 
 	/* Check default empty title */
@@ -330,30 +330,30 @@ int main(int argc, char *argv[]) {
 	g_test_add ("/progress-dialog/default title",
 	            ProgressFixture,
 	            NULL,
-	            iris_progress_dialog_fixture_setup,
+	            gtk_iris_progress_dialog_fixture_setup,
 	            default_title,
-	            iris_progress_dialog_fixture_teardown);
+	            gtk_iris_progress_dialog_fixture_teardown);
 
 	g_test_add ("/progress-dialog/custom static title",
 	            ProgressFixture,
 	            NULL,
-	            iris_progress_dialog_fixture_setup,
+	            gtk_iris_progress_dialog_fixture_setup,
 	            custom_static_title,
-	            iris_progress_dialog_fixture_teardown);
+	            gtk_iris_progress_dialog_fixture_teardown);
 
 	g_test_add ("/progress-dialog/custom dynamic title",
 	            ProgressFixture,
 	            NULL,
-	            iris_progress_dialog_fixture_setup,
+	            gtk_iris_progress_dialog_fixture_setup,
 	            custom_dynamic_title,
-	            iris_progress_dialog_fixture_teardown);
+	            gtk_iris_progress_dialog_fixture_teardown);
 
 	g_test_add ("/progress-dialog/groups",
 	            ProgressFixture,
 	            NULL,
-	            iris_progress_dialog_fixture_setup,
+	            gtk_iris_progress_dialog_fixture_setup,
 	            test_groups,
-	            iris_progress_dialog_fixture_teardown);
+	            gtk_iris_progress_dialog_fixture_teardown);
 
 	return g_test_run();
 }

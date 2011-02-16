@@ -137,12 +137,12 @@ create_progress_monitor () {
 	g_return_if_fail (demo_window != NULL);
 
 	if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (show_info_bar))) {
-		progress_widget = iris_progress_info_bar_new ("Contemplating ...");
+		progress_widget = gtk_iris_progress_info_bar_new ("Contemplating ...");
 		vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
 		gtk_box_pack_end (GTK_BOX (vbox), progress_widget, FALSE, FALSE, 0);
 	}
 	else
-		progress_widget = iris_progress_dialog_new (GTK_WINDOW (demo_window));
+		progress_widget = gtk_iris_progress_dialog_new (GTK_WINDOW (demo_window));
 
 	iris_progress_monitor_set_permanent_mode (IRIS_PROGRESS_MONITOR (progress_widget),
 	                                          TRUE);

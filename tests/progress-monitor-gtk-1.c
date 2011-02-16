@@ -26,8 +26,8 @@
 #include <iris-gtk.h>
 
 #include "iris/iris-process-private.h"
-#include "iris-gtk/iris-progress-dialog-private.h"
-#include "iris-gtk/iris-progress-info-bar-private.h"
+#include "iris-gtk/gtk-iris-progress-dialog-private.h"
+#include "iris-gtk/gtk-iris-progress-info-bar-private.h"
 
 /* Work item to increment a global counter, so we can tell if the hole queue
  * gets executed propertly
@@ -155,7 +155,7 @@ typedef struct {
 } ProgressFixture;
 
 static void
-iris_progress_dialog_fixture_setup (ProgressFixture *fixture,
+gtk_iris_progress_dialog_fixture_setup (ProgressFixture *fixture,
                                     gconstpointer    user_data)
 {
 	GtkWidget *dialog;
@@ -163,9 +163,9 @@ iris_progress_dialog_fixture_setup (ProgressFixture *fixture,
 	fixture->main_loop = g_main_loop_new (NULL, TRUE);
 	fixture->container = NULL;
 
-	dialog = iris_progress_dialog_new (NULL);
+	dialog = gtk_iris_progress_dialog_new (NULL);
 
-	g_assert (IRIS_IS_PROGRESS_DIALOG (dialog));
+	g_assert (GTK_IRIS_IS_PROGRESS_DIALOG (dialog));
 
 	fixture->monitor = IRIS_PROGRESS_MONITOR (dialog);
 
@@ -173,7 +173,7 @@ iris_progress_dialog_fixture_setup (ProgressFixture *fixture,
 }
 
 static void
-iris_progress_dialog_fixture_teardown (ProgressFixture *fixture,
+gtk_iris_progress_dialog_fixture_teardown (ProgressFixture *fixture,
                                        gconstpointer    user_data)
 {
 	if (fixture->monitor != NULL)
@@ -183,7 +183,7 @@ iris_progress_dialog_fixture_teardown (ProgressFixture *fixture,
 }
 
 static void
-iris_progress_info_bar_fixture_setup (ProgressFixture *fixture,
+gtk_iris_progress_info_bar_fixture_setup (ProgressFixture *fixture,
                                       gconstpointer    user_data)
 {
 	GtkWidget *info_bar;
@@ -195,9 +195,9 @@ iris_progress_info_bar_fixture_setup (ProgressFixture *fixture,
 	 */
 	fixture->container = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 
-	info_bar = iris_progress_info_bar_new ();
+	info_bar = gtk_iris_progress_info_bar_new ();
 
-	g_assert (IRIS_IS_PROGRESS_INFO_BAR (info_bar));
+	g_assert (GTK_IRIS_IS_PROGRESS_INFO_BAR (info_bar));
 
 	fixture->monitor = IRIS_PROGRESS_MONITOR (info_bar);
 
@@ -208,7 +208,7 @@ iris_progress_info_bar_fixture_setup (ProgressFixture *fixture,
 }
 
 static void
-iris_progress_info_bar_fixture_teardown (ProgressFixture *fixture,
+gtk_iris_progress_info_bar_fixture_teardown (ProgressFixture *fixture,
                                          gconstpointer    user_data)
 {
 	if (fixture->monitor != NULL)
@@ -345,11 +345,11 @@ process_titles_2 (ProgressFixture *fixture,
 	watch_2 = iface->get_watch (fixture->monitor, IRIS_TASK (process_2));
 
 	/* Check that the UI reflects the title */
-	if (IRIS_IS_PROGRESS_DIALOG (fixture->monitor)) {
+	if (GTK_IRIS_IS_PROGRESS_DIALOG (fixture->monitor)) {
 		displayed_title_1 = gtk_label_get_text (watch_1->title_label);
 		displayed_title_2 = gtk_label_get_text (watch_2->title_label);
 	}
-	else if (IRIS_IS_PROGRESS_INFO_BAR (fixture->monitor)) {
+	else if (GTK_IRIS_IS_PROGRESS_INFO_BAR (fixture->monitor)) {
 		displayed_title_1 = gtk_label_get_text (watch_1->title_label);
 		displayed_title_2 = gtk_label_get_text (watch_2->title_label);
 	}
@@ -667,11 +667,11 @@ int main(int argc, char *argv[]) {
 	g_thread_init (NULL);
 	gtk_test_init (&argc, &argv, NULL);
 
-	add_tests_with_fixture (iris_progress_dialog_fixture_setup,
-	                        iris_progress_dialog_fixture_teardown,
+	add_tests_with_fixture (gtk_iris_progress_dialog_fixture_setup,
+	                        gtk_iris_progress_dialog_fixture_teardown,
 	                        "dialog");
-	add_tests_with_fixture (iris_progress_info_bar_fixture_setup,
-	                        iris_progress_info_bar_fixture_teardown,
+	add_tests_with_fixture (gtk_iris_progress_info_bar_fixture_setup,
+	                        gtk_iris_progress_info_bar_fixture_teardown,
 	                        "info-bar");
 
 	return g_test_run();
