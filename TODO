@@ -2,11 +2,8 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-* Fix atomic access of port->state
-
-* Fix all tests, receiver-scheduler has been pretty sketchy :)
-
-* iris_queue_length should be iris_queue_get_length
+* /progress-monitor/info-bar/finalize: IRIS_IS_PROGRESS_INFO_BAR in
+  remove_watch() failed one time
 
 * IrisGtk stuff should be in irisgtk namespace :)
 
