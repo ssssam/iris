@@ -99,7 +99,7 @@ iris_gmainscheduler_foreach_real (IrisScheduler            *scheduler,
 	priv = IRIS_GMAINSCHEDULER (scheduler)->priv;
 
 	/* Foreach the queue in a really hacky way. FIXME: don't do it like this! */
-	for (i=0; i<iris_queue_length (priv->queue); i++) {
+	for (i=0; i<iris_queue_get_length (priv->queue); i++) {
 		IrisThreadWork *thread_work;
 
 		thread_work = iris_queue_try_pop (priv->queue);

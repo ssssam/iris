@@ -85,7 +85,7 @@ iris_thread_worker_exclusive (IrisThread  *thread,
 
 	g_get_current_time (&tv_now);
 	g_get_current_time (&tv_req);
-	queued = iris_queue_length (queue);
+	queued = iris_queue_get_length (queue);
 
 	/* Since our thread is in exclusive mode, we are responsible for
 	 * asking the scheduler manager to add or remove threads based
@@ -143,7 +143,7 @@ get_next_item:
 			 * we look to add another thread even though we have nothing
 			 * in the queue, we know there are more coming.
 			 */
-			queued = iris_queue_length (queue);
+			queued = iris_queue_get_length (queue);
 			if (queued == 0 && !has_resized) {
 				queued = per_quanta * 2;
 				has_resized = TRUE;
@@ -478,7 +478,7 @@ iris_thread_print_stat (IrisThread *thread)
 	           thread->scheduler==iris_scheduler_default()? "(def.)  ": "        ",
 	           (long)thread->active,
 	           thread->active != NULL ? "yes" : "no",
-	           thread->active != NULL ? iris_queue_length (thread->active) : 0);
+	           thread->active != NULL ? iris_queue_get_length (thread->active) : 0);
 
 	g_mutex_unlock (thread->mutex);
 }

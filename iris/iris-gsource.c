@@ -37,7 +37,7 @@ iris_gsource_prepare (GSource *gsource,
 	source = (IrisGSource*)gsource;
 	*timeout = -1;
 
-	return (iris_queue_length (source->queue) > 0);
+	return (iris_queue_get_length (source->queue) > 0);
 }
 
 static gboolean
@@ -47,7 +47,7 @@ iris_gsource_check (GSource *gsource)
 
 	source = (IrisGSource*)gsource;
 
-	return (iris_queue_length (source->queue) > 0);
+	return (iris_queue_get_length (source->queue) > 0);
 }
 
 static gboolean

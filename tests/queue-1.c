@@ -58,11 +58,11 @@ test6 (void)
 	IrisQueue *queue = iris_queue_new ();
 	g_assert (queue != NULL);
 	iris_queue_push (queue, &i);
-	g_assert (iris_queue_length (queue) == 1);
+	g_assert (iris_queue_get_length (queue) == 1);
 	g_assert (iris_queue_try_pop (queue) == &i);
-	g_assert (iris_queue_length (queue) == 0);
+	g_assert (iris_queue_get_length (queue) == 0);
 	g_assert (iris_queue_try_pop (queue) == NULL);
-	g_assert (iris_queue_length (queue) == 0);
+	g_assert (iris_queue_get_length (queue) == 0);
 }
 
 static void
@@ -89,7 +89,7 @@ test_pop_closed_1 (void)
 	iris_queue_close (queue);
 	g_assert (iris_queue_is_closed (queue) == TRUE);
 
-	g_assert_cmpint (iris_queue_length (queue), ==, 1);
+	g_assert_cmpint (iris_queue_get_length (queue), ==, 1);
 
 	result = iris_queue_push (queue, &i);
 	g_assert (result == FALSE);

@@ -42,13 +42,13 @@
  * </para></warning>
  */
 
-static guint    iris_lfqueue_real_length    (IrisQueue *queue);
-static gpointer iris_lfqueue_real_pop       (IrisQueue *queue);
-static gpointer iris_lfqueue_real_timed_pop (IrisQueue *queue,
-                                             GTimeVal  *timeout);
-static gpointer iris_lfqueue_real_try_pop   (IrisQueue *queue);
-static gboolean iris_lfqueue_real_push      (IrisQueue *queue,
-                                             gpointer   data);
+static guint    iris_lfqueue_real_get_length (IrisQueue *queue);
+static gpointer iris_lfqueue_real_pop        (IrisQueue *queue);
+static gpointer iris_lfqueue_real_timed_pop  (IrisQueue *queue,
+                                              GTimeVal  *timeout);
+static gpointer iris_lfqueue_real_try_pop    (IrisQueue *queue);
+static gboolean iris_lfqueue_real_push       (IrisQueue *queue,
+                                              gpointer   data);
 
 G_DEFINE_TYPE (IrisLFQueue, iris_lfqueue, IRIS_TYPE_QUEUE)
 
@@ -90,7 +90,7 @@ iris_lfqueue_class_init (IrisLFQueueClass *klass)
 	queue_class->pop = iris_lfqueue_real_pop;
 	queue_class->try_pop = iris_lfqueue_real_try_pop;
 	queue_class->timed_pop = iris_lfqueue_real_timed_pop;
-	queue_class->length = iris_lfqueue_real_length;
+	queue_class->get_length = iris_lfqueue_real_get_length;
 }
 
 static void
@@ -258,7 +258,7 @@ iris_lfqueue_real_pop (IrisQueue *queue)
 }
 
 static guint
-iris_lfqueue_real_length (IrisQueue *queue)
+iris_lfqueue_real_get_length (IrisQueue *queue)
 {
-	return IRIS_LFQUEUE (queue)->priv->length;
+	return IRIS_LFQUEUE(queue)->priv->length;
 }

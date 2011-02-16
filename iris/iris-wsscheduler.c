@@ -123,7 +123,7 @@ iris_wsscheduler_foreach_rrobin_cb (IrisRRobin *rrobin,
 	gint i;
 
 	/* Foreach the queue in a really hacky way. FIXME: be neater! */
-	for (i=0; i<iris_queue_length(queue); i++) {
+	for (i=0; i<iris_queue_get_length(queue); i++) {
 		IrisThreadWork *thread_work = iris_queue_try_pop (queue);
 
 		if (!thread_work) break;

@@ -149,7 +149,7 @@ iris_scheduler_foreach_rrobin_cb (IrisRRobin *rrobin,
 	/* Foreach the queue in a really hacky way. FIXME: be neater!
 	 * And make sure the order of work is preserved!!!
 	 * In particular, avoid calling queue_length() each time! */
-	for (i=0; i<iris_queue_length(queue); i++) {
+	for (i=0; i<iris_queue_get_length(queue); i++) {
 		IrisThreadWork *thread_work = iris_queue_try_pop (queue);
 		/* By removing the work from the queue, we know now it can't be executed */
 

@@ -60,7 +60,7 @@ struct _IrisQueueClass
 	                                GTimeVal  *timeout);
 	void     (*close)              (IrisQueue *queue);
 
-	guint    (*length)             (IrisQueue *queue);
+	guint    (*get_length)         (IrisQueue *queue);
 	gboolean (*is_closed)          (IrisQueue *queue);
 };
 
@@ -78,7 +78,7 @@ gpointer    iris_queue_timed_pop_or_close (IrisQueue *queue,
                                            GTimeVal  *timeout);
 void        iris_queue_close              (IrisQueue *queue);
 
-guint       iris_queue_length             (IrisQueue *queue);
+guint       iris_queue_get_length         (IrisQueue *queue);
 gboolean    iris_queue_is_closed          (IrisQueue *queue);
 
 G_END_DECLS

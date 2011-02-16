@@ -73,7 +73,7 @@ static gpointer iris_queue_real_try_pop_or_close   (IrisQueue *queue);
 static gpointer iris_queue_real_timed_pop_or_close (IrisQueue *queue,
                                                     GTimeVal  *timeout);
 static void     iris_queue_real_close              (IrisQueue *queue);
-static guint    iris_queue_real_length             (IrisQueue *queue);
+static guint    iris_queue_real_get_length         (IrisQueue *queue);
 static gboolean iris_queue_real_is_closed          (IrisQueue *queue);
 
 
@@ -121,7 +121,7 @@ iris_queue_class_init (IrisQueueClass *klass)
 	klass->try_pop_or_close = iris_queue_real_try_pop_or_close;
 	klass->timed_pop_or_close = iris_queue_real_timed_pop_or_close;
 	klass->close = iris_queue_real_close;
-	klass->length = iris_queue_real_length;
+	klass->get_length = iris_queue_real_get_length;
 	klass->is_closed = iris_queue_real_is_closed;
 }
 
@@ -272,7 +272,7 @@ iris_queue_close (IrisQueue *queue)
 }
 
 /**
- * iris_queue_length:
+ * iris_queue_get_length:
  * @queue: An #IrisQueue
  *
  * Retrieves the current length of the queue.
@@ -280,9 +280,9 @@ iris_queue_close (IrisQueue *queue)
  * Return value: the length of the queue
  */
 guint
-iris_queue_length (IrisQueue *queue)
+iris_queue_get_length (IrisQueue *queue)
 {
-	return IRIS_QUEUE_GET_CLASS (queue)->length (queue);
+	return IRIS_QUEUE_GET_CLASS (queue)->get_length (queue);
 }
 
 /**
@@ -484,7 +484,7 @@ iris_queue_real_close (IrisQueue *queue)
 }
 
 static guint
-iris_queue_real_length (IrisQueue *queue)
+iris_queue_real_get_length (IrisQueue *queue)
 {
 	return g_async_queue_length (queue->priv->q);
 }

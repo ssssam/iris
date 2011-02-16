@@ -55,13 +55,13 @@
  * </para></warning>
  */
 
-static gboolean iris_wsqueue_real_push      (IrisQueue *queue,
-                                             gpointer   data);
-static gpointer iris_wsqueue_real_pop       (IrisQueue *queue);
-static gpointer iris_wsqueue_real_try_pop   (IrisQueue *queue);
-static gpointer iris_wsqueue_real_timed_pop (IrisQueue *queue,
-                                             GTimeVal  *timeout);
-static guint    iris_wsqueue_real_length    (IrisQueue *queue);
+static gboolean iris_wsqueue_real_push       (IrisQueue *queue,
+                                              gpointer   data);
+static gpointer iris_wsqueue_real_pop        (IrisQueue *queue);
+static gpointer iris_wsqueue_real_try_pop    (IrisQueue *queue);
+static gpointer iris_wsqueue_real_timed_pop  (IrisQueue *queue,
+                                              GTimeVal  *timeout);
+static guint    iris_wsqueue_real_get_length (IrisQueue *queue);
 
 #define WSQUEUE_DEFAULT_SIZE 32
 
@@ -145,7 +145,7 @@ iris_wsqueue_class_init (IrisWSQueueClass *klass)
 	queue_class->pop = iris_wsqueue_real_pop;
 	queue_class->try_pop = iris_wsqueue_real_try_pop;
 	queue_class->timed_pop = iris_wsqueue_real_timed_pop;
-	queue_class->length = iris_wsqueue_real_length;
+	queue_class->get_length = iris_wsqueue_real_get_length;
 }
 
 static void
@@ -289,7 +289,7 @@ iris_wsqueue_real_timed_pop (IrisQueue *queue,
 }
 
 static guint
-iris_wsqueue_real_length (IrisQueue *queue)
+iris_wsqueue_real_get_length (IrisQueue *queue)
 {
 	IrisWSQueuePrivate *priv;
 

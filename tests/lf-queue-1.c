@@ -60,11 +60,11 @@ test6 (void)
 	IrisQueue *queue = iris_lfqueue_new ();
 	g_assert (queue != NULL);
 	iris_queue_push (queue, &i);
-	g_assert (iris_queue_length (queue) == 1);
+	g_assert (iris_queue_get_length (queue) == 1);
 	g_assert (iris_queue_pop (queue) == &i);
-	g_assert (iris_queue_length (queue) == 0);
+	g_assert (iris_queue_get_length (queue) == 0);
 	g_assert (iris_queue_try_pop (queue) == NULL);
-	g_assert (iris_queue_length (queue) == 0);
+	g_assert (iris_queue_get_length (queue) == 0);
 }
 
 static void
