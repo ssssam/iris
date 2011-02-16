@@ -103,10 +103,8 @@ message_handler (IrisMessage *message,
 	gint     *p_counter = iris_message_get_pointer (message, "counter");
 	gboolean  check_order = iris_message_get_boolean (message, "check-order");
 
-	if (check_order) {
-		/*g_print ("Executing %i...\n", message_number);*/
+	if (check_order)
 		g_assert_cmpint (g_atomic_int_get (p_counter), ==, message_number);
-	}
 
 	g_atomic_int_inc (p_counter);
 }

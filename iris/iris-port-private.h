@@ -49,9 +49,10 @@ struct _IrisPortPrivate
 	                          * receiver.
 	                          */
 
-	volatile gint state;     /* Flags for our current state, such
-	                          * as if we are currently paused.
-	                          */
+	/* Flags. Any may be accessed concurrently so always use g_atomics */
+	/* FIXME: would be nice to merge these, and use some g_atomic bitfield operators ... */
+	volatile gint paused;
+	volatile gint flushing;  /* Must be paused while flushing */
 };
 
 #endif /* __IRIS_PORT_PRIVATE_H__ */

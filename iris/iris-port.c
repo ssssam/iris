@@ -40,17 +40,8 @@
  * the messages will be processed one at a time.
  */
 
-typedef enum {
-	IRIS_PORT_STATE_PAUSED = 1 << 0,
-
-	/* FLUSHING requies PAUSED */
-	IRIS_PORT_STATE_FLUSHING = (1 << 1)
-} IrisPortState;
-
-#define PORT_IS_PAUSED(port) \
-	((g_atomic_int_get (&port->priv->state) & IRIS_PORT_STATE_PAUSED) != 0)
-#define PORT_IS_FLUSHING(port) \
-	((g_atomic_int_get (&port->priv->state) & IRIS_PORT_STATE_FLUSHING) != 0)
+#define PORT_IS_PAUSED(p)   (g_atomic_int_get (&p->priv->paused))
+#define PORT_IS_FLUSHING(p) (g_atomic_int_get (&p->priv->flushing))
 
 G_DEFINE_TYPE (IrisPort, iris_port, G_TYPE_OBJECT)
 
@@ -127,7 +118,9 @@ iris_port_init (IrisPort *port)
 	                                          IrisPortPrivate);
 
 	port->priv->mutex = g_mutex_new ();
-	port->priv->state = 0;
+
+	port->priv->paused = FALSE;
+	port->priv->flushing = FALSE;
 }
 
 /**
@@ -197,7 +190,7 @@ post_with_lock_ul (IrisPort     *port,
 		case IRIS_DELIVERY_ACCEPTED:
 			break;
 		case IRIS_DELIVERY_PAUSE:
-			priv->state |= IRIS_PORT_STATE_PAUSED;
+			g_atomic_int_set (&priv->paused, TRUE);
 			queue_at_head ? store_message_at_head_ul (port, message):
 			                store_message_at_tail_ul (port, message);
 			break;
@@ -237,6 +230,7 @@ iris_port_post (IrisPort    *port,
 	IrisPortPrivate    *priv;
 	IrisReceiver       *receiver;
 	IrisDeliveryStatus  delivered;
+	gboolean            was_paused;
 
 	iris_debug (IRIS_DEBUG_PORT);
 
@@ -267,7 +261,9 @@ iris_port_post (IrisPort    *port,
 			 */
 			g_warn_if_fail (priv->queue == NULL || g_queue_get_length (priv->queue) == 0);
 
-			priv->state &= ~IRIS_PORT_STATE_PAUSED;
+			was_paused = g_atomic_int_compare_and_exchange (&priv->paused, TRUE, FALSE);
+			g_warn_if_fail (was_paused);
+
 			post_with_lock_ul (port, receiver, message, FALSE);
 		}
 		else
@@ -400,6 +396,7 @@ iris_port_flush (IrisPort    *port)
 	IrisMessage        *message;
 	IrisReceiver       *receiver;
 	IrisDeliveryStatus  delivered;
+	gboolean            flag_was_set;
 
 	iris_debug (IRIS_DEBUG_PORT);
 
@@ -413,7 +410,19 @@ iris_port_flush (IrisPort    *port)
 
 	g_mutex_lock (priv->mutex);
 
-	priv->state |= IRIS_PORT_STATE_FLUSHING | IRIS_PORT_STATE_PAUSED;
+	if (g_atomic_int_get (&priv->flushing)) {
+		/* No need to run the flush if we got here. It is vital that after an
+		 * exclusive receiver's last message is handled the port is flushed so
+		 * it can unpause. The existing one only unlocks the mutex in one place
+		 * and if it is told to pause, will try to deliver again inside the
+		 * mutex. That code path with act exactly like the flush called from
+		 * the receiver's last message.
+		 */
+		g_mutex_unlock (priv->mutex);
+		return;
+	}
+	g_atomic_int_set (&priv->paused, TRUE);
+	g_atomic_int_set (&priv->flushing, TRUE);
 
 	do {
 		/* Get next message; remember 'current' is effectively the queue's head. */
@@ -428,7 +437,8 @@ iris_port_flush (IrisPort    *port)
 
 		if (message == NULL) {
 			/* Unpause & quit flushing now the queue is empty */
-			priv->state &= ~IRIS_PORT_STATE_PAUSED;
+			flag_was_set = g_atomic_int_compare_and_exchange (&priv->paused, TRUE, FALSE);
+			g_warn_if_fail (flag_was_set);
 			break;
 		}
 
@@ -462,7 +472,8 @@ iris_port_flush (IrisPort    *port)
 		/* Only continue flushing if the receiver is still accepting */
 	} while (delivered == IRIS_DELIVERY_ACCEPTED);
 
-	priv->state &= ~IRIS_PORT_STATE_FLUSHING;
+	flag_was_set = g_atomic_int_compare_and_exchange (&priv->flushing, TRUE, FALSE);
+	g_warn_if_fail (flag_was_set);
 
 	/* Don't free the queue even if it's empty. We will probably need it again. */
 
