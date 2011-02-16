@@ -48,6 +48,11 @@
  * to a global queue for a fallback when out of items.  If no item can be
  * retreived from the global queue, it will try to steal from its peers using
  * the #IrisRRobin of peer queues, which should also be #IrisQueue based.
+ *
+ * <warning><para>
+ * #IrisWSQueue is experimental code and may not run correctly. Do
+ * not use it in production!
+ * </para></warning>
  */
 
 static gboolean iris_wsqueue_real_push      (IrisQueue *queue,

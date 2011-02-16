@@ -33,6 +33,11 @@
  * #IrisLFScheduler is a lock-free scheduler implementation.  Don't be fooled,
  * lock-free is rarely the right choice.  This scheduler will cause your system
  * to spin cpu's while trying to perform a work-load as fast as possible.
+ *
+ * <warning><para>
+ * #IrisLFScheduler is experimental code and may not run correctly. Do
+ * not use it in production!
+ * </para></warning>
  */
 
 struct _IrisLFSchedulerPrivate

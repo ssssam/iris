@@ -35,6 +35,11 @@
  *
  * Keep in mind that lock-free is not always the fastest implementation
  * for all problem sets.
+ *
+ * <warning><para>
+ * #IrisLFQueue is experimental code and may not run correctly. Do
+ * not use it in production!
+ * </para></warning>
  */
 
 static guint    iris_lfqueue_real_length    (IrisQueue *queue);

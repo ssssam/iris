@@ -42,8 +42,10 @@
  * To prevent thread-starvation, if a thread runs out of work items it will
  * try to steal work from other threads.
  *
- * The #IrisWSScheduler has not yet been proven for correctness.  Until
- * that happens you should test your work-loads appropriately.
+ * <warning><para>
+ * #IrisWSScheduler is experimental code and may not run correctly. Do
+ * not use it in production!
+ * </para></warning>
  */
 
 struct _IrisWSSchedulerPrivate
