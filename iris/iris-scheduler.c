@@ -77,14 +77,10 @@ iris_scheduler_queue_rrobin_cb (gpointer data,
 	queue = data;
 	thread_work = user_data;
 
-	if (iris_queue_is_closed (queue)) {
-		/* This thread has finished; request a new item */
-		return FALSE;
-	}
-
-	iris_queue_push (queue, thread_work);
-
-	return TRUE;
+	/* If the queue is closed (meaning thread has finished) we will return
+	 * FALSE and the rrobin will call again with another queue
+	 */
+	return iris_queue_push (queue, thread_work);
 }
 
 static void

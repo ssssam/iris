@@ -34,6 +34,9 @@ struct _IrisQueuePrivate
 	 * iris_queue_is_open().
 	 */
 	volatile gint open;
+
+	/* Number of close tokens posted by iris_queue_close() */
+	gint close_token_count;
 };
 
 G_END_DECLS

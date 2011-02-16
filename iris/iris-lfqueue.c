@@ -42,7 +42,7 @@ static gpointer iris_lfqueue_real_pop       (IrisQueue *queue);
 static gpointer iris_lfqueue_real_timed_pop (IrisQueue *queue,
                                              GTimeVal  *timeout);
 static gpointer iris_lfqueue_real_try_pop   (IrisQueue *queue);
-static void     iris_lfqueue_real_push      (IrisQueue *queue,
+static gboolean iris_lfqueue_real_push      (IrisQueue *queue,
                                              gpointer   data);
 
 G_DEFINE_TYPE (IrisLFQueue, iris_lfqueue, IRIS_TYPE_QUEUE)
@@ -113,7 +113,7 @@ iris_lfqueue_new ()
 	return g_object_new (IRIS_TYPE_LFQUEUE, NULL);
 }
 
-static void
+static gboolean
 iris_lfqueue_real_push (IrisQueue *queue,
                         gpointer   data)
 {
@@ -123,8 +123,8 @@ iris_lfqueue_real_push (IrisQueue *queue,
 	IrisLink           *link;
 	gboolean            success = FALSE;
 
-	g_return_if_fail (queue != NULL);
-	g_return_if_fail (data != NULL);
+	g_return_val_if_fail (queue != NULL, FALSE);
+	g_return_val_if_fail (data != NULL, FALSE);
 
 	priv = IRIS_LFQUEUE (queue)->priv;
 	link = G_STAMP_POINTER_INCREMENT (iris_free_list_get (priv->free_list));
@@ -149,6 +149,8 @@ iris_lfqueue_real_push (IrisQueue *queue,
 
 	g_atomic_pointer_compare_and_exchange ((gpointer*)&priv->tail, old_tail, link);
 	g_atomic_int_inc ((gint*)&priv->length);
+
+	return TRUE;
 }
 
 static gpointer

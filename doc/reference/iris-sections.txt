@@ -105,6 +105,7 @@ iris_queue_try_pop
 iris_queue_timed_pop
 iris_queue_try_pop_or_close
 iris_queue_timed_pop_or_close
+iris_queue_close
 iris_queue_length
 iris_queue_is_closed
 <SUBSECTION Standard>

@@ -50,7 +50,7 @@
  * the #IrisRRobin of peer queues, which should also be #IrisQueue based.
  */
 
-static void     iris_wsqueue_real_push      (IrisQueue *queue,
+static gboolean iris_wsqueue_real_push      (IrisQueue *queue,
                                              gpointer   data);
 static gpointer iris_wsqueue_real_pop       (IrisQueue *queue);
 static gpointer iris_wsqueue_real_try_pop   (IrisQueue *queue);
@@ -174,11 +174,12 @@ iris_wsqueue_new (IrisQueue  *global,
 	return IRIS_QUEUE (queue);
 }
 
-static void
+static gboolean
 iris_wsqueue_real_push (IrisQueue *queue,
                         gpointer   data)
 {
 	g_warning ("iris_queue_push should not be called for IrisWSQueue");
+	return FALSE;
 }
 
 

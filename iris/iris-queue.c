@@ -25,28 +25,45 @@
  * SECTION:iris-queue
  * @title: IrisQueue
  * @short_description: Thread-safe queues
+ * @see_also: #IrisLFQueue, #IrisWSQueue
  *
  * #IrisQueue is a queue abstraction for concurrent queues.  The default
  * implementation wraps #GAsyncQueue which is a lock-based queue.
  *
- * A new feature is 'closing' of queues. Using
- * iris_queue_timed_pop_or_close() or iris_queue_try_pop_or_close(), the owner
- * of a queue may signal to other parts of the program that it is no longer
- * processing the queue. If a queue might close, callers must always check that
- * it is open using iris_queue_is_closed() before calling iris_queue_push().
- * Pushing items to a closed #IrisQueue will trigger a warning.
+ * A useful feature of #IrisQueue is the 'closing' of queues. This has two
+ * possible uses. Firstly, the owner of the queue can call iris_queue_close()
+ * to signal to all listeners that there will be no more items. Alternatively,
+ * if the queue has only one listener, that listener can use
+ * iris_queue_timed_pop_or_close() or iris_queue_try_pop_or_close() to signal
+ * to the source of the data that the items will no longer be processed.
+ * The advantage of this method of signalling is that it implicitly prevents
+ * race conditions from occurring without adding an extra mutex.
  *
- * By setting the flag on the queue rather than somewhere else you ensure that
- * no items can be enqueued between iris_queue_try_pop() or
- * iris_queue_timed_pop() returning NULL and the flag actually being set to
- * NULL, without requiring a separate mutex.
+ * Callers should check the return value of iris_queue_push() to see if an
+ * item posted successfully.
  *
- * See also #IrisLFQueue and #IrisWSQueue
+ * <refsect2 id="examples">
+ * <title>Examples</title>
+ * <para>
+ * A good example is found in Iris' scheduling: a transient #IrisThread will
+ * process work out of a queue until the queue is empty and then stop it. The
+ * thread must notify the scheduler that the queue will no longer be processed
+ * before the scheduler can enqueue more items. Using
+ * iris_queue_try_pop_or_close() to get items from the queue is a quick and
+ * neat solution.
+ *
+ * Exclusive threads use closing in the other direction: when a scheduler is
+ * destroyed, it notifies its own threads to stop processing its work queues
+ * using iris_queue_close(). Again, this is neater than sending a 'dummy' work
+ * item to signify closure or setting up a separate message queue for just
+ * one message.
+ * </para>
+ * </refsect2>
  */
 
 G_DEFINE_TYPE (IrisQueue, iris_queue, G_TYPE_OBJECT)
 
-static void     iris_queue_real_push               (IrisQueue *queue,
+static gboolean iris_queue_real_push               (IrisQueue *queue,
                                                     gpointer   data);
 static gpointer iris_queue_real_pop                (IrisQueue *queue);
 static gpointer iris_queue_real_try_pop            (IrisQueue *queue);
@@ -55,8 +72,32 @@ static gpointer iris_queue_real_timed_pop          (IrisQueue *queue,
 static gpointer iris_queue_real_try_pop_or_close   (IrisQueue *queue);
 static gpointer iris_queue_real_timed_pop_or_close (IrisQueue *queue,
                                                     GTimeVal  *timeout);
+static void     iris_queue_real_close              (IrisQueue *queue);
 static guint    iris_queue_real_length             (IrisQueue *queue);
 static gboolean iris_queue_real_is_closed          (IrisQueue *queue);
+
+
+/* IrisQueue currently involves some hacks around the GAsyncQueue codebase,
+ * mainly to implement closing. I don't think that's a problem, the code hasn't
+ * changed too much since 2000.
+ */
+struct _GAsyncQueue
+{
+  GMutex *mutex;
+  GCond *cond;
+  GQueue queue;
+  GDestroyNotify item_free_func;
+  guint waiting_threads;
+  gint32 ref_count;
+};
+
+/* Value pushed by iris_queue_close() to wake up pop listeners. Note that it
+ * isn't a problem that this value might conflict with legitimate items. Pop
+ * functions will only treat this value as special if it is the last item in a
+ * closed queue, and since closing the queue and pushing the token happens
+ * atomically (and always happens) there is no danger of confusion.
+ */
+#define CLOSE_TOKEN (gpointer)0x12345678
 
 static void
 iris_queue_finalize (GObject *object)
@@ -79,6 +120,7 @@ iris_queue_class_init (IrisQueueClass *klass)
 	klass->timed_pop = iris_queue_real_timed_pop;
 	klass->try_pop_or_close = iris_queue_real_try_pop_or_close;
 	klass->timed_pop_or_close = iris_queue_real_timed_pop_or_close;
+	klass->close = iris_queue_real_close;
 	klass->length = iris_queue_real_length;
 	klass->is_closed = iris_queue_real_is_closed;
 }
@@ -113,13 +155,16 @@ iris_queue_new ()
  * @queue: An #IrisQueue
  * @data: a pointer to store that is not %NULL
  *
- * Pushes a non-%NULL pointer onto the queue.
+ * Pushes a non-%NULL pointer onto the queue, if it is not closed.
+ *
+ * Return value: %TRUE if @data was pushed successfully, %FALSE if @queue is
+ *               closed.
  */
-void
+gboolean
 iris_queue_push (IrisQueue *queue,
                  gpointer   data)
 {
-	IRIS_QUEUE_GET_CLASS (queue)->push (queue, data);
+	return IRIS_QUEUE_GET_CLASS (queue)->push (queue, data);
 }
 
 /**
@@ -128,9 +173,13 @@ iris_queue_push (IrisQueue *queue,
  *
  * Pops an item off the queue.  It is up to the queue implementation to
  * determine if this method should block.  The default implementation of
- * #IrisQueue blocks until an item is available.
+ * #IrisQueue blocks until an item is available or the queue is closed.
  *
- * Return value: the next item off the queue or %NULL if there was an error
+ * iris_queue_pop() will return items from a closed queue until the queue is
+ * empty, at which point it will return %NULL when called.
+ *
+ * Return value: the next item off the queue, or %NULL if the queue became
+ *               closed or there was an error.
  */
 gpointer
 iris_queue_pop (IrisQueue *queue)
@@ -143,7 +192,7 @@ iris_queue_pop (IrisQueue *queue)
  * @queue: An #IrisQueue
  *
  * Tries to pop an item off the queue.  If no item is available %NULL
- * is returned.
+ * is returned. If @queue is closed, behaviour is the same.
  *
  * Return value: the next item off the queue or %NULL if none was available.
  */
@@ -158,9 +207,12 @@ iris_queue_try_pop (IrisQueue *queue)
  * @queue: An #IrisQueue
  * @timeout: the absolute timeout for pop
  *
- * Pops an item off the queue or returns %NULL when @timeout has passed.
+ * Pops an item off the queue, or waits for @timeout to elapse for one to be
+ * pushed. If @queue remains empty, %NULL is returned when @timeout has passed
+ * if @queue becomes closed.
  *
- * Return value: the next item off the queue or %NULL if @timeout has passed.
+ * Return value: the next item off the queue, or %NULL if @timeout has passed
+ *               or the queue became closed.
  */
 gpointer
 iris_queue_timed_pop (IrisQueue *queue,
@@ -177,7 +229,8 @@ iris_queue_timed_pop (IrisQueue *queue,
  * is returned and the queue is closed, so that no more items may be
  * enqueued.
  *
- * Return value: the next item off the queue or %NULL if none was available.
+ * Return value: the next item off the queue, or %NULL if none was available
+ *               or the queue became closed.
  */
 gpointer
 iris_queue_try_pop_or_close (IrisQueue *queue)
@@ -194,13 +247,28 @@ iris_queue_try_pop_or_close (IrisQueue *queue)
  * %NULL is returned the queue will be closed so that no more items may be
  * posted.
  *
- * Return value: the next item off the queue or %NULL if @timeout has passed.
+ * Return value: the next item off the queue, or %NULL if @timeout has passed
+ *               or @queue becomes closed.
  */
 gpointer
 iris_queue_timed_pop_or_close (IrisQueue *queue,
                                GTimeVal  *timeout)
 {
 	return IRIS_QUEUE_GET_CLASS (queue)->timed_pop_or_close (queue, timeout);
+}
+
+/**
+ * iris_queue_close:
+ * @queue: An #IrisQueue
+ *
+ * Closes @queue. If the queue is empty, any thread that is waiting on
+ * iris_queue_pop() will receive %NULL immediately. See the introduction for
+ * more information on queue closing.
+ */
+void
+iris_queue_close (IrisQueue *queue)
+{
+	IRIS_QUEUE_GET_CLASS (queue)->close (queue);
 }
 
 /**
@@ -221,10 +289,20 @@ iris_queue_length (IrisQueue *queue)
  * iris_queue_is_closed:
  * @queue: An #IrisQueue
  *
- * A new #IrisQueue always accepts new items being enqueued, but the owner of
- * the queue may decide to close at any point. When a queue is set to closed,
- * you should no longer (and are no longer able to) post more items. Closed is
- * normally set when the owner of the queue is no longer processing items.
+ * Returns whether the @queue has been closed.
+ *
+ * <note>
+ * The following code is NOT thread-safe:
+ *  |[
+ *     if (iris_queue_is_closed (queue))
+ *       return FALSE;
+ *     else
+ *       iris_queue_push (queue, item);
+ *  ]|
+ * The queue may become closed between the call to iris_queue_is_closed() and
+ * iris_queue_push(); the correct method is simply to call iris_queue_push()
+ * and check the return value.
+ * </note>
  *
  * Return value: %TRUE if the queue is no longer accepting entries.
  */
@@ -235,35 +313,131 @@ iris_queue_is_closed (IrisQueue *queue)
 }
 
 
+/**************************************************************************
+ *                     IrisQueue default implementation                   *
+ *************************************************************************/
+
+
 static void
+close_ul (IrisQueue *queue)
+{
+	gint         i;
+
+	g_atomic_int_set (&queue->priv->open, FALSE);
+
+	/* Send the close token to any threads currently blocking on the queue. */
+	for (i=0; i < queue->priv->q->waiting_threads; i++)
+		g_async_queue_push_unlocked (queue->priv->q, CLOSE_TOKEN);
+
+	queue->priv->close_token_count = queue->priv->q->waiting_threads;
+}
+
+/* Swallow CLOSE_TOKEN items */
+static gpointer
+handle_close_token_ul (IrisQueue *queue,
+                       gpointer   item)
+{
+	gint remaining_items;
+
+	if (item == NULL)
+		return NULL;
+
+	/* Filter close tokens. They must be the last items in the queue, so we can
+	 * avoid filtering actual queue items that happen to be the same value.
+	 */
+	remaining_items = g_async_queue_length_unlocked (queue->priv->q) + 
+	                  queue->priv->q->waiting_threads;
+
+	g_warn_if_fail (remaining_items >= queue->priv->close_token_count -1);
+
+	if ((queue->priv->close_token_count > 0) &&
+	     remaining_items == queue->priv->close_token_count -1) {
+		g_warn_if_fail (item == CLOSE_TOKEN);
+
+		queue->priv->close_token_count --;
+		return NULL;
+	} else
+		return item;
+}
+
+
+static gboolean
 iris_queue_real_push (IrisQueue *queue,
                       gpointer   data)
 {
+	gboolean is_open;
+
+	g_return_val_if_fail (data != NULL, FALSE);
+
 	g_async_queue_lock (queue->priv->q);
-	if (G_LIKELY (g_atomic_int_get (&queue->priv->open)))
+
+	is_open = g_atomic_int_get (&queue->priv->open);
+
+	if (G_LIKELY (is_open))
 		g_async_queue_push_unlocked (queue->priv->q, data);
-	else
-		g_warning ("iris_queue_push: queue %lx is closed", (gulong)queue);
+
 	g_async_queue_unlock (queue->priv->q);
+
+	return is_open;
 }
 
 static gpointer
 iris_queue_real_pop (IrisQueue *queue)
 {
-	return g_async_queue_pop (queue->priv->q);
+	gpointer item;
+
+	g_async_queue_lock (queue->priv->q);
+
+	if (g_atomic_int_get (&queue->priv->open) == FALSE &&
+	    g_async_queue_length_unlocked (queue->priv->q) <= 0) {
+		g_async_queue_unlock (queue->priv->q);
+		return NULL;
+	}
+
+	item = g_async_queue_pop_unlocked (queue->priv->q);
+
+	if (g_atomic_int_get (&queue->priv->open) == FALSE)
+		item = handle_close_token_ul (queue, item);
+	g_async_queue_unlock (queue->priv->q);
+
+	return item;
 }
 
 static gpointer
 iris_queue_real_try_pop (IrisQueue *queue)
 {
-	return g_async_queue_try_pop (queue->priv->q);
+	gpointer item;
+
+	g_async_queue_lock (queue->priv->q);
+	item = g_async_queue_try_pop_unlocked (queue->priv->q);
+
+	if (g_atomic_int_get (&queue->priv->open) == FALSE)
+		item = handle_close_token_ul (queue, item);
+	g_async_queue_unlock (queue->priv->q);
+
+	return item;
 }
 
 static gpointer
 iris_queue_real_timed_pop (IrisQueue *queue,
                            GTimeVal  *timeout)
 {
-	return g_async_queue_timed_pop (queue->priv->q, timeout);
+	gpointer item;
+
+	g_async_queue_lock (queue->priv->q);
+	if (g_atomic_int_get (&queue->priv->open) == FALSE &&
+	    g_async_queue_length_unlocked (queue->priv->q) <= 0) {
+		g_async_queue_unlock (queue->priv->q);
+		return NULL;
+	}
+
+	item = g_async_queue_timed_pop_unlocked (queue->priv->q, timeout);
+
+	if (g_atomic_int_get (&queue->priv->open) == FALSE)
+		item = handle_close_token_ul (queue, item);
+	g_async_queue_unlock (queue->priv->q);
+
+	return item;
 }
 
 static gpointer
@@ -274,8 +448,10 @@ iris_queue_real_try_pop_or_close (IrisQueue *queue)
 	g_async_queue_lock (queue->priv->q);
 	item = g_async_queue_try_pop_unlocked (queue->priv->q);
 
-	if (item == NULL)
-		g_atomic_int_set (&queue->priv->open, FALSE);
+	if (g_atomic_int_get (&queue->priv->open) == FALSE)
+		item = handle_close_token_ul (queue, item);
+	else if (item == NULL)
+		close_ul (queue);
 	g_async_queue_unlock (queue->priv->q);
 
 	return item;
@@ -290,11 +466,21 @@ iris_queue_real_timed_pop_or_close (IrisQueue *queue,
 	g_async_queue_lock (queue->priv->q);
 	item = g_async_queue_timed_pop_unlocked (queue->priv->q, timeout);
 
-	if (item == NULL)
-		g_atomic_int_set (&queue->priv->open, FALSE);
+	if (g_atomic_int_get (&queue->priv->open) == FALSE)
+		item = handle_close_token_ul (queue, item);
+	else if (item == NULL)
+		close_ul (queue);
 	g_async_queue_unlock (queue->priv->q);
 
 	return item;
+}
+
+static void
+iris_queue_real_close (IrisQueue *queue)
+{
+	g_async_queue_lock (queue->priv->q);
+	close_ul (queue);
+	g_async_queue_unlock (queue->priv->q);
 }
 
 static guint
