@@ -35,6 +35,11 @@
  * thread.
  */
 
+/* GMainScheduler is a little unhappy as a subclass of IrisScheduler, it might
+ * better to make IrisScheduler an interface and add some IrisSimpleScheduler
+ * as the default implementation ... but no huge need
+ */
+ 
 struct _IrisGMainSchedulerPrivate
 {
 	GMainContext *context;
@@ -166,12 +171,15 @@ iris_gmainscheduler_class_init (IrisGMainSchedulerClass *klass)
 }
 
 static void
-iris_gmainscheduler_init (IrisGMainScheduler *scheduler)
+iris_gmainscheduler_init (IrisGMainScheduler *gmainscheduler)
 {
-	scheduler->priv = G_TYPE_INSTANCE_GET_PRIVATE (scheduler,
-	                                               IRIS_TYPE_GMAINSCHEDULER,
-	                                               IrisGMainSchedulerPrivate);
-	scheduler->priv->queue = iris_queue_new ();
+	gmainscheduler->priv = G_TYPE_INSTANCE_GET_PRIVATE (gmainscheduler,
+	                                                     IRIS_TYPE_GMAINSCHEDULER,
+	                                                     IrisGMainSchedulerPrivate);
+	gmainscheduler->priv->queue = iris_queue_new ();
+
+	/* Don't add us to the scheduler manager, since we don't need any threads managing */
+	IRIS_SCHEDULER(gmainscheduler)->priv->initialized = TRUE;
 }
 
 static gboolean
