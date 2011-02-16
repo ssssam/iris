@@ -227,7 +227,8 @@ iris_process_cancel (IrisProcess *process)
 /**
  * iris_process_enqueue:
  * @process: An #IrisProcess
- * @work_item: An #IrisMessage
+ * @work_item: An #IrisMessage. The process will take ownership of one
+ *             reference.
  *
  * Posts a work item to the queue. The task function will be passed @work_item
  * when the work item is executed. The type and contents of the message are
@@ -236,6 +237,10 @@ iris_process_cancel (IrisProcess *process)
  * The work items should not depend in any way on order of execution - if this
  * is a problem, you should create individual #IrisTask objects which allow you
  * to specify dependencies.
+ *
+ * The caller does not need to unref @work_item once it has been enqueued, the
+ * process will take ownership. If the message is still needed the caller
+ * should add another reference before calling iris_process_enqueue().
  */
 void
 iris_process_enqueue (IrisProcess *process,
@@ -1063,6 +1068,7 @@ iris_task_post_work_item_real (IrisProcess *process,
 
 	priv = process->priv;
 
+	iris_message_ref (work_item);
 	iris_queue_push (priv->work_queue, work_item);
 }
 

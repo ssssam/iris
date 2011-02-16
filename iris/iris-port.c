@@ -222,6 +222,11 @@ post_with_lock_ul (IrisPort     *port,
  * scheduler may call the #IrisReceiver<!-- -->'s message handler from multiple
  * threads. To avoid this, use iris_arbiter_coordinate() to make the receiver
  * <firstterm>exclusive</firstterm>.
+ *
+ * Once an #IrisMessage is posted, it will be kept alive until the receiver's
+ * message handler function has returned. Therefore the caller can drop their
+ * reference on @message after calling this function, unless they still need to
+ * use the message.
  */
 void
 iris_port_post (IrisPort    *port,
@@ -451,23 +456,23 @@ iris_port_flush (IrisPort    *port)
 
 		g_mutex_lock (priv->mutex);
 
+		if (delivered == IRIS_DELIVERY_REMOVE)
+			store_message_at_head_ul (port, message);
+
+		if (delivered == IRIS_DELIVERY_REMOVE || delivered == IRIS_DELIVERY_ACCEPTED_REMOVE)
+			g_atomic_pointer_compare_and_exchange ((gpointer *)&priv->receiver, receiver, NULL);
+
 		if (delivered == IRIS_DELIVERY_PAUSE) {
 			/* Try again. Pass TRUE so if delivery is deferred, the item goes
 			 * back to the head of the queue not the tail
 			 */
 			delivered = post_with_lock_ul (port, receiver, message, TRUE);
-			iris_message_unref (message);
-		} else
-		if (delivered == IRIS_DELIVERY_REMOVE) {
-			store_message_at_head_ul (port, message);
-			iris_message_unref (message);
 		}
 
-		if (delivered == IRIS_DELIVERY_ACCEPTED || delivered == IRIS_DELIVERY_ACCEPTED_REMOVE)
-			iris_message_unref (message);
-
-		if (delivered == IRIS_DELIVERY_REMOVE || delivered == IRIS_DELIVERY_ACCEPTED_REMOVE)
-			g_atomic_pointer_compare_and_exchange ((gpointer *)&priv->receiver, receiver, NULL);
+		/* Free the reference that the queue held; the message has either been
+		 * requeued (with a new reference) or taken by the receiver
+		 */
+		iris_message_unref (message);
 
 		/* Only continue flushing if the receiver is still accepting */
 	} while (delivered == IRIS_DELIVERY_ACCEPTED);

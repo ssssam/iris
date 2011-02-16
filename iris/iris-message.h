@@ -34,7 +34,8 @@ typedef struct _IrisMessage IrisMessage;
  * @message: #IrisMessage to be processed
  * @data: user data passed when the callback was connected.
  *
- * This type of function is used for message handlers.
+ * This type of function is used for message handlers. The callback is not
+ * expected to unref @message itself.
  */
 typedef void (*IrisMessageHandler) (IrisMessage *message, gpointer data);
 
