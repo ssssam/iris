@@ -1,41 +1,44 @@
 <SECTION>
 <FILE>iris-lfscheduler</FILE>
-IRIS_LFSCHEDULER_CONST
-IrisLFSchedulerPrivate
 <TITLE>IrisLFScheduler</TITLE>
 IrisLFScheduler
 iris_lfscheduler_new
 iris_lfscheduler_new_full
 <SUBSECTION Standard>
 IRIS_LFSCHEDULER
+IRIS_LFSCHEDULER_CONST
 IRIS_IS_LFSCHEDULER
 IRIS_TYPE_LFSCHEDULER
 iris_lfscheduler_get_type
 IRIS_LFSCHEDULER_CLASS
 IRIS_IS_LFSCHEDULER_CLASS
 IRIS_LFSCHEDULER_GET_CLASS
+<SUBSECTION Private>
+IrisLFSchedulerPrivate
 </SECTION>
 
 <SECTION>
 <FILE>iris-gmainscheduler</FILE>
-IRIS_GMAINSCHEDULER_CONST
-IrisGMainSchedulerPrivate
 <TITLE>IrisGMainScheduler</TITLE>
 IrisGMainScheduler
 iris_gmainscheduler_new
 iris_gmainscheduler_get_context
 <SUBSECTION Standard>
 IRIS_GMAINSCHEDULER
+IRIS_GMAINSCHEDULER_CONST
 IRIS_IS_GMAINSCHEDULER
 IRIS_TYPE_GMAINSCHEDULER
 iris_gmainscheduler_get_type
 IRIS_GMAINSCHEDULER_CLASS
 IRIS_IS_GMAINSCHEDULER_CLASS
 IRIS_GMAINSCHEDULER_GET_CLASS
+<SUBSECTION Private>
+IrisGMainSchedulerPrivate
 </SECTION>
 
 <SECTION>
 <FILE>iris-task</FILE>
+<TITLE>IrisTask</TITLE>
 IRIS_TASK_THROW_NEW
 IRIS_TASK_THROW
 IRIS_TASK_CATCH
@@ -43,7 +46,6 @@ IRIS_TASK_RETURN_VALUE
 IRIS_TASK_RETURN_TASK
 IRIS_TASK_RETURN_TASK_NEW
 IrisTaskFunc
-<TITLE>IrisTask</TITLE>
 IrisTask
 iris_task_new
 iris_task_new_with_func
@@ -175,9 +177,9 @@ iris_arbiter_get_type
 
 <SECTION>
 <FILE>iris-scheduler</FILE>
+<TITLE>IrisScheduler</TITLE>
 IrisCallback
 IrisSchedulerForeachFunc
-<TITLE>IrisScheduler</TITLE>
 IrisScheduler
 iris_scheduler_new
 iris_scheduler_new_full
@@ -244,6 +246,7 @@ IrisPortPrivate
 
 <SECTION>
 <FILE>iris-receiver</FILE>
+<TITLE>IrisReceiver</TITLE>
 IrisReceiver
 IrisReceiverClass
 iris_receiver_get_scheduler
@@ -300,6 +303,7 @@ IrisLFQueuePrivate
 
 <SECTION>
 <FILE>iris-scheduler-manager</FILE>
+<TITLE>IrisSchedulerManager</TITLE>
 iris_scheduler_manager_prepare
 iris_scheduler_manager_unprepare
 iris_scheduler_manager_request
@@ -309,6 +313,7 @@ iris_scheduler_manager_print_stat
 
 <SECTION>
 <FILE>iris-message</FILE>
+<TITLE>IrisMessage</TITLE>
 IrisMessage
 IrisMessageHandler
 iris_message_new
@@ -370,6 +375,7 @@ IRIS_CHECK_VERSION
 
 <SECTION>
 <FILE>iris-rrobin</FILE>
+<TITLE>IrisRRobin</TITLE>
 IRIS_TYPE_RROBIN
 IrisRRobin
 IrisRRobinFunc
@@ -387,6 +393,7 @@ iris_rrobin_get_type
 
 <SECTION>
 <FILE>iris-stack</FILE>
+<TITLE>IrisStack</TITLE>
 IrisStack
 iris_stack_get_type
 iris_stack_new
@@ -507,6 +514,7 @@ IrisProgressInfoBarPrivate
 </SECTION>
 
 <SECTION>
+<TITLE>Internal</TITLE>
 <SUBSECTION Private>
 <FILE>iris-coordination-arbiter</FILE>
 <SUBSECTION Standard>
