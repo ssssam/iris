@@ -310,12 +310,15 @@ main (int   argc,
 	                        iris_gmainscheduler_fixture_teardown,
 	                        "gmainscheduler");
 
+
+	if (0) {
 	add_tests_with_fixture (iris_lfscheduler_fixture_setup,
 	                        iris_lfscheduler_fixture_teardown,
 	                        "lockfree-scheduler");
 	add_tests_with_fixture (iris_wsscheduler_fixture_setup,
 	                        iris_wsscheduler_fixture_teardown,
 	                        "workstealing-scheduler");
+	}
 
 	return g_test_run ();
 }
