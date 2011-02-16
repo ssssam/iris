@@ -202,7 +202,7 @@ def build (bld):
 		# Set unit_test flag selectively so user can call:
 		#   ./waf check --target=tests/foo-test
 		# to just run one test
-		if not Options.options.targets or (test.target.name in Options.options.targets):
+		if not Options.options.targets or (test.target.name in Options.options.targets.split(",")):
 			test.unit_test = 1
 
 
