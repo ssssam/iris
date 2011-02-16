@@ -95,6 +95,11 @@ test_finalize (void)
 
 		g_object_unref (scheduler);
 
+		/* FIXME: test can fail if the thread doesn't yield itself back to the scheduler manager
+		 * quickly enough
+		 */
+		g_usleep (500);
+
 		g_assert_cmpint (iris_scheduler_manager_get_spare_thread_count (), ==,
 		                 spare_threads + n_threads);
 	}

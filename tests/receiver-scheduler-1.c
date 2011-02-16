@@ -5,6 +5,8 @@
 #include <iris/iris-receiver-private.h>
 #include <iris/iris-scheduler-private.h>
 
+/* FIXME: maybe rename this test suite to messages-live-1 or something */
+
 /* Testing if receiver gets messages after its own destruction, because we
  * can't be certain it will cause a segfault.
  */
