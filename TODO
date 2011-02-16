@@ -2,19 +2,13 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-* Remove stale port->repost member
-
-* IrisGtk stuff should be in irisgtk namespace :)
-
-* Add iris_scheduler_manager_reset(), to avoid having 3000 threads in gdb
-  (better still, free them properly :)
-
 * Fix atomic access of port->state
 
 * Fix all tests, receiver-scheduler has been pretty sketchy :)
 
-* Prevent arbiters from being connected to receivers that have already processed
-  messages.
+* iris_queue_length should be iris_queue_get_length
+
+* IrisGtk stuff should be in irisgtk namespace :)
 
 * Cancel button, reimplement this! Make it work in progress-tasks too!!
   Remember to doc. in iris-progress-monitor.c
@@ -38,6 +32,15 @@ Iris 0.3.0
   and that probably won't change (too difficult)
 
 * Tests should always use a fresh scheduler, no?
+
+* Prevent arbiters from being connected to receivers that have already processed
+  messages.
+
+* Same for ports.
+
+* Fix immutability in general (see chergert maiL)
+
+* Fix freeing of process/tasks (see chergert mail)
 
 * Valgrind it a bit
 
@@ -196,6 +199,9 @@ Finalisation: a few issues here.
     is cancelled or it completes.
 
   * All this needs thorough testing of course!
+
+How does Iris relate to GThreadPool? Have we reinvented things we could
+actually pull in from GLib?
 
 Introspection. See:
   http://live.gnome.org/GObjectIntrospection/WritingBindingableAPIs
