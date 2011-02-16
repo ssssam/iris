@@ -27,12 +27,13 @@
 
 G_BEGIN_DECLS
 
-void iris_scheduler_manager_prepare    (IrisScheduler *scheduler);
-void iris_scheduler_manager_unprepare  (IrisScheduler *scheduler);
-void iris_scheduler_manager_request    (IrisScheduler *scheduler,
-                                        guint          per_quantum,
-                                        guint          total);
-void iris_scheduler_manager_print_stat (void);
+void iris_scheduler_manager_prepare                (IrisScheduler *scheduler);
+void iris_scheduler_manager_unprepare              (IrisScheduler *scheduler);
+void iris_scheduler_manager_request                (IrisScheduler *scheduler,
+                                                    guint          per_quantum,
+                                                    guint          total);
+gint iris_scheduler_manager_get_spare_thread_count ();
+void iris_scheduler_manager_print_stat             (void);
 
 G_END_DECLS
 

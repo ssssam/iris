@@ -120,8 +120,11 @@ get_next_item:
 		iris_thread_work_free (thread_work);
 	}
 	else {
-		/* This should not be possible since iris_queue_pop cannot return NULL */
-		g_warning ("Exclusive thread is done managing, received NULL");
+		/* Queue is closed, so scheduler is finalizing. The scheduler will be
+		 * waiting until we set thread->scheduler to NULL.
+		 */
+		g_atomic_pointer_set (&thread->scheduler, NULL);
+		iris_scheduler_manager_yield (thread);
 		return;
 	}
 
@@ -201,9 +204,13 @@ iris_thread_worker_transient (IrisThread  *thread,
 		}
 	} while (thread_work != NULL);
 
-	/* Yield our thread back to the scheduler manager */
+	/* Remove the thread from the scheduler (if it's not already removed us due
+	 * to being in finalization), and yield our thread back to the scheduler manager */
+	if (g_atomic_int_get (&thread->scheduler->in_finalize) == FALSE)
+		iris_scheduler_remove_thread (thread->scheduler, thread);
+	g_atomic_pointer_set (&thread->scheduler, NULL);
+
 	iris_scheduler_manager_yield (thread);
-	thread->scheduler = NULL;
 }
 
 static void
@@ -226,6 +233,7 @@ iris_thread_handle_manage (IrisThread  *thread,
 		iris_thread_worker_transient (thread, queue);
 
 	g_mutex_lock (thread->mutex);
+	g_object_unref (thread->active);
 	thread->active = NULL;
 	g_mutex_unlock (thread->mutex);
 }

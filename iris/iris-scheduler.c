@@ -56,6 +56,9 @@
  * existing threads, or create new threads if no existing threads are
  * available.  Based on the speed of work performed by the scheduler,
  * the manager will try to appropriate a sufficient number of threads.
+ *
+ * When destroyed, the scheduler will block until all of its threads have
+ * worked through their queues.
  */
 
 G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT)
@@ -241,6 +244,8 @@ iris_scheduler_add_thread_real (IrisScheduler  *scheduler,
 	if (!iris_rrobin_append (priv->rrobin, queue))
 		goto error;
 
+	priv->thread_list = g_list_prepend (priv->thread_list, thread);
+
 	/* check if this thread is the leader */
 	leader = g_atomic_int_compare_and_exchange (&priv->has_leader, FALSE, TRUE);
 
@@ -276,6 +281,8 @@ iris_scheduler_remove_thread_real (IrisScheduler *scheduler,
 
 	thread->user_data = NULL;
 
+	priv->thread_list = g_list_remove (priv->thread_list, thread);
+
 	/* We don't check, but this thread should not be the leader because the
 	 * leader should be running in exclusive mode ...
 	 */
@@ -284,11 +291,47 @@ iris_scheduler_remove_thread_real (IrisScheduler *scheduler,
 }
 
 static void
+release_thread (gpointer data,
+                gpointer user_data)
+{
+	IrisThread *thread = data;
+
+	g_mutex_lock (thread->mutex);
+	if (thread->active != NULL) {
+		iris_queue_close (thread->active);
+		g_object_unref (thread->active);
+	}
+	g_mutex_unlock (thread->mutex);
+
+	/* Wait for the thread to recognise its removal, to avoid it accessing
+	 * freed memory.
+	 */
+	while (g_atomic_pointer_get (&thread->scheduler) != NULL)
+		g_thread_yield ();
+}
+
+static void
 iris_scheduler_finalize (GObject *object)
 {
+	IrisScheduler        *scheduler;
 	IrisSchedulerPrivate *priv;
 
-	priv = IRIS_SCHEDULER (object)->priv;
+	scheduler = IRIS_SCHEDULER (object);
+	priv = scheduler->priv;
+
+	/* For the benefit of our threads */
+	g_atomic_int_set (&scheduler->in_finalize, TRUE);
+
+	g_mutex_lock (priv->mutex);
+
+	/* Release all of our threads */
+	g_list_foreach (priv->thread_list, release_thread, NULL);
+	g_list_free (priv->thread_list);
+
+	g_mutex_unlock (priv->mutex);
+
+	if (priv->rrobin != NULL)
+		iris_rrobin_unref (priv->rrobin);
 
 	g_mutex_free (priv->mutex);
 
@@ -319,10 +362,20 @@ iris_scheduler_init (IrisScheduler *scheduler)
 	scheduler->priv = G_TYPE_INSTANCE_GET_PRIVATE (scheduler,
 	                                          IRIS_TYPE_SCHEDULER,
 	                                          IrisSchedulerPrivate);
-	scheduler->priv->min_threads = 0;
-	scheduler->priv->max_threads = 0;
+
+	scheduler->in_finalize = FALSE;
+	scheduler->maxed = FALSE;
+
 	scheduler->priv->mutex = g_mutex_new ();
 	scheduler->priv->queue = g_async_queue_new ();
+
+	scheduler->priv->thread_list = NULL;
+
+	scheduler->priv->min_threads = 0;
+	scheduler->priv->max_threads = 0;
+
+	/* Actual init happens lazily from iris_scheduler_queue() */
+	scheduler->priv->initialized = FALSE;
 }
 
 /**
@@ -565,7 +618,6 @@ iris_scheduler_add_thread (IrisScheduler *scheduler,
                            gboolean       exclusive)
 {
 	IRIS_SCHEDULER_GET_CLASS (scheduler)->add_thread (scheduler, thread, exclusive);
-	thread->scheduler = g_object_ref (scheduler);
 }
 
 /**
@@ -583,13 +635,10 @@ iris_scheduler_remove_thread (IrisScheduler *scheduler,
 {
 	IRIS_SCHEDULER_GET_CLASS (scheduler)->remove_thread (scheduler, thread);
 
-	/* We know that the threads scheduler definitely is no longer
+	/* We know that the scheduler definitely is no longer
 	 * maxed out since this thread is ending.
 	 */
-	g_atomic_int_set (&thread->scheduler->maxed, FALSE);
-
-	thread->scheduler = NULL;
-	g_object_unref (scheduler);
+	g_atomic_int_set (&scheduler->maxed, FALSE);
 }
 
 /**

@@ -303,6 +303,7 @@ IrisLFQueuePrivate
 iris_scheduler_manager_prepare
 iris_scheduler_manager_unprepare
 iris_scheduler_manager_request
+iris_scheduler_manager_get_spare_thread_count
 iris_scheduler_manager_print_stat
 </SECTION>
 

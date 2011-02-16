@@ -45,6 +45,11 @@ struct _IrisSchedulerPrivate
 	 *        they do not get nuked from the synchronizations above.
 	 */
 
+	/* It would be nice to put this on the class so the subclasses could use
+	 * it, but then we also need to share our mutex ...
+	 */
+	GList            *thread_list;
+
 	guint             min_threads;
 	guint             max_threads;
 	volatile gint     has_leader;

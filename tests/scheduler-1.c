@@ -77,6 +77,25 @@ test_queue (void)
 	}
 }
 
+/* finalize: test threads are released to the scheduler */
+static void
+test_finalize (void)
+{
+	IrisScheduler *scheduler;
+	int            i,
+	               spare_threads;
+
+	scheduler = iris_scheduler_new_full (4, 4);
+
+	for (i=0; i<WORK_COUNT; i++)
+		iris_scheduler_queue (scheduler, (IrisCallback)g_usleep, GINT_TO_POINTER (500), NULL);
+
+	spare_threads = iris_scheduler_manager_get_spare_thread_count ();
+
+	g_object_unref (scheduler);
+
+	g_assert_cmpint (iris_scheduler_manager_get_spare_thread_count (), ==, spare_threads + 4);
+}
 
 gint
 main (int   argc,
@@ -90,7 +109,9 @@ main (int   argc,
 	g_test_add_func ("/scheduler/get_min_threads1", test2);
 	g_test_add_func ("/scheduler/get_max_threads1", test3);
 
-	g_test_add_func ("/scheduler/queue", test_queue);
+	g_test_add_func ("/scheduler/queue()", test_queue);
+
+	g_test_add_func ("/scheduler/finalize", test_finalize);
 
 	return g_test_run ();
 }

@@ -89,6 +89,7 @@ struct _IrisScheduler
 
 	/*< private >*/
 	IrisSchedulerPrivate *priv;
+	volatile gint        in_finalize;
 	volatile gint        maxed;
 };
 
@@ -123,14 +124,21 @@ struct _IrisThread
 	gpointer       user_data3;
 
 	/*< private >*/
-	IrisScheduler *scheduler;  /* Pointer to scheduler       */
-	GThread       *thread;     /* Handle to the thread       */
-	GAsyncQueue   *queue;      /* Command queue              */
-	gboolean       exclusive;  /* Can the thread be removed  *
-	                            * from an active scheduler   */
-	GMutex        *mutex;      /* Mutex for changing thread  *
-	                            * state. e.g. active queue.  */
-	IrisQueue     *active;     /* Active processing queue    */
+
+	/* 'scheduler' is set by the scheduler manager when a thread is added, and
+	 * is unset by the thread when the thread is removed. No memory guards are
+	 * needed except during removal, where the scheduler waits for this pointer
+	 * to == NULL so it knows the thread is idle.
+	 */
+	IrisScheduler * volatile scheduler;
+
+	GThread                 *thread;     /* Handle to the thread       */
+	GAsyncQueue             *queue;      /* Command queue              */
+	gboolean                 exclusive;  /* Can the thread be removed  *
+	                                      * from an active scheduler   */
+	GMutex                  *mutex;      /* Mutex for changing thread  *
+	                                      * state. e.g. active queue.  */
+	IrisQueue               *active;     /* Active processing queue, or NULL if idle */
 };
 
 struct _IrisThreadWork

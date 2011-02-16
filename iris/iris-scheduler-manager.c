@@ -50,10 +50,8 @@ G_LOCK_DEFINE (singleton);
 void
 iris_scheduler_manager_yield (IrisThread *thread)
 {
-	g_return_if_fail (thread->scheduler != NULL);
-
-	/* Remove the thread from the scheduler. */
-	iris_scheduler_remove_thread (thread->scheduler, thread);
+	/* It's up to the thread to call iris_scheduler_remove_thread etc. */
+	g_return_if_fail (thread->scheduler == NULL);
 
 	G_LOCK (singleton);
 	singleton->free_list = g_list_prepend (singleton->free_list, thread);
@@ -242,6 +240,7 @@ iris_scheduler_manager_request (IrisScheduler *scheduler,
 	if (n_threads < max_threads) {
 		for (i = n_threads; i < requested; i++) {
 			thread = get_or_create_thread_unlocked (FALSE);
+			thread->scheduler = scheduler;
 			iris_scheduler_add_thread (scheduler, thread, FALSE);
 			n_threads++;
 		}
@@ -251,6 +250,28 @@ iris_scheduler_manager_request (IrisScheduler *scheduler,
 	                   GINT_TO_POINTER (n_threads));
 
 	G_UNLOCK (singleton);
+}
+
+/**
+ * iris_scheduler_manager_get_spare_thread_count:
+ *
+ * Return how many threads the scheduler manager currently has idling.
+ *
+ * Return value: number of spare threads
+ */
+gint
+iris_scheduler_manager_get_spare_thread_count ()
+{
+	gint spare_thread_count;
+
+	if (G_UNLIKELY (!singleton))
+		iris_scheduler_manager_init ();
+
+	G_LOCK (singleton);
+	spare_thread_count = g_list_length (singleton->free_list);
+	G_UNLOCK (singleton);
+
+	return spare_thread_count;
 }
 
 /**
