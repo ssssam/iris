@@ -572,6 +572,21 @@ receive_completed (IrisArbiter  *arbiter,
 static void
 iris_coordination_arbiter_finalize (GObject *object)
 {
+	IrisCoordinationArbiter        *coord_arbiter;
+	IrisCoordinationArbiterPrivate *priv;
+
+	coord_arbiter = IRIS_COORDINATION_ARBITER (object);
+	priv = coord_arbiter->priv;
+
+	if (priv->exclusive != NULL)
+		g_object_unref (priv->exclusive);
+
+	if (priv->concurrent != NULL)
+		g_object_unref (priv->concurrent);
+
+	if (priv->teardown != NULL)
+		g_object_unref (priv->teardown);
+
 	G_OBJECT_CLASS (iris_coordination_arbiter_parent_class)->finalize (object);
 }
 
@@ -628,6 +643,11 @@ iris_coordination_arbiter_new (IrisReceiver *exclusive,
 		arbiter->priv->flags = IRIS_COORD_CONCURRENT;
 	else
 		arbiter->priv->flags = IRIS_COORD_EXCLUSIVE;
+
+	/* At least one receiver holds a reference on the arbiter so we can drop
+	 * the initial one.
+	 */
+	g_object_unref (arbiter);
 
 	return IRIS_ARBITER (arbiter);
 }

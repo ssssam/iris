@@ -34,6 +34,8 @@ static void
 iris_scheduler_fixture_teardown (SchedulerFixture *fixture,
                                  gconstpointer    user_data)
 {
+	/* Make sure receivers etc. aren't holding extra references */
+	g_assert_cmpint (G_OBJECT(fixture->scheduler)->ref_count, ==, 1);
 	g_object_unref (fixture->scheduler);
 }
 
@@ -158,7 +160,7 @@ test_integrity (SchedulerFixture *fixture,
 	while (g_atomic_int_get (&message_counter) < 51)
 		yield (fixture, 50);
 
-	g_object_unref (receiver);
+	iris_receiver_destroy (receiver, NULL, IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
 	g_object_unref (port);
 }
 
@@ -189,8 +191,8 @@ test_order (SchedulerFixture *fixture,
 	while (g_atomic_int_get (&message_counter) < 51)
 		yield (fixture, 50);
 
-	g_object_unref (receiver);
 	g_object_unref (port);
+	iris_receiver_destroy (receiver, NULL, IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
 }
 
 static void
@@ -216,10 +218,7 @@ test_destruction (SchedulerFixture *fixture,
 		iris_port_post (p, msg);
 	}
 
-	iris_port_set_receiver (p, NULL);
-
-	iris_receiver_close (r, NULL, IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
-	g_object_unref (r);
+	iris_receiver_destroy (r, NULL, IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
 
 	yield (fixture, 50);
 

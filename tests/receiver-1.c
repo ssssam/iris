@@ -124,6 +124,24 @@ set_scheduler1 (void)
 	g_assert (iris_receiver_get_scheduler (r) == s2);
 }
 
+static void
+test_destroy (void)
+{
+	IrisReceiver  *receiver;
+	IrisPort      *port;
+
+	port = iris_port_new ();
+	receiver = iris_arbiter_receive (NULL, iris_port_new (),
+	                                 message_handler, NULL, NULL);
+	iris_arbiter_coordinate (receiver, NULL, NULL);
+
+	iris_receiver_destroy (receiver, NULL, FALSE);
+
+	/* If the receiver has finalized it will have released its ref on 'port' */
+	g_assert_cmpint (G_OBJECT(port)->ref_count, ==, 1);
+	g_object_unref (port);
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -137,6 +155,7 @@ main (int   argc,
 	g_test_add_func ("/receiver/message_delivered1", message_delivered1);
 	g_test_add_func ("/receiver/many_message_delivered1", many_message_delivered1);
 	g_test_add_func ("/receiver/set_scheduler1", set_scheduler1);
+	g_test_add_func ("/receiver/destroy()", test_destroy);
 
 	return g_test_run ();
 }

@@ -98,7 +98,7 @@ iris_port_finalize (GObject *object)
 	IrisPort        *port;
 	IrisPortPrivate *priv;
 
-	port = IRIS_PORT (port);
+	port = IRIS_PORT (object);
 	priv = port->priv;
 
 	if (priv->queue != NULL)

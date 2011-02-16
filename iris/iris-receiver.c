@@ -34,9 +34,7 @@
  * from an #IrisPort.  See iris_arbiter_receive() for how to create
  * a new receiver for an #IrisPort to perform a given action.
  *
- * Before an #IrisReceiver is destroyed it must be closed, using
- * iris_receiver_close(). This is to avoid messages that are queued in the
- * scheduler running after the destruction of the receiver.
+ * You should use iris_receiver_destroy() to finalize an #IrisReceiver.
  *
  * #IrisReceiver objects can be attached to an arbiter to provide
  * additional control over when actions can be performed.  See
@@ -243,9 +241,9 @@ iris_receiver_dispose (GObject *object)
 
 	if (g_atomic_int_get (&priv->active) > 0)
 		g_warning ("receiver %lx was finalized with messages still active. "
-		           "This is likely to cause a crash. The owner of an "
-		           "IrisReceiver must always call iris_receiver_close() "
-		           "before unreferencing the receiver.", (gulong)object);
+		           "This is likely to cause a crash. Always use "
+		           "iris_receiver_destroy() to free an IrisReceiver.",
+		           (gulong)object);
 
 	g_object_unref (priv->scheduler);
 
@@ -440,25 +438,23 @@ iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
 }
 
 /**
- * iris_receiver_close:
+ * iris_receiver_destroy:
  * @receiver: An #IrisReceiver
  * @main_context: A #GMainContext (if %NULL, the default context will be used)
  * @iterate_main_context: Whether to run @main_context while waiting for the
  *                        messages to process (default: %FALSE).
  *
- * Disconnects the port connected to @receiver and cancels any messages that
- * are still pending. Note that any or all of the messages may still execute
- * before the function returns, so you should only begin destruction of shared
- * data once this function completes. This function must be called by the owner
- * of @receiver before it is unreferenced, to prevent messages executing after
- * the receiver has been destroyed.
+ * Disconnects the port connected to @receiver, cancels any messages that are
+ * still pending and frees @receiver. Note that any or all of the messages may
+ * still execute before the function returns, so you should only begin
+ * destruction of shared data once this function completes.
  *
- * Because iris_receiver_close() involves flushing queued events from the
+ * Because iris_receiver_destroy() involves flushing queued events from the
  * scheduler, users of the GLib main loop may need to pass their application's
  * #GMainContext (%NULL for the default one) as @main_context and %TRUE to
  * @iterate_main_context. This is necessary when you are calling
- * iris_receiver_close() from the main loop thread <emphasis>and</emphasis> any
- * of the following are true:
+ * iris_receiver_destroy() from the main loop thread <emphasis>and</emphasis>
+ * any of the following are true:
  * <itemizedlist>
  * <listitem>@receiver's scheduler is an #IrisGMainScheduler running
  *           in the same main loop</listitem>
@@ -474,9 +470,9 @@ iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
  * has closed and they should stop sending messages and unref the port.
  */
 void
-iris_receiver_close (IrisReceiver *receiver,
-                     GMainContext *main_context,
-                     gboolean      iterate_main_context)
+iris_receiver_destroy (IrisReceiver *receiver,
+                       GMainContext *main_context,
+                       gboolean      iterate_main_context)
 {
 	IrisReceiverPrivate *priv;
 
@@ -484,7 +480,9 @@ iris_receiver_close (IrisReceiver *receiver,
 
 	priv = receiver->priv;
 
-	/* Close off the port to avoid getting more messages */
+	/* Close off the port to avoid getting more messages
+	 * (and release its reference)
+	 */
 	iris_port_set_receiver (priv->port, NULL);
 
 	/* Unqueue any callbacks still queued. */
@@ -502,4 +500,14 @@ iris_receiver_close (IrisReceiver *receiver,
 		if (iterate_main_context)
 			g_main_context_iteration (main_context, FALSE);
 	}
+
+	/* Remove arbiter */
+	if (priv->arbiter != NULL) {
+		g_warn_if_fail (G_OBJECT(priv->arbiter)->ref_count == 1);
+		g_object_unref (priv->arbiter);
+		priv->arbiter = NULL;
+	};
+
+	g_warn_if_fail (G_OBJECT(receiver)->ref_count == 1);
+	g_object_unref (receiver);
 }
