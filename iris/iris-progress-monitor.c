@@ -620,40 +620,42 @@ _iris_progress_monitor_finished (IrisProgressMonitor *progress_monitor)
  * cannot change */
 static void
 watch_chain (IrisProgressMonitor             *progress_monitor,
-             IrisProcess                     *process,
+             IrisProcess                     *added_process,
              IrisProgressMonitorDisplayStyle  display_style)
 {
 	IrisProgressMonitorInterface *iface;
-	IrisProcess                  *head;
+	IrisProcess                  *head,
+	                             *process;
 	IrisProgressWatch            *watch;
 	IrisProgressGroup            *group;
 
 	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
-	g_return_if_fail (IRIS_IS_PROCESS (process));
+	g_return_if_fail (IRIS_IS_PROCESS (added_process));
 
 	iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
 
-	head = process;
+	watch = iface->get_watch (progress_monitor, IRIS_TASK (added_process));
+	group = watch->group;
+
+	head = added_process;
 	while (iris_process_has_predecessor (head))
 		head = iris_process_get_predecessor (head);
 
-	watch = iface->get_watch (progress_monitor, IRIS_TASK (process));
-	group = watch->group;
-
-	if (head != process) {
-		/* If the initially added process wasn't the head of the chain, remove
-		 * it so the processes are shown in order.
-		 * FIXME: currently does not work due to iris_receiver_abort not working
-		 * I think
-		 */
-		/*_iris_progress_watch_disconnect (watch);
-		iface->remove_watch (progress_monitor, watch, TRUE);*/
-	}
-
 	process = head;
 	do {
-		watch_process_internal (progress_monitor, process,
-		                        display_style, group, FALSE);
+		if (process == added_process && process != head) {
+			/* User has been awkward and added the chain using a process that
+			 * wasn't its first one
+			 */
+			iface->reorder_watch_in_group (progress_monitor,
+			                               watch,
+			                               TRUE);
+		} else
+			watch_process_internal (progress_monitor, 
+			                        process,
+			                        display_style,
+			                        group,
+			                        FALSE);
 	} while ((process = iris_process_get_successor (process)) != NULL);
 }
 

@@ -79,13 +79,16 @@ struct _IrisProgressMonitorInterface
 	                                  gint                 millisecs);
 
 	/* Private */
-	void               (*remove_group) (IrisProgressMonitor *progress_monitor,
-	                                    IrisProgressGroup   *group);
-	IrisProgressWatch *(*get_watch)    (IrisProgressMonitor *progress_monitor,
-	                                    IrisTask            *task);
-	void               (*remove_watch) (IrisProgressMonitor *progress_monitor,
-	                                    IrisProgressWatch   *watch,
-	                                    gboolean             temporary);
+	void               (*remove_group)           (IrisProgressMonitor *progress_monitor,
+	                                              IrisProgressGroup   *group);
+	IrisProgressWatch *(*get_watch)              (IrisProgressMonitor *progress_monitor,
+	                                              IrisTask            *task);
+	void               (*remove_watch)           (IrisProgressMonitor *progress_monitor,
+	                                              IrisProgressWatch   *watch,
+	                                              gboolean             temporary);
+	void               (*reorder_watch_in_group) (IrisProgressMonitor *progress_monitor,
+	                                              IrisProgressWatch   *watch,
+	                                              gboolean             at_end);
 
 	void     (*reserved1)            (void);
 	void     (*reserved2)            (void);

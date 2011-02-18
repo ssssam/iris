@@ -80,8 +80,8 @@ trigger_process (GtkButton *trigger,
 		IrisProgressGroup   *group;
 		gint                 chain_middle;
 
-		/* This is very important: watch the middle process to try and trip up
-		 * the progress monitor, which has to make sure the order is preserved
+		/* This is very important: we add the middle process to make sure the
+		 * progress monitor still puts the widgets in the right order.
 		 */
 		chain_middle = floor(chain_size / 2.0);
 		group = g_object_get_data (G_OBJECT (widget), "group");

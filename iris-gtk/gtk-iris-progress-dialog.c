@@ -57,6 +57,9 @@ static void     gtk_iris_progress_dialog_add_watch            (IrisProgressMonit
 static void     gtk_iris_progress_dialog_remove_watch         (IrisProgressMonitor *progress_monitor,
                                                            IrisProgressWatch   *watch,
                                                            gboolean             temporary);
+static void     gtk_iris_progress_dialog_reorder_watch_in_group (IrisProgressMonitor *progress_monitor,
+                                                                 IrisProgressWatch   *watch,
+                                                                 gboolean             at_end);
 
 static void     gtk_iris_progress_dialog_handle_message       (IrisProgressMonitor *progress_monitor,
                                                            IrisProgressWatch   *watch,
@@ -174,9 +177,10 @@ iris_progress_monitor_interface_init (IrisProgressMonitorInterface *interface)
 	interface->set_watch_hide_delay = gtk_iris_progress_dialog_set_watch_hide_delay;
 
 	/* Private */
-	interface->remove_group         = gtk_iris_progress_dialog_remove_group;
-	interface->get_watch            = gtk_iris_progress_dialog_get_watch;
-	interface->remove_watch         = gtk_iris_progress_dialog_remove_watch;
+	interface->remove_group           = gtk_iris_progress_dialog_remove_group;
+	interface->remove_watch           = gtk_iris_progress_dialog_remove_watch;
+	interface->reorder_watch_in_group = gtk_iris_progress_dialog_reorder_watch_in_group;
+	interface->get_watch              = gtk_iris_progress_dialog_get_watch;
 }
 
 /* Prevent dialog from shrinking width-ways when watches are removed */
@@ -482,6 +486,36 @@ gtk_iris_progress_dialog_remove_watch (IrisProgressMonitor *progress_monitor,
 		if (priv->watch_list == NULL)
 			finish_dialog (progress_dialog);
 	}
+}
+
+static void
+gtk_iris_progress_dialog_reorder_watch_in_group (IrisProgressMonitor *progress_monitor,
+                                                 IrisProgressWatch   *watch,
+                                                 gboolean             at_end)
+{
+	GList             *children;
+	gint               n_children,
+	                   new_position;
+	IrisProgressGroup *group;
+
+	g_return_if_fail (watch->group != NULL);
+
+	group = watch->group;
+
+	children = gtk_container_get_children (GTK_CONTAINER (group->watch_box));
+	n_children = g_list_length (children);
+	g_list_free (children);
+
+	g_return_if_fail (n_children > 0);
+
+	if (at_end)
+		new_position = n_children - 1;
+	else
+		new_position = 0;
+
+	gtk_box_reorder_child (GTK_BOX (group->watch_box),
+	                       GTK_WIDGET (watch->toplevel),
+	                       new_position);
 }
 
 static gboolean
