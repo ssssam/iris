@@ -64,7 +64,7 @@ GType      gtk_iris_progress_dialog_get_type  (void) G_GNUC_CONST;
 GtkWidget *gtk_iris_progress_dialog_new       (GtkWindow          *parent);
 
 void       gtk_iris_progress_dialog_set_title (GtkIrisProgressDialog *progress_dialog,
-                                           const gchar        *title_format);
+                                               const gchar        *title_format);
 
 G_END_DECLS
 

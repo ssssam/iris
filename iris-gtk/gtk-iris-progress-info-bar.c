@@ -48,46 +48,46 @@
 
 static void     gtk_iris_progress_info_bar_class_init          (GtkIrisProgressInfoBarClass *progress_info_bar_class);
 static void     gtk_iris_progress_info_bar_init                (GtkIrisProgressInfoBar *progress_info_bar);
-static void     iris_progress_monitor_interface_init       (IrisProgressMonitorInterface *interface);
+static void     iris_progress_monitor_interface_init           (IrisProgressMonitorInterface *interface);
 
 static GObject *gtk_iris_progress_info_bar_constructor         (GType type,
-                                                            guint n_construct_properties,
-                                                            GObjectConstructParam *construct_params);
+                                                                guint n_construct_properties,
+                                                                GObjectConstructParam *construct_params);
 static void     gtk_iris_progress_info_bar_finalize            (GObject *object);
 
-static void     gtk_iris_progress_info_bar_add_group           (IrisProgressMonitor *progress_monitor,
-                                                            IrisProgressGroup   *group);
-static void     gtk_iris_progress_info_bar_remove_group        (IrisProgressMonitor *progress_monitor,
-                                                            IrisProgressGroup   *group);
-static void     gtk_iris_progress_info_bar_add_watch           (IrisProgressMonitor *progress_monitor,
-                                                            IrisProgressWatch   *watch);
-static void     gtk_iris_progress_info_bar_remove_watch        (IrisProgressMonitor *progress_monitor,
-                                                            IrisProgressWatch   *watch,
-                                                            gboolean             temporary);
+static void     gtk_iris_progress_info_bar_add_group              (IrisProgressMonitor *progress_monitor,
+                                                                   IrisProgressGroup   *group);
+static void     gtk_iris_progress_info_bar_remove_group           (IrisProgressMonitor *progress_monitor,
+                                                                   IrisProgressGroup   *group);
+static void     gtk_iris_progress_info_bar_add_watch              (IrisProgressMonitor *progress_monitor,
+                                                                   IrisProgressWatch   *watch);
+static void     gtk_iris_progress_info_bar_remove_watch           (IrisProgressMonitor *progress_monitor,
+                                                                   IrisProgressWatch   *watch,
+                                                                   gboolean             temporary);
 static void     gtk_iris_progress_info_bar_reorder_watch_in_group (IrisProgressMonitor *progress_monitor,
                                                                    IrisProgressWatch   *watch,
                                                                    gboolean             at_end);
 
 static void     gtk_iris_progress_info_bar_handle_message       (IrisProgressMonitor *progress_monitor,
-                                                             IrisProgressWatch   *watch,
-                                                             IrisMessage         *message);
+                                                                 IrisProgressWatch   *watch,
+                                                                 IrisMessage         *message);
 
 static gboolean gtk_iris_progress_info_bar_is_watching_task     (IrisProgressMonitor *progress_monitor,
-                                                             IrisTask            *task);
+                                                                 IrisTask            *task);
 
-static void     format_watch_title                          (GtkWidget           *label,
-                                                             const gchar         *title,
-                                                             gboolean             grouped);
+static void     format_watch_title                              (GtkWidget           *label,
+                                                                 const gchar         *title,
+                                                                 gboolean             grouped);
 
-static void     finish_info_bar                             (GtkIrisProgressInfoBar *progress_info_bar);
+static void     finish_info_bar                                 (GtkIrisProgressInfoBar *progress_info_bar);
 
 static void     gtk_iris_progress_info_bar_set_permanent_mode   (IrisProgressMonitor *progress_monitor,
-                                                             gboolean             enable);
+                                                                 gboolean             enable);
 static void     gtk_iris_progress_info_bar_set_watch_hide_delay (IrisProgressMonitor *progress_monitor,
-                                                             int                  milliseconds);
+                                                                 int                  milliseconds);
 
 IrisProgressWatch *gtk_iris_progress_info_bar_get_watch         (IrisProgressMonitor *progress_monitor,
-                                                             IrisTask            *task);
+                                                                 IrisTask            *task);
 
 G_DEFINE_TYPE_WITH_CODE (GtkIrisProgressInfoBar, gtk_iris_progress_info_bar, GTK_TYPE_INFO_BAR,
                          G_IMPLEMENT_INTERFACE (IRIS_TYPE_PROGRESS_MONITOR,
@@ -174,8 +174,8 @@ iris_progress_monitor_interface_init (IrisProgressMonitorInterface *interface)
 
 static GObject *
 gtk_iris_progress_info_bar_constructor (GType type,
-                                    guint n_construct_properties,
-                                    GObjectConstructParam *construct_params)
+                                        guint n_construct_properties,
+                                        GObjectConstructParam *construct_params)
 {
 	GtkWidget  *content_area;
 
@@ -213,7 +213,7 @@ find_watch_by_task (gconstpointer a,
 
 static void
 gtk_iris_progress_info_bar_add_group (IrisProgressMonitor *progress_monitor,
-                                  IrisProgressGroup   *group) {
+                                      IrisProgressGroup   *group) {
 	GtkIrisProgressInfoBar        *info_bar;
 	GtkIrisProgressInfoBarPrivate *priv;
 	GtkWidget *expander,
@@ -259,7 +259,7 @@ gtk_iris_progress_info_bar_add_group (IrisProgressMonitor *progress_monitor,
 
 static void
 gtk_iris_progress_info_bar_remove_group (IrisProgressMonitor *progress_monitor,
-                                     IrisProgressGroup   *group)
+                                         IrisProgressGroup   *group)
 {
 	g_return_if_fail (GTK_IS_WIDGET (group->toplevel));
 	g_warn_if_fail (G_OBJECT (group->toplevel)->ref_count == 1);
@@ -307,7 +307,7 @@ hide_group (GtkIrisProgressInfoBar *progress_info_bar,
 
 static void
 gtk_iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
-                                  IrisProgressWatch   *watch)
+                                      IrisProgressWatch   *watch)
 {
 	GtkIrisProgressInfoBar        *progress_info_bar;
 	GtkIrisProgressInfoBarPrivate *priv;
@@ -383,8 +383,8 @@ gtk_iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 
 static void
 gtk_iris_progress_info_bar_remove_watch (IrisProgressMonitor *progress_monitor,
-                                     IrisProgressWatch   *watch,
-                                     gboolean             temporary)
+                                         IrisProgressWatch   *watch,
+                                         gboolean             temporary)
 {
 
 	GtkIrisProgressInfoBar        *progress_info_bar;
@@ -453,7 +453,7 @@ gtk_iris_progress_info_bar_reorder_watch_in_group (IrisProgressMonitor *progress
 
 static gboolean
 gtk_iris_progress_info_bar_is_watching_task (IrisProgressMonitor *progress_monitor,
-                                         IrisTask            *task)
+                                             IrisTask            *task)
 {
 	return (gtk_iris_progress_info_bar_get_watch (progress_monitor, task) != NULL);
 }
@@ -580,8 +580,8 @@ handle_title (IrisProgressMonitor *progress_monitor,
 
 static void
 gtk_iris_progress_info_bar_handle_message (IrisProgressMonitor *progress_monitor,
-                                       IrisProgressWatch   *watch,
-                                       IrisMessage         *message)
+                                           IrisProgressWatch   *watch,
+                                           IrisMessage         *message)
 {
 	g_return_if_fail (GTK_IRIS_IS_PROGRESS_INFO_BAR(progress_monitor));
 
@@ -623,7 +623,7 @@ gtk_iris_progress_info_bar_new ()
 
 static void
 gtk_iris_progress_info_bar_set_permanent_mode (IrisProgressMonitor *progress_monitor,
-                                           gboolean             enable)
+                                               gboolean             enable)
 {
 	GtkIrisProgressInfoBar *progress_info_bar;
 
@@ -636,7 +636,7 @@ gtk_iris_progress_info_bar_set_permanent_mode (IrisProgressMonitor *progress_mon
 
 static void
 gtk_iris_progress_info_bar_set_watch_hide_delay (IrisProgressMonitor *progress_monitor,
-                                             gint                 milliseconds)
+                                                 gint                 milliseconds)
 {
 	GtkIrisProgressInfoBar *progress_info_bar;
 
@@ -650,11 +650,11 @@ gtk_iris_progress_info_bar_set_watch_hide_delay (IrisProgressMonitor *progress_m
 /* Private interface member */
 IrisProgressWatch *
 gtk_iris_progress_info_bar_get_watch (IrisProgressMonitor *progress_monitor,
-                                  IrisTask            *task)
+                                      IrisTask            *task)
 {
 	GtkIrisProgressInfoBar        *progress_info_bar;
 	GtkIrisProgressInfoBarPrivate *priv;
-	GList                      *node;
+	GList                         *node;
 
 	g_return_val_if_fail (GTK_IRIS_IS_PROGRESS_INFO_BAR (progress_monitor), NULL);
 	g_return_val_if_fail (IRIS_IS_TASK (task), NULL);

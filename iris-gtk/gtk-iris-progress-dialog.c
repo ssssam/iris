@@ -41,47 +41,47 @@
 
 static void     gtk_iris_progress_dialog_class_init           (GtkIrisProgressDialogClass  *progress_dialog_class);
 static void     gtk_iris_progress_dialog_init                 (GtkIrisProgressDialog *progress_dialog);
-static void     iris_progress_monitor_interface_init      (IrisProgressMonitorInterface *interface);
+static void     iris_progress_monitor_interface_init          (IrisProgressMonitorInterface *interface);
 
 static GObject *gtk_iris_progress_dialog_constructor          (GType type,
-                                                           guint n_construct_properties,
-                                                           GObjectConstructParam *construct_params);
+                                                               guint n_construct_properties,
+                                                               GObjectConstructParam *construct_params);
 static void     gtk_iris_progress_dialog_finalize             (GObject *object);
 
-static void     gtk_iris_progress_dialog_add_group            (IrisProgressMonitor *progress_monitor,
-                                                           IrisProgressGroup   *group);
-static void     gtk_iris_progress_dialog_remove_group         (IrisProgressMonitor *progress_monitor,
-                                                           IrisProgressGroup   *group);
-static void     gtk_iris_progress_dialog_add_watch            (IrisProgressMonitor *progress_monitor,
-                                                           IrisProgressWatch   *watch);
-static void     gtk_iris_progress_dialog_remove_watch         (IrisProgressMonitor *progress_monitor,
-                                                           IrisProgressWatch   *watch,
-                                                           gboolean             temporary);
+static void     gtk_iris_progress_dialog_add_group              (IrisProgressMonitor *progress_monitor,
+                                                                 IrisProgressGroup   *group);
+static void     gtk_iris_progress_dialog_remove_group           (IrisProgressMonitor *progress_monitor,
+                                                                 IrisProgressGroup   *group);
+static void     gtk_iris_progress_dialog_add_watch              (IrisProgressMonitor *progress_monitor,
+                                                                 IrisProgressWatch   *watch);
+static void     gtk_iris_progress_dialog_remove_watch           (IrisProgressMonitor *progress_monitor,
+                                                                 IrisProgressWatch   *watch,
+                                                                 gboolean             temporary);
 static void     gtk_iris_progress_dialog_reorder_watch_in_group (IrisProgressMonitor *progress_monitor,
                                                                  IrisProgressWatch   *watch,
                                                                  gboolean             at_end);
 
 static void     gtk_iris_progress_dialog_handle_message       (IrisProgressMonitor *progress_monitor,
-                                                           IrisProgressWatch   *watch,
-                                                           IrisMessage         *message);
+                                                               IrisProgressWatch   *watch,
+                                                               IrisMessage         *message);
 
 static gboolean gtk_iris_progress_dialog_is_watching_task     (IrisProgressMonitor *progress_monitor,
-                                                           IrisTask            *task);
+                                                               IrisTask            *task);
 
-static void     format_watch_title                        (GtkWidget           *label,
-                                                           const gchar         *title,
-                                                           gboolean             grouped);
-static void     update_dialog_title                       (GtkIrisProgressDialog  *progress_dialog,
-                                                           gchar               *progress_text_precalculated);
-static void     finish_dialog                             (GtkIrisProgressDialog  *progress_dialog);
+static void     format_watch_title                            (GtkWidget           *label,
+                                                               const gchar         *title,
+                                                               gboolean             grouped);
+static void     update_dialog_title                           (GtkIrisProgressDialog  *progress_dialog,
+                                                               gchar               *progress_text_precalculated);
+static void     finish_dialog                                 (GtkIrisProgressDialog  *progress_dialog);
 
 static void     gtk_iris_progress_dialog_set_permanent_mode   (IrisProgressMonitor *progress_monitor,
-                                                           gboolean             enable);
+                                                               gboolean             enable);
 static void     gtk_iris_progress_dialog_set_watch_hide_delay (IrisProgressMonitor *progress_monitor,
-                                                           gint                 millisecpnds);
+                                                               gint                 millisecpnds);
 
 IrisProgressWatch *gtk_iris_progress_dialog_get_watch         (IrisProgressMonitor *progress_monitor,
-                                                           IrisTask            *task);
+                                                               IrisTask            *task);
 
 G_DEFINE_TYPE_WITH_CODE (GtkIrisProgressDialog, gtk_iris_progress_dialog, GTK_TYPE_DIALOG,
                          G_IMPLEMENT_INTERFACE (IRIS_TYPE_PROGRESS_MONITOR,
@@ -206,8 +206,8 @@ dialog_size_request_cb (GtkWidget *widget,
 
 static GObject *
 gtk_iris_progress_dialog_constructor (GType type,
-                                  guint n_construct_properties,
-                                  GObjectConstructParam *construct_params)
+                                      guint n_construct_properties,
+                                      GObjectConstructParam *construct_params)
 {
 	GObject *object = ((GObjectClass *) gtk_iris_progress_dialog_parent_class)->constructor
 	                    (type, n_construct_properties, construct_params);
@@ -232,7 +232,7 @@ gtk_iris_progress_dialog_constructor (GType type,
 
 static void
 gtk_iris_progress_dialog_add_group (IrisProgressMonitor *progress_monitor,
-                                IrisProgressGroup   *group) {
+                                    IrisProgressGroup   *group) {
 	GtkWidget *toplevel_vbox,
 	          *watch_vbox,
 	          *hbox,
@@ -273,7 +273,7 @@ gtk_iris_progress_dialog_add_group (IrisProgressMonitor *progress_monitor,
 /* Called on group destruction */
 static void
 gtk_iris_progress_dialog_remove_group (IrisProgressMonitor *progress_monitor,
-                                   IrisProgressGroup   *group)
+                                       IrisProgressGroup   *group)
 {
 	g_return_if_fail (GTK_IS_WIDGET (group->toplevel));
 	g_warn_if_fail (G_OBJECT (group->toplevel)->ref_count == 1);
@@ -333,7 +333,7 @@ find_watch_by_task (gconstpointer a,
 
 static void
 gtk_iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
-                                IrisProgressWatch   *watch)
+                                    IrisProgressWatch   *watch)
 {
 	GtkIrisProgressDialog        *progress_dialog;
 	GtkIrisProgressDialogPrivate *priv;
@@ -438,8 +438,8 @@ gtk_iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
  */
 static void
 gtk_iris_progress_dialog_remove_watch (IrisProgressMonitor *progress_monitor,
-                                   IrisProgressWatch   *watch,
-                                   gboolean             temporary)
+                                       IrisProgressWatch   *watch,
+                                       gboolean             temporary)
 {
 	GtkIrisProgressDialog        *progress_dialog;
 	GtkIrisProgressDialogPrivate *priv;
@@ -520,7 +520,7 @@ gtk_iris_progress_dialog_reorder_watch_in_group (IrisProgressMonitor *progress_m
 
 static gboolean
 gtk_iris_progress_dialog_is_watching_task (IrisProgressMonitor *progress_monitor,
-                                       IrisTask            *task)
+                                           IrisTask            *task)
 {
 	return (gtk_iris_progress_dialog_get_watch (progress_monitor, task) != NULL);
 }
@@ -745,8 +745,8 @@ handle_title (IrisProgressMonitor *progress_monitor,
 
 static void
 gtk_iris_progress_dialog_handle_message (IrisProgressMonitor *progress_monitor,
-                                     IrisProgressWatch   *watch,
-                                     IrisMessage         *message)
+                                         IrisProgressWatch   *watch,
+                                         IrisMessage         *message)
 {
 	g_return_if_fail (GTK_IRIS_IS_PROGRESS_DIALOG (progress_monitor));
 
@@ -825,7 +825,7 @@ gtk_iris_progress_dialog_new (GtkWindow   *parent)
  **/
 void
 gtk_iris_progress_dialog_set_title (GtkIrisProgressDialog *progress_dialog,
-                                const gchar        *title_format)
+                                    const gchar        *title_format)
 {
 	GtkIrisProgressDialogPrivate *priv;
 
@@ -862,7 +862,7 @@ gtk_iris_progress_dialog_set_title (GtkIrisProgressDialog *progress_dialog,
 
 void
 gtk_iris_progress_dialog_set_permanent_mode (IrisProgressMonitor *progress_monitor,
-                                         gboolean             enable)
+                                             gboolean             enable)
 {
 	GtkIrisProgressDialog *progress_dialog;
 
@@ -875,7 +875,7 @@ gtk_iris_progress_dialog_set_permanent_mode (IrisProgressMonitor *progress_monit
 
 void
 gtk_iris_progress_dialog_set_watch_hide_delay (IrisProgressMonitor *progress_monitor,
-                                           gint                 milliseconds)
+                                               gint                 milliseconds)
 {
 	GtkIrisProgressDialog *progress_dialog;
 
@@ -889,11 +889,11 @@ gtk_iris_progress_dialog_set_watch_hide_delay (IrisProgressMonitor *progress_mon
 /* Private interface member */
 IrisProgressWatch *
 gtk_iris_progress_dialog_get_watch (IrisProgressMonitor *progress_monitor,
-                                IrisTask            *task)
+                                    IrisTask            *task)
 {
 	GtkIrisProgressDialog        *progress_dialog;
 	GtkIrisProgressDialogPrivate *priv;
-	GList                     *node;
+	GList                         *node;
 
 	g_return_val_if_fail (GTK_IRIS_IS_PROGRESS_DIALOG (progress_monitor), NULL);
 	g_return_val_if_fail (IRIS_IS_TASK (task), NULL);
