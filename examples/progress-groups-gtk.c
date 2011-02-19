@@ -197,7 +197,7 @@ create_progress_monitors (void)
 	/* The dialog */
 	dialog = gtk_iris_progress_dialog_new (GTK_WINDOW (demo_window));
 	gtk_iris_progress_dialog_set_title (GTK_IRIS_PROGRESS_DIALOG (dialog),
-	                                "%s - Sheep counter");
+	                                   "%s");
 	iris_progress_monitor_set_permanent_mode (IRIS_PROGRESS_MONITOR (dialog),
 	                                          TRUE);
 	monitor_list = g_list_prepend (monitor_list, dialog);

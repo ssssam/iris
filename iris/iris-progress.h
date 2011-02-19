@@ -38,6 +38,10 @@
  * recommended you don't send status messages more than once every 250ms or so;
  * there's no point.
  *
+ * No messages should be sent after IRIS_PROGRESS_MESSAGE_CANCELLED or
+ * IRIS_PROGRESS_MESSAGE_COMPLETE.
+ *
+ * FIXME: is this still TRUE?
  * The same message could be sent more than once; any listeners must be able to
  * handle for example @IRIS_PROGRESS_MESSAGE_COMPLETE being received twice.
  **/

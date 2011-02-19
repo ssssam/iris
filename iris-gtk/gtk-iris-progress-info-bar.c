@@ -68,6 +68,8 @@ static void     gtk_iris_progress_info_bar_reorder_watch_in_group (IrisProgressM
                                                                    IrisProgressWatch   *watch,
                                                                    gboolean             at_end);
 
+static void     handle_update                                   (IrisProgressMonitor *progress_monitor,
+                                                                 IrisProgressWatch   *watch);
 static void     gtk_iris_progress_info_bar_handle_message       (IrisProgressMonitor *progress_monitor,
                                                                  IrisProgressWatch   *watch,
                                                                  IrisMessage         *message);
@@ -177,7 +179,8 @@ gtk_iris_progress_info_bar_constructor (GType type,
                                         guint n_construct_properties,
                                         GObjectConstructParam *construct_params)
 {
-	GtkWidget  *content_area;
+	GtkWidget  *content_area,
+	           *action_area;
 
 	GObject    *object = ((GObjectClass *) gtk_iris_progress_info_bar_parent_class)->constructor
 	                      (type, n_construct_properties, construct_params);
@@ -186,11 +189,20 @@ gtk_iris_progress_info_bar_constructor (GType type,
 	GtkIrisProgressInfoBar *progress_info_bar = GTK_IRIS_PROGRESS_INFO_BAR (info_bar);
 	GtkIrisProgressInfoBarPrivate *priv = progress_info_bar->priv;
 
+	content_area = gtk_info_bar_get_content_area (info_bar);
 	priv->box = gtk_vbox_new (FALSE, GROUP_V_SPACING);
+	gtk_container_add (GTK_CONTAINER (content_area), priv->box);
 	gtk_widget_show (priv->box);
 
-	content_area = gtk_info_bar_get_content_area (info_bar);
-	gtk_container_add (GTK_CONTAINER (content_area), priv->box);
+	/* Action area hack - we add our own vbox to hold the cancel buttons. We
+	 * cannot use the real action area because it's a GtkButtonBox so the
+	 * spacing has to be uniform. This doesn't work because the buttons need to
+	 * line up with the group progress widgets, which can be any size.
+	 */
+	action_area = gtk_info_bar_get_action_area (info_bar);
+	priv->action_box = gtk_vbox_new (FALSE, GROUP_V_SPACING);
+	gtk_box_pack_end (GTK_BOX (action_area), priv->action_box, TRUE, TRUE, 0);
+	gtk_widget_show (priv->action_box);
 
 	/* FIXME: GTK_MESSAGE_PROGRESS ?? */
 	gtk_info_bar_set_message_type (GTK_INFO_BAR (info_bar),
@@ -212,14 +224,30 @@ find_watch_by_task (gconstpointer a,
 }
 
 static void
+group_cancel_clicked (GtkButton *cancel_button,
+                      gpointer   user_data) {
+	IrisProgressMonitor *progress_monitor;
+	IrisProgressGroup   *group;
+
+	gtk_widget_set_sensitive (GTK_WIDGET (cancel_button), FALSE);
+
+	progress_monitor = IRIS_PROGRESS_MONITOR (user_data);
+	group = g_object_get_data (G_OBJECT (cancel_button), "group");
+
+	_iris_progress_monitor_cancel_group (progress_monitor, group);
+}
+
+static void
 gtk_iris_progress_info_bar_add_group (IrisProgressMonitor *progress_monitor,
                                       IrisProgressGroup   *group) {
 	GtkIrisProgressInfoBar        *info_bar;
 	GtkIrisProgressInfoBarPrivate *priv;
-	GtkWidget *expander,
-	          *hbox, *vbox,
-	          *title_label, *progress_bar;
-	gchar     *title;
+	GtkWidget    *expander,
+	             *hbox, *vbox,
+	             *title_label,
+	             *progress_bar,
+	             *cancel_button, *cancel_alignment;
+	gchar        *title;
 
 	g_return_if_fail (GTK_IRIS_IS_PROGRESS_INFO_BAR (progress_monitor));
 
@@ -250,11 +278,35 @@ gtk_iris_progress_info_bar_add_group (IrisProgressMonitor *progress_monitor,
 	gtk_expander_set_label_widget (GTK_EXPANDER (expander), hbox);
 	gtk_container_add (GTK_CONTAINER (expander), vbox);
 
+	cancel_button = gtk_button_new_from_stock (GTK_STOCK_CANCEL);
+	cancel_alignment = gtk_alignment_new (0.5, 0.0, 0.0, 0.0);
+	gtk_container_add (GTK_CONTAINER (cancel_alignment), cancel_button);
+
+	g_object_set_data (G_OBJECT (cancel_button), "group", group);
+	g_signal_connect (G_OBJECT (cancel_button),
+	                  "clicked",
+	                  G_CALLBACK (group_cancel_clicked),
+	                  progress_monitor);
+
+	/* Give cancel button a matching size to its progress widgets */
+	group->user_data2 = gtk_size_group_new (GTK_SIZE_GROUP_VERTICAL);
+	gtk_size_group_add_widget (GTK_SIZE_GROUP (group->user_data2), expander);
+	gtk_size_group_add_widget (GTK_SIZE_GROUP (group->user_data2), cancel_alignment);
+
+	/* Make the progress bar the right height - ungrouped watches have them the
+	 * same height as the cancel button; ours need to be the same
+	 */
+	group->user_data3 = gtk_size_group_new (GTK_SIZE_GROUP_VERTICAL);
+	gtk_size_group_add_widget (GTK_SIZE_GROUP (group->user_data3), progress_bar);
+	gtk_size_group_add_widget (GTK_SIZE_GROUP (group->user_data3), cancel_button);
+
 	g_object_ref_sink (G_OBJECT (expander));
+	g_object_ref_sink (G_OBJECT (cancel_alignment));
 
 	group->toplevel = expander;
 	group->watch_box = vbox;
 	group->progress_bar = progress_bar;
+	group->cancel_widget = cancel_alignment;
 }
 
 static void
@@ -264,14 +316,17 @@ gtk_iris_progress_info_bar_remove_group (IrisProgressMonitor *progress_monitor,
 	g_return_if_fail (GTK_IS_WIDGET (group->toplevel));
 	g_warn_if_fail (G_OBJECT (group->toplevel)->ref_count == 1);
 
-	g_object_unref (group->user_data1);
-
 	gtk_widget_destroy (group->toplevel);
+	gtk_widget_destroy (group->cancel_widget);
+
+	g_object_unref (group->user_data1);
+	g_object_unref (group->user_data2);
+	g_object_unref (group->user_data3);
 }
 
 static void
 show_group (GtkIrisProgressInfoBar *progress_info_bar,
-            IrisProgressGroup   *group)
+            IrisProgressGroup      *group)
 {
 	GtkIrisProgressInfoBarPrivate *priv;
 
@@ -283,12 +338,15 @@ show_group (GtkIrisProgressInfoBar *progress_info_bar,
 	gtk_box_pack_start (GTK_BOX (priv->box), group->toplevel, FALSE, TRUE, 0);
 	gtk_widget_show_all (GTK_WIDGET (group->toplevel));
 
+	gtk_box_pack_start (GTK_BOX (priv->action_box), group->cancel_widget, FALSE, TRUE, 0);
+	gtk_widget_show_all (GTK_WIDGET (group->cancel_widget));
+
 	group->visible = TRUE;
 }
 
 static void
 hide_group (GtkIrisProgressInfoBar *progress_info_bar,
-            IrisProgressGroup   *group)
+            IrisProgressGroup      *group)
 {
 	GtkIrisProgressInfoBarPrivate *priv;
 
@@ -298,12 +356,28 @@ hide_group (GtkIrisProgressInfoBar *progress_info_bar,
 	priv = progress_info_bar->priv;
 
 	gtk_container_remove (GTK_CONTAINER (priv->box), group->toplevel);
+	gtk_container_remove (GTK_CONTAINER (priv->action_box), group->cancel_widget);
 
 	_iris_progress_group_reset (group);
 
 	group->visible = FALSE;
 }
 
+
+
+static void
+watch_cancel_clicked (GtkButton *cancel_button,
+                      gpointer   user_data) {
+	IrisProgressMonitor *progress_monitor;
+	IrisProgressWatch   *watch;
+
+	gtk_widget_set_sensitive (GTK_WIDGET (cancel_button), FALSE);
+
+	progress_monitor = IRIS_PROGRESS_MONITOR (user_data);
+	watch = g_object_get_data (G_OBJECT (cancel_button), "watch");
+
+	_iris_progress_monitor_cancel_watch (progress_monitor, watch);
+}
 
 static void
 gtk_iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
@@ -312,9 +386,11 @@ gtk_iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 	GtkIrisProgressInfoBar        *progress_info_bar;
 	GtkIrisProgressInfoBarPrivate *priv;
 
-	GtkWidget *vbox, *hbox, *hbox_indent,
-	          *title_label,
-	          *progress_bar;
+	GtkWidget    *vbox, *hbox, *hbox_indent,
+	             *title_label,
+	             *progress_bar,
+	             *cancel_button, *cancel_alignment;
+	GtkSizeGroup *size_group;
 
 	g_return_if_fail (GTK_IRIS_IS_PROGRESS_INFO_BAR (progress_monitor));
 
@@ -350,6 +426,30 @@ gtk_iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 
 		gtk_box_pack_start (GTK_BOX (hbox_indent), hbox, FALSE, TRUE, EXPANDER_INDENT);
 		gtk_box_pack_start (GTK_BOX (priv->box), hbox_indent, FALSE, TRUE, 0);
+
+		cancel_button = gtk_button_new_from_stock (GTK_STOCK_CANCEL);
+		cancel_alignment = gtk_alignment_new (0.5, 0.0, 0.0, 0.0);
+		gtk_container_add (GTK_CONTAINER (cancel_alignment), cancel_button);
+
+		g_object_set_data (G_OBJECT (cancel_button), "watch", watch);
+		g_signal_connect (G_OBJECT (cancel_button),
+		                  "clicked",
+		                  G_CALLBACK (watch_cancel_clicked),
+		                  progress_monitor);
+
+		/* Maintain relationship between our cancel button in the action widgets
+		 * hbox and the actual progress monitor widgets
+		 */
+		size_group = gtk_size_group_new (GTK_SIZE_GROUP_VERTICAL);
+		gtk_size_group_add_widget (GTK_SIZE_GROUP (size_group), hbox_indent);
+		gtk_size_group_add_widget (GTK_SIZE_GROUP (size_group),
+		                           cancel_alignment);
+
+		gtk_box_pack_start (GTK_BOX (priv->action_box), cancel_alignment, TRUE, TRUE, 0);
+		gtk_widget_show_all (cancel_alignment);
+
+		watch->cancel_widget = cancel_alignment;
+		watch->user_data2 = size_group;
 	}
 	else {
 		gtk_box_pack_start (GTK_BOX (hbox), progress_bar, TRUE, TRUE, 0);
@@ -367,6 +467,11 @@ gtk_iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 		if (!watch->group->visible)
 			show_group (progress_info_bar, watch->group);
 
+		cancel_button = gtk_bin_get_child (GTK_BIN (watch->group->cancel_widget));
+		gtk_widget_set_sensitive (cancel_button, TRUE);
+
+		watch->cancel_widget = NULL;
+		watch->user_data2 = NULL;
 	}
 
 	gtk_widget_show_all (hbox_indent);
@@ -374,7 +479,8 @@ gtk_iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 	watch->toplevel = hbox_indent;
 	watch->title_label = title_label;
 	watch->progress_bar = progress_bar;
-	watch->cancel_button = NULL;
+
+	handle_update (progress_monitor, watch);
 
 	if (priv->permanent_mode == TRUE)
 		/* Ensure we are visible; quicker just to call than to check */
@@ -386,7 +492,6 @@ gtk_iris_progress_info_bar_remove_watch (IrisProgressMonitor *progress_monitor,
                                          IrisProgressWatch   *watch,
                                          gboolean             temporary)
 {
-
 	GtkIrisProgressInfoBar        *progress_info_bar;
 	GtkIrisProgressInfoBarPrivate *priv;
 
@@ -407,6 +512,12 @@ gtk_iris_progress_info_bar_remove_watch (IrisProgressMonitor *progress_monitor,
 			else if (!watch->cancelled && !temporary)
 				watch->group->completed_watches ++;
 		}
+	} else {
+		/* Remove cancel button from action area */
+		gtk_container_remove (GTK_CONTAINER (priv->action_box),
+		                      watch->cancel_widget);
+
+		g_object_unref (GTK_SIZE_GROUP (watch->user_data2));
 	}
 
 	gtk_widget_destroy (GTK_WIDGET (watch->toplevel));
@@ -520,15 +631,25 @@ handle_stopped (IrisProgressMonitor *progress_monitor,
                 IrisProgressWatch   *watch)
 {
 	GtkIrisProgressInfoBarPrivate *priv;
+	GtkWidget                     *cancel_button;
 
 	g_return_if_fail (GTK_IRIS_IS_PROGRESS_INFO_BAR (progress_monitor));
 
 	priv = GTK_IRIS_PROGRESS_INFO_BAR (progress_monitor)->priv;
 
+	if (watch->group == NULL) {
+		cancel_button = gtk_bin_get_child (GTK_BIN (watch->cancel_widget));
+		gtk_widget_set_sensitive (cancel_button, FALSE);
+	} else
+	if (_iris_progress_group_is_stopped (watch->group)) {
+		cancel_button = gtk_bin_get_child (GTK_BIN (watch->group->cancel_widget));
+		gtk_widget_set_sensitive (cancel_button, FALSE);
+	}
+
 	if (priv->watch_hide_delay == 0)
 		watch_delayed_remove (watch);
-	else if (priv->watch_hide_delay == -1);
-		/* Never hide watch; for debugging purposes */
+	else
+	if (priv->watch_hide_delay == -1);
 	else {
 		watch->finish_timeout_id = g_timeout_add (priv->watch_hide_delay,
 		                                          watch_delayed_remove,

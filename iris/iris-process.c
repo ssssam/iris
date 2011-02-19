@@ -825,7 +825,6 @@ handle_cancel (IrisProcess *process,
                IrisMessage *message)
 {
 	IrisProcessPrivate *priv;
-	IrisMessage        *progress_message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 
@@ -847,13 +846,9 @@ handle_cancel (IrisProcess *process,
 			iris_process_cancel (priv->source);
 	}
 
-	/* Notify watchers; even if one triggered the cancel it will be waiting for
-	 * a message before it updates the UI.
+	/* We post IRIS_PROGRESS_MESSAGE_CANCELLED from the work function to make
+	 * sure it's our last message.
 	 */
-	if (priv->watch_port_list != NULL) {
-		progress_message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
-		post_progress_message (process, progress_message);
-	}
 }
 
 static void
@@ -1096,8 +1091,8 @@ iris_process_execute_real (IrisTask *task)
 	gboolean  cancelled;
 	IrisProcess        *process;
 	IrisProcessPrivate *priv;
-	IrisMessage        *message;
 	IrisScheduler      *work_scheduler;
+	IrisMessage        *message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (task));
 
@@ -1174,7 +1169,6 @@ iris_process_execute_real (IrisTask *task)
 		if (cancelled) {
 			message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
 			post_progress_message (process, message);
-			iris_message_unref (message);
 		}
 	}
 

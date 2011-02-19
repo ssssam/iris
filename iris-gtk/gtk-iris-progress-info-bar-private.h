@@ -36,7 +36,8 @@ struct _GtkIrisProgressInfoBarPrivate
 
 	GList *watch_list;
 
-	GtkWidget    *box;
+	GtkWidget    *box,
+	             *action_box;
 	GtkSizeGroup *title_group;
 
 	gint       watch_hide_delay;

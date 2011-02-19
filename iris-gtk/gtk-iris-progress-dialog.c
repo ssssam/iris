@@ -61,6 +61,8 @@ static void     gtk_iris_progress_dialog_reorder_watch_in_group (IrisProgressMon
                                                                  IrisProgressWatch   *watch,
                                                                  gboolean             at_end);
 
+static void     handle_update                                 (IrisProgressMonitor *progress_monitor,
+                                                               IrisProgressWatch   *watch);
 static void     gtk_iris_progress_dialog_handle_message       (IrisProgressMonitor *progress_monitor,
                                                                IrisProgressWatch   *watch,
                                                                IrisMessage         *message);
@@ -230,41 +232,76 @@ gtk_iris_progress_dialog_constructor (GType type,
 	return object;
 }
 
+
+static GtkWidget *
+new_cancel_button () {
+	GtkWidget *button,
+	          *image;
+
+	image = gtk_image_new_from_stock (GTK_STOCK_CANCEL,
+	                                  GTK_ICON_SIZE_BUTTON);
+	button = gtk_button_new();
+	gtk_container_add (GTK_CONTAINER (button), image);
+
+	return button;
+}
+
+static void
+group_cancel_clicked (GtkButton *cancel_button,
+                      gpointer   user_data) {
+	IrisProgressMonitor *progress_monitor;
+	IrisProgressGroup   *group;
+
+	progress_monitor = IRIS_PROGRESS_MONITOR (user_data);
+	group = g_object_get_data (G_OBJECT (cancel_button), "group");
+
+	gtk_widget_set_sensitive (GTK_WIDGET (cancel_button), FALSE);
+
+	_iris_progress_monitor_cancel_group (progress_monitor, group);
+}
+
 static void
 gtk_iris_progress_dialog_add_group (IrisProgressMonitor *progress_monitor,
                                     IrisProgressGroup   *group) {
-	GtkWidget *toplevel_vbox,
+	GtkWidget *toplevel_hbox, *toplevel_vbox,
 	          *watch_vbox,
-	          *hbox,
-	          *label;
+	          *label,
+	          *cancel_button, *cancel_alignment;
 	gchar     *title;
 
 	/* Construction of group UI */
+	toplevel_hbox = gtk_hbox_new (FALSE, WATCH_H_SPACING);
 	toplevel_vbox = gtk_vbox_new (FALSE, WATCH_V_SPACING);
-
-	hbox = gtk_hbox_new (FALSE, 0);
 
 	title = g_strdup_printf ("<b>%s</b>", group->title);
 	label = gtk_label_new ("");
 	gtk_label_set_markup (GTK_LABEL (label), title);
 	gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
 
-	/* FIXME: hide 'cancel' text, I think the icon on its own will do */
-	//button = gtk_button_new_from_stock (GTK_STOCK_CANCEL);
+	cancel_button = new_cancel_button (progress_monitor, group);
+	cancel_alignment = gtk_alignment_new (0.5, 0.0, 0.0, 0.0);
+	gtk_container_add (GTK_CONTAINER (cancel_alignment), cancel_button);
 
-	gtk_box_pack_start (GTK_BOX (hbox), label, TRUE, TRUE, 0);
-	//gtk_box_pack_start (GTK_BOX (hbox), button, FALSE, TRUE, 0);
+	g_object_set_data (G_OBJECT (cancel_button), "group", group);
+	g_signal_connect (G_OBJECT (cancel_button),
+	                  "clicked",
+	                  G_CALLBACK (group_cancel_clicked),
+	                  progress_monitor);
 
 	watch_vbox = gtk_vbox_new (TRUE, WATCH_V_SPACING);
 
-	gtk_box_pack_start (GTK_BOX (toplevel_vbox), hbox, FALSE, TRUE, 0);
+	gtk_box_pack_start (GTK_BOX (toplevel_vbox), label, FALSE, TRUE, 0);
 	gtk_box_pack_start (GTK_BOX (toplevel_vbox), watch_vbox, TRUE, TRUE, 0);
 
-	g_object_ref_sink (G_OBJECT (toplevel_vbox));
+	gtk_box_pack_start (GTK_BOX (toplevel_hbox), toplevel_vbox, TRUE, TRUE, 0);
+	gtk_box_pack_start (GTK_BOX (toplevel_hbox), cancel_alignment, FALSE, FALSE, 0);
 
-	group->toplevel = toplevel_vbox;
+	g_object_ref_sink (G_OBJECT (toplevel_hbox));
+
+	group->toplevel = toplevel_hbox;
 	group->watch_box = watch_vbox;
 	group->progress_bar = NULL;
+	group->cancel_widget = cancel_button;
 
 	/* Used to align the watch title labels */
 	group->user_data1 = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
@@ -279,8 +316,7 @@ gtk_iris_progress_dialog_remove_group (IrisProgressMonitor *progress_monitor,
 	g_warn_if_fail (G_OBJECT (group->toplevel)->ref_count == 1);
 
 	gtk_widget_destroy (group->toplevel);
-
-	g_object_unref (GTK_SIZE_GROUP (group->user_data1));
+	g_object_unref (group->user_data1);
 }
 
 static void
@@ -332,6 +368,20 @@ find_watch_by_task (gconstpointer a,
 }
 
 static void
+watch_cancel_clicked (GtkButton *cancel_button,
+                      gpointer   user_data) {
+	IrisProgressMonitor *progress_monitor;
+	IrisProgressWatch   *watch;
+
+	progress_monitor = IRIS_PROGRESS_MONITOR (user_data);
+	watch = g_object_get_data (G_OBJECT (cancel_button), "watch");
+
+	gtk_widget_set_sensitive (GTK_WIDGET (cancel_button), FALSE);
+
+	_iris_progress_monitor_cancel_watch (progress_monitor, watch);
+}
+
+static void
 gtk_iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
                                     IrisProgressWatch   *watch)
 {
@@ -339,9 +389,11 @@ gtk_iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 	GtkIrisProgressDialogPrivate *priv;
 
 	GtkWidget *vbox, *vbox2,
-	          *hbox, *hbox2,
+	          *hbox,
+	          *indent,
 	          *title_label,
-	          *progress_bar;
+	          *progress_bar,
+	          *cancel_button;
 
 	progress_dialog = GTK_IRIS_PROGRESS_DIALOG (progress_monitor);
 	priv = progress_dialog->priv;
@@ -381,10 +433,23 @@ gtk_iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 		/* Construction of stand-alone watch UI */
 		vbox = gtk_vbox_new (FALSE, WATCH_H_SPACING);
 
-		hbox = gtk_hbox_new(FALSE, 0);
 		vbox2 = gtk_vbox_new(FALSE, 0);
+		hbox = gtk_hbox_new (FALSE, WATCH_H_SPACING);
 
-		gtk_box_pack_start (GTK_BOX(hbox), progress_bar, TRUE, TRUE, WATCH_INDENT);
+		indent = gtk_label_new ("");
+		gtk_widget_set_size_request (indent, WATCH_INDENT, 0);
+
+		cancel_button = new_cancel_button ();
+
+		g_object_set_data (G_OBJECT (cancel_button), "watch", watch);
+		g_signal_connect (G_OBJECT (cancel_button),
+		                  "clicked",
+		                  G_CALLBACK (watch_cancel_clicked),
+		                  progress_monitor);
+
+		gtk_box_pack_start (GTK_BOX(hbox), indent, FALSE, FALSE, 0);
+		gtk_box_pack_start (GTK_BOX(hbox), progress_bar, TRUE, TRUE, 0);
+		gtk_box_pack_start (GTK_BOX(hbox), cancel_button, FALSE, FALSE, 0);
 
 		gtk_box_pack_start (GTK_BOX(vbox), title_label, FALSE, FALSE, WATCH_V_SPACING);
 		gtk_box_pack_start (GTK_BOX(vbox), hbox, FALSE, FALSE, WATCH_V_SPACING);
@@ -392,39 +457,51 @@ gtk_iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 		gtk_box_pack_start (GTK_BOX (priv->box), vbox, FALSE, TRUE, 0);
 
 		watch->toplevel = vbox;
-		watch->cancel_button = NULL;
+		watch->cancel_widget = cancel_button;
 	}
 	else {
 		gtk_size_group_add_widget (GTK_SIZE_GROUP (watch->group->user_data1),
 		                           title_label);
 
 		/* Construction of grouped watch UI */
-		hbox = gtk_hbox_new (FALSE, 0);
+		hbox = gtk_hbox_new (FALSE, WATCH_H_SPACING);
 
-		/* Second hbox is just to acheive the indent */
-		hbox2 = gtk_hbox_new (FALSE, WATCH_H_SPACING);
-		gtk_box_pack_start (GTK_BOX (hbox2), title_label, FALSE, TRUE, 0);
-		gtk_box_pack_start (GTK_BOX (hbox2), progress_bar, TRUE, TRUE, 0);
-		gtk_box_pack_start (GTK_BOX (hbox), hbox2, TRUE, TRUE, WATCH_INDENT);
+		indent = gtk_label_new ("");
+		gtk_widget_set_size_request (indent, WATCH_INDENT, 0);
+
+		gtk_box_pack_start (GTK_BOX (hbox), indent, FALSE, FALSE, 0);
+		gtk_box_pack_start (GTK_BOX (hbox), title_label, FALSE, TRUE, 0);
+		gtk_box_pack_start (GTK_BOX (hbox), progress_bar, TRUE, TRUE, 0);
 
 		vbox = watch->group->watch_box;
 		gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, TRUE, WATCH_V_SPACING);
 
+		/* Ensure visible and non-cancelled */
 		if (!watch->group->visible)
 			show_group (progress_dialog, watch->group);
 
+		gtk_widget_set_sensitive (watch->group->cancel_widget, TRUE);
+
 		watch->toplevel = hbox;
-		watch->cancel_button = NULL;
+		watch->cancel_widget = NULL;
 	}
 
-	gtk_widget_show_all (vbox);
+	gtk_widget_show_all (GTK_WIDGET (watch->toplevel));
 
 	watch->title_label = title_label;
 	watch->progress_bar = progress_bar;
 
+	handle_update (progress_monitor, watch);
+
 	if (priv->permanent_mode == TRUE)
 		/* Ensure we are visible; quicker just to call than to check */
 		gtk_widget_show (GTK_WIDGET (progress_dialog));
+
+	/* Don't focus the cancel button, for the annoying case of the dialog being
+	 * popped up while the user is typing. They may still press tab and then
+	 * enter to cancel.
+	 */
+	gtk_window_set_focus (GTK_WINDOW (progress_dialog), NULL);
 }
 
 
@@ -545,25 +622,6 @@ format_watch_title (GtkWidget   *label,
 	}
 }
 
-/*static void
-set_completed (GtkIrisProgressDialog *progress_dialog,
-               gboolean            completed)
-{
-	GtkIrisProgressDialogPrivate *priv;
-
-	priv = progress_dialog->priv;
-
-	priv->completed = completed;
-
-	if (completed)
-		gtk_button_set_label (GTK_BUTTON (priv->button),
-		                      _("Close"));
-	else
-		gtk_button_set_label (GTK_BUTTON (priv->button),
-		                      _("Close"));
-};*/
-
-
 /**************************************************************************
  *                        Message processing                              *
  *************************************************************************/
@@ -669,7 +727,7 @@ finish_dialog (GtkIrisProgressDialog *progress_dialog)
 static gboolean
 watch_delayed_remove (gpointer data)
 {
-	IrisProgressWatch         *watch = data;
+	IrisProgressWatch *watch = data;
 
 	gtk_iris_progress_dialog_remove_watch (watch->monitor, watch, FALSE);
 
@@ -687,9 +745,18 @@ handle_stopped (IrisProgressMonitor *progress_monitor,
 
 	priv = GTK_IRIS_PROGRESS_DIALOG (progress_monitor)->priv;
 
+	/* Set cancel button insensitive */
+	if (watch->group == NULL)
+		gtk_widget_set_sensitive (GTK_WIDGET (watch->cancel_widget), FALSE);
+	else
+	if (_iris_progress_group_is_stopped (watch->group))
+		gtk_widget_set_sensitive (GTK_WIDGET (watch->group->cancel_widget), FALSE);
+
+	/* Remove watch or add idle to do it after showing it completed for a bit */
 	if (priv->watch_hide_delay == 0)
 		watch_delayed_remove (watch);
-	else if (priv->watch_hide_delay == -1);
+	else
+	if (priv->watch_hide_delay == -1);
 		/* Never hide watch; for debugging purposes */
 	else {
 		watch->finish_timeout_id = g_timeout_add (priv->watch_hide_delay,

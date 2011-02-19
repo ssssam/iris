@@ -200,6 +200,8 @@ iris_progress_monitor_base_init (gpointer g_class)
 void
 _iris_progress_group_reset (IrisProgressGroup *group)
 {
+	group->cancelled = FALSE;
+
 	group->completed_watches = 0;
 }
 
@@ -589,24 +591,56 @@ iris_progress_group_unref (IrisProgressGroup *group) {
 }
 
 
+gboolean
+_iris_progress_group_is_stopped (IrisProgressGroup *group)
+{
+	IrisProgressWatch *watch;
+	GList             *node;
+
+	for (node=group->watch_list; node; node=node->next) {
+		watch = node->data;
+		if (!watch->complete && !watch->cancelled)
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
+
 /**************************************************************************
  *                    Widget implementation helpers                       *
  *************************************************************************/
 
-/*void
-_iris_progress_monitor_cancel (IrisProgressMonitor *progress_monitor,
-                               GList               *watch_list)
+void
+_iris_progress_monitor_cancel_group   (IrisProgressMonitor *progress_monitor,
+                                       IrisProgressGroup   *group)
 {
-	GList *node;
+	GList             *node;
+	IrisProgressWatch *watch;
 
-	* Cancel every process being watched *
-	for (node=watch_list; node; node=node->next) {
-		IrisProgressWatch *watch = node->data;
+	for (node=group->watch_list; node; node=node->next) {
+		watch = node->data;
+
+		/* Allowed, it's possible with a long watch_hide_delay .. */
+		if (watch->cancelled || watch->complete)
+			continue;
+
 		iris_task_cancel (IRIS_TASK (watch->task));
 	}
 
 	g_signal_emit (progress_monitor, signals[CANCEL], 0);
-}*/
+}
+
+void
+_iris_progress_monitor_cancel_watch   (IrisProgressMonitor *progress_monitor,
+                                       IrisProgressWatch   *watch)
+{
+	g_return_if_fail (!watch->cancelled);
+
+	iris_task_cancel (IRIS_TASK (watch->task));
+
+	g_signal_emit (progress_monitor, signals[CANCEL], 0);
+}
 
 void
 _iris_progress_monitor_finished (IrisProgressMonitor *progress_monitor)
@@ -731,6 +765,12 @@ _iris_progress_monitor_handle_message (IrisMessage  *message,
 	IrisProgressWatch            *watch = user_data;
 	IrisProgressMonitor          *progress_monitor = watch->monitor;
 	IrisProgressMonitorInterface *iface;
+
+	if (watch->cancelled || watch->complete)
+		g_warning ("IrisProgressMonitor: watch %lx sent a progress message "
+		           "after already sending %s.\n",
+		           (gulong)watch,
+		           watch->cancelled? "CANCELLED": "COMPLETE");
 
 	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
 

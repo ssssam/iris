@@ -44,8 +44,10 @@ struct _IrisProgressGroup
 	gpointer toplevel,
 	         watch_box,
 	         progress_bar,
+	         cancel_widget,
 	         user_data1,
-	         user_data2;
+	         user_data2,
+	         user_data3;
 };
 
 struct _IrisProgressWatch
@@ -88,7 +90,9 @@ struct _IrisProgressWatch
 	gpointer toplevel,
 	         title_label,
 	         progress_bar,
-	         cancel_button;
+	         cancel_widget,
+	         user_data1,
+	         user_data2;
 };
 
 
@@ -97,11 +101,13 @@ void _iris_progress_watch_disconnect       (IrisProgressWatch *watch);
 
 void _iris_progress_group_reset            (IrisProgressGroup *group);
 
-/* Called when cancel button pressed on widget - will cancel every process in 
- * watch_list and emit 'cancel' signal.
- */
-//void _iris_progress_monitor_cancel         (IrisProgressMonitor *progress_monitor,
-//                                            GList               *watch_list);
+gboolean _iris_progress_group_is_stopped   (IrisProgressGroup *group);
+
+/* Callback for cancel buttons in the dialogs */
+void _iris_progress_monitor_cancel_group   (IrisProgressMonitor *progress_monitor,
+                                            IrisProgressGroup   *group);
+void _iris_progress_monitor_cancel_watch   (IrisProgressMonitor *progress_monitor,
+                                            IrisProgressWatch   *watch);
 
 /* Emit IrisProgressMonitor::finished */
 void _iris_progress_monitor_finished       (IrisProgressMonitor *progress_monitor);
