@@ -24,8 +24,6 @@
 #include "iris-process-private.h"
 #include "iris-progress.h"
 
-#include <stdio.h>
-
 /**
  * SECTION:iris-process
  * @title: IrisProcess
@@ -108,19 +106,6 @@ static void             post_progress_message      (IrisProcess *process,
 static void             iris_process_dummy         (IrisProcess *task,
                                                     IrisMessage *work_item,
                                                     gpointer user_data);
-
-
-/* The process subsystem runs tasks in its own scheduler, because
- *  a) we don't always benefit from the default scheduler's policy of one
- *     thread per core because the processing is often IO-bound, and
- *  b) work items could execute very slowly or block altogether, if this is
- *     happening in the default scheduler then it can delay or even prevent
- *     message delivery. This is especially bad when the message pending is a
- *     cancel for the slow process.
- */
-static IrisScheduler *process_scheduler = NULL;
-
-G_LOCK_DEFINE (process_scheduler);
 
 
 /**************************************************************************
@@ -1279,20 +1264,8 @@ static void
 iris_process_init (IrisProcess *process)
 {
 	IrisProcessPrivate *priv;
-	int                 max_threads;
 
 	priv = process->priv = IRIS_PROCESS_GET_PRIVATE (process);
-
-	/* FIXME: This probably needs all sorts of tweaking. The basic idea is one
-	 * thread per process at the moment, does that make sense? */
-	if (G_UNLIKELY (!process_scheduler)) {
-		G_LOCK (process_scheduler);
-		if (G_LIKELY (!process_scheduler)) {
-			max_threads = iris_scheduler_get_n_cpu() * 4;
-			process_scheduler = iris_scheduler_new_full (1, max_threads);
-		}
-		G_UNLOCK (process_scheduler);
-	}
 
 	/* FIXME: Leaked? "We should have a teardown port for dispose" */
 
@@ -1303,16 +1276,12 @@ iris_process_init (IrisProcess *process)
 	 * FIXME: not sure even this is a compelling rationale ..
 	 */
 	priv->work_port = iris_port_new ();
-	priv->work_receiver = iris_arbiter_receive (/*g_atomic_pointer_get (&process_scheduler),*/
-	                                            iris_scheduler_default (),
+	priv->work_receiver = iris_arbiter_receive (iris_get_default_control_scheduler (),
 	                                            priv->work_port,
 	                                            iris_process_post_work_item,
 	                                            g_object_ref (process),
 	                                            (GDestroyNotify)g_object_unref);
 	iris_arbiter_coordinate (priv->work_receiver, NULL, NULL);
-
-	iris_task_set_work_scheduler (IRIS_TASK (process),
-	                              process_scheduler);
 
 	priv->work_queue = iris_queue_new ();
 

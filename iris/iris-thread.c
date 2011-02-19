@@ -475,7 +475,9 @@ iris_thread_print_stat (IrisThread *thread)
 	           "\t  Active: %3s     Queue Size: %d\n",
 	           (long)thread->thread,
 	           (long)thread->scheduler,
-	           thread->scheduler==iris_scheduler_default()? "(def.)  ": "        ",
+	           thread->scheduler ==
+	             iris_get_default_control_scheduler()? "(ctrl)  ":
+	             iris_get_default_work_scheduler()? "(work)  ": "        ",
 	           (long)thread->active,
 	           thread->active != NULL ? "yes" : "no",
 	           thread->active != NULL ? iris_queue_get_length (thread->active) : 0);

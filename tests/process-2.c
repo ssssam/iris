@@ -75,6 +75,7 @@ hospital_handler (IrisMessage *message,
  *
  *  In real life usage, the 'cancel' message is the most obvious parallel.
  */
+/* FIXME: any point in this test still existing? */
 static void
 blocking_1 ()
 {
@@ -89,7 +90,7 @@ blocking_1 ()
 
 	/* Force 2 threads or less, to ensure test fails */
 	scheduler = iris_scheduler_new_full (1, 2);
-	iris_scheduler_set_default (scheduler);
+	iris_set_default_work_scheduler (scheduler);
 
 	/* Test is executed 100 times to further try to make it fail */
 	for (ii=0; ii<10; ii++) {
@@ -99,7 +100,7 @@ blocking_1 ()
 		port = iris_port_new ();
 
 		/* 'Hospital' must receive the ambulance messages at all costs */
-		hospital = iris_arbiter_receive (iris_scheduler_default (),
+		hospital = iris_arbiter_receive (iris_get_default_control_scheduler (),
 		                                 port,
 		                                 hospital_handler, &ambulance_received, NULL);
 

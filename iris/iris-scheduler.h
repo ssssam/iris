@@ -152,14 +152,17 @@ struct _IrisThreadWork
 	volatile gint     remove;
 };
 
+IrisScheduler*  iris_get_default_control_scheduler (void);
+void            iris_set_default_control_scheduler (IrisScheduler *scheduler);
+IrisScheduler*  iris_get_default_work_scheduler    (void);
+void            iris_set_default_work_scheduler    (IrisScheduler *scheduler);
+
 GType           iris_thread_get_type           (void) G_GNUC_CONST;
 GType           iris_scheduler_get_type        (void) G_GNUC_CONST;
 
 IrisScheduler*  iris_scheduler_new             (void);
 IrisScheduler*  iris_scheduler_new_full        (guint           min_threads,
-                                               guint           max_threads);
-IrisScheduler*  iris_scheduler_default         (void);
-void            iris_scheduler_set_default     (IrisScheduler *scheduler);
+                                                guint           max_threads);
 
 gint            iris_scheduler_get_min_threads (IrisScheduler  *scheduler);
 gint            iris_scheduler_get_max_threads (IrisScheduler  *scheduler);

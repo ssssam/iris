@@ -62,7 +62,7 @@ test_live_process (void)
 
 	for (n_threads=4; n_threads<=8; n_threads++) {
 		scheduler = iris_scheduler_new_full (n_threads, n_threads);
-		iris_scheduler_set_default (scheduler);
+		iris_set_default_work_scheduler (scheduler);
 
 		process_counter = 0;
 		message_counter = 0;

@@ -42,16 +42,18 @@
  * @short_description: A generic, extendable scheduler for work items
  *
  * #IrisScheduler is a base class used for managing the scheduling of
- * work items onto active threads.  The default scheduler is sufficient
+ * work items onto active threads.  The standard scheduler is sufficient
  * for most purposes.  However, if you need custom scheduling with
  * different queuing decisions you can create your own.
  *
- * The default scheduler will have a thread per-core with a minimum
- * of 2 threads.
+ * There are two default schedulers inside Iris. The control scheduler is
+ * mused for handling message processing, while the work scheduler is
+ * suitable for tasks that will take much longer. The separation prevents slow
+ * tasks from ever causing delays to stuff like their own cancel messages.
  *
- * By default, a scheduler will be given "min-threads" threads during
- * startup.  If a "leader" thread, (typically the first thread added)
- * feels it is getting behind, it will ask the scheduler manager for
+ * The workflow of the scheduler is that it receives "min-threads" threads
+ * during startup, and then if a "leader" thread, (typically the first thread
+ * added) feels it is getting behind, it will ask the scheduler manager for
  * more help.  The scheduler manager will try to first repurpose
  * existing threads, or create new threads if no existing threads are
  * available.  Based on the speed of work performed by the scheduler,
@@ -63,9 +65,97 @@
 
 G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT)
 
-G_LOCK_DEFINE (default_scheduler);
+G_LOCK_DEFINE (default_work_scheduler);
+G_LOCK_DEFINE (default_control_scheduler);
 
-volatile static IrisScheduler *default_scheduler = NULL;
+volatile static IrisScheduler *default_work_scheduler = NULL,
+                              *default_control_scheduler = NULL;
+
+
+/**
+ * iris_get_default_control_scheduler:
+ *
+ * Retrieves the default scheduler used for message processing.
+ *
+ * Return value: a #IrisScheduler instance
+ */
+IrisScheduler*
+iris_get_default_control_scheduler (void)
+{
+	if (G_UNLIKELY (default_control_scheduler == NULL)) {
+		G_LOCK (default_control_scheduler);
+		if (!g_atomic_pointer_get (&default_control_scheduler))
+			default_control_scheduler = iris_scheduler_new_full
+			                              (1, MAX (2, iris_scheduler_get_n_cpu()));
+		G_UNLOCK (default_control_scheduler);
+	}
+	return g_atomic_pointer_get (&default_control_scheduler);
+}
+
+/**
+ * iris_set_default_control_scheduler:
+ * @scheduler: An #IrisScheduler
+ *
+ * Allows the caller to set the default scheduler for the process.
+ */
+void
+iris_set_default_control_scheduler (IrisScheduler *new_scheduler)
+{
+	IrisScheduler *old_scheduler;
+	g_return_if_fail (new_scheduler != NULL);
+
+	G_LOCK (default_control_scheduler);
+	old_scheduler = g_atomic_pointer_get (&default_control_scheduler);
+	g_object_ref (new_scheduler);
+	g_atomic_pointer_set (&default_control_scheduler, new_scheduler);
+	G_UNLOCK (default_control_scheduler);
+
+	if (old_scheduler)
+		g_object_unref ((gpointer)old_scheduler);
+}
+
+/**
+ * iris_get_default_work_scheduler:
+ *
+ * Retrieves the default scheduler used for tasks and processes.
+ *
+ * Return value: a #IrisScheduler instance
+ */
+IrisScheduler*
+iris_get_default_work_scheduler (void)
+{
+	if (G_UNLIKELY (default_work_scheduler == NULL)) {
+		G_LOCK (default_work_scheduler);
+		if (!g_atomic_pointer_get (&default_work_scheduler))
+			default_work_scheduler = iris_scheduler_new_full
+			                              (MAX (2, iris_scheduler_get_n_cpu()),
+			                               iris_scheduler_get_n_cpu() * 2);
+		G_UNLOCK (default_work_scheduler);
+	}
+	return g_atomic_pointer_get (&default_work_scheduler);
+}
+
+/**
+ * iris_set_default_work_scheduler:
+ * @scheduler: An #IrisScheduler
+ *
+ * Allows the caller to set the default work scheduler.
+ */
+void
+iris_set_default_work_scheduler (IrisScheduler *new_scheduler)
+{
+	IrisScheduler *old_scheduler;
+	g_return_if_fail (new_scheduler != NULL);
+
+	G_LOCK (default_work_scheduler);
+	old_scheduler = g_atomic_pointer_get (&default_work_scheduler);
+	g_object_ref (new_scheduler);
+	g_atomic_pointer_set (&default_work_scheduler, new_scheduler);
+	G_UNLOCK (default_work_scheduler);
+
+	if (old_scheduler)
+		g_object_unref ((gpointer)old_scheduler);
+}
 
 static gboolean
 iris_scheduler_queue_rrobin_cb (gpointer data,
@@ -202,7 +292,7 @@ iris_scheduler_get_min_threads_real (IrisScheduler *scheduler)
 {
 	gint min_threads;
 	min_threads = scheduler->priv->min_threads;
-	return (min_threads > 0) ? min_threads : 1;
+	return (min_threads > 0) ? min_threads : 2;
 }
 
 static gint
@@ -210,7 +300,7 @@ iris_scheduler_get_max_threads_real (IrisScheduler *scheduler)
 {
 	IrisSchedulerPrivate *priv = scheduler->priv;
 	if (G_UNLIKELY (priv->max_threads == 0))
-		priv->max_threads = MAX (2, iris_scheduler_get_n_cpu ());
+		priv->max_threads = MAX(2, iris_scheduler_get_n_cpu () * 2);
 	return priv->max_threads;
 }
 
@@ -427,46 +517,6 @@ iris_scheduler_new_full (guint min_threads,
 	scheduler->priv->max_threads = max_threads;
 
 	return scheduler;
-}
-
-/**
- * iris_scheduler_set_default:
- * @scheduler: An #IrisScheduler
- *
- * Allows the caller to set the default scheduler for the process.
- */
-void
-iris_scheduler_set_default (IrisScheduler *scheduler)
-{
-	iris_debug (IRIS_DEBUG_SCHEDULER);
-
-	g_return_if_fail (scheduler != NULL);
-
-	G_LOCK (default_scheduler);
-	scheduler = g_object_ref (scheduler);
-	if (default_scheduler)
-		g_object_unref ((gpointer)default_scheduler);
-	g_atomic_pointer_set (&default_scheduler, scheduler);
-	G_UNLOCK (default_scheduler);
-}
-
-/**
- * iris_scheduler_default:
- *
- * Retrieves the default scheduler which can be shared.
- *
- * Return value: a #IrisScheduler instance
- */
-IrisScheduler*
-iris_scheduler_default (void)
-{
-	if (G_UNLIKELY (default_scheduler == NULL)) {
-		G_LOCK (default_scheduler);
-		if (!g_atomic_pointer_get (&default_scheduler))
-			default_scheduler = iris_scheduler_new ();
-		G_UNLOCK (default_scheduler);
-	}
-	return g_atomic_pointer_get (&default_scheduler);
 }
 
 /**

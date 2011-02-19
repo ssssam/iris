@@ -9,7 +9,8 @@ static IrisScheduler *default_scheduler = NULL;
 #define SETUP()                                                 \
 	G_STMT_START {                                          \
 		default_scheduler = mock_scheduler_new();       \
-		iris_scheduler_set_default(default_scheduler);  \
+		iris_set_default_control_scheduler(default_scheduler);  \
+		iris_set_default_work_scheduler(default_scheduler);  \
 	} G_STMT_END
 
 static void

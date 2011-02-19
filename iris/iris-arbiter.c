@@ -138,7 +138,7 @@ iris_arbiter_receive (IrisScheduler      *scheduler,
 	IrisReceiver *receiver;
 
 	if (!scheduler)
-		scheduler = iris_scheduler_default ();
+		scheduler = iris_get_default_control_scheduler ();
 
 	receiver = g_object_new (IRIS_TYPE_RECEIVER, NULL);
 	receiver->priv->callback = handler;

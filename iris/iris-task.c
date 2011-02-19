@@ -932,7 +932,7 @@ iris_task_set_work_scheduler (IrisTask      *task,
 	priv = task->priv;
 
 	if (work_scheduler == NULL)
-		work_scheduler = g_object_ref (iris_scheduler_default ());
+		work_scheduler = g_object_ref (iris_get_default_work_scheduler ());
 
 	/* Like in iris-receiver, changing scheduler while executing is a bad idea
 	 * but hopefully will not cause crashes
@@ -1558,13 +1558,13 @@ iris_task_init (IrisTask *task)
 	priv = task->priv = IRIS_TASK_GET_PRIVATE (task);
 
 	priv->port = iris_port_new ();
-	priv->receiver = iris_arbiter_receive (iris_scheduler_default (),
+	priv->receiver = iris_arbiter_receive (iris_get_default_control_scheduler (),
 	                                       priv->port,
 	                                       iris_task_handle_message,
 	                                       g_object_ref (task),
 	                                       (GDestroyNotify)g_object_unref);
 
-	priv->work_scheduler = g_object_ref (iris_scheduler_default ());
+	priv->work_scheduler = g_object_ref (iris_get_default_work_scheduler ());
 
 	priv->mutex = g_mutex_new ();
 
