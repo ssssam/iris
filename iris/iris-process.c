@@ -1069,11 +1069,13 @@ iris_process_post_work_item (IrisMessage *work_item,
 }
 
 
+
 static void
 iris_process_execute_real (IrisTask *task)
 {
 	GValue    params[2] = { {0,}, {0,} };
 	gboolean  cancelled;
+	GTimer   *timer;
 	IrisProcess        *process;
 	IrisProcessPrivate *priv;
 	IrisScheduler      *work_scheduler;
@@ -1089,6 +1091,9 @@ iris_process_execute_real (IrisTask *task)
 	g_value_init (&params[1], G_TYPE_POINTER);
 
 	/* See TODO about why this code is really dumb and how it could be improved */
+
+	timer = g_timer_new ();
+
 	while (1) {
 		IrisMessage *work_item;
 
@@ -1103,6 +1108,9 @@ iris_process_execute_real (IrisTask *task)
 
 		if (cancelled)
 			break;
+
+		if (G_UNLIKELY (g_timer_elapsed(timer, NULL) > 1.0))
+			goto _yield;
 
 		work_item = iris_queue_try_pop (priv->work_queue);
 
@@ -1121,6 +1129,7 @@ iris_process_execute_real (IrisTask *task)
 					break;
 			}
 
+_yield:
 			/* Yield, by reposting this function to the scheduler and returning.
 			 * FIXME: would be nice if we could tell the scheduler "don't execute this for at least
 			 * 20ms" or something so we don't waste quite as much power waiting for work.
