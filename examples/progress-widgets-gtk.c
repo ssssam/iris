@@ -60,7 +60,7 @@ trigger_process (GtkButton *trigger,
 	IrisProcess *process;
 	gint         i;
 	GList       *node;
-	const gint   count = GPOINTER_TO_INT (user_data);
+	gint         count = GPOINTER_TO_INT (user_data);
 
 	process = iris_process_new_with_func (count_sheep_func, NULL, NULL);
 	iris_process_set_title (process, gtk_entry_get_text (GTK_ENTRY (title_entry)));
@@ -77,12 +77,19 @@ trigger_process (GtkButton *trigger,
 
 	for (node=monitor_list; node; node=node->next) {
 		IrisProgressMonitor *widget = IRIS_PROGRESS_MONITOR (node->data);
+		IrisProgressMonitorDisplayStyle display_style;
+
+		display_style = count==-1? IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY:
+		                           IRIS_PROGRESS_MONITOR_ITEMS;
+
 		iris_progress_monitor_watch_process (widget,
 		                                     process,
-		                                     IRIS_PROGRESS_MONITOR_ITEMS,
-		                                     0);
+		                                     display_style,
+		                                     NULL);
 	}
 
+	if (count == -1)
+		count = g_random_int_range (5, 5000);
 	for (i=0; i<count; i++)
 		iris_process_enqueue (process, iris_message_new (0));
 	iris_process_no_more_work (process);
@@ -148,6 +155,11 @@ create_demo_dialog (void)
 	button = gtk_button_new_with_label ("Count 1000 sheep");
 	g_signal_connect (button, "clicked", G_CALLBACK (trigger_process),
 	                  GINT_TO_POINTER (1000));
+	gtk_box_pack_start (GTK_BOX (triggers_box), button, TRUE, TRUE, 0);
+
+	button = gtk_button_new_with_label ("Find lost sheep");
+	g_signal_connect (button, "clicked", G_CALLBACK (trigger_process),
+	                  GINT_TO_POINTER (-1));
 	gtk_box_pack_start (GTK_BOX (triggers_box), button, TRUE, TRUE, 0);
 
 	hbox = gtk_hbox_new (FALSE, 0);

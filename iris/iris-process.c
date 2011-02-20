@@ -780,6 +780,11 @@ update_status (IrisProcess *process, gboolean force)
 
 	priv = process->priv;
 
+	/* This code executes even if the process is being watched in activity only
+	 * mode. That doesn't actually matter other than the wasted energy
+	 * calculating values.
+	 */
+
 	/* Send total items first, so we don't risk processed_items > total_items */
 	total = g_atomic_int_get (&priv->total_items);
 

@@ -25,13 +25,19 @@
  * IrisProgressMessageType:
  * @IRIS_PROGRESS_MESSAGE_COMPLETE: the task has completed.
  * @IRIS_PROGRESS_MESSAGE_CANCELLED: the task was cancelled.
+ * @IRIS_PROGRESS_MESSAGE_PULSE: sent when it's not possible to calculate
+ *                               actual progress. Watch must have
+ *                               @IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY display
+ *                               style.
+ * @IRIS_PROGRESS_MESSAGE_FRACTION: should contain a float between 0 and 1.
+ *                                  Sent when progress isn't best represented
+ *                                  as discrite items. Watch must not have
+ *                                  @IRIS_PROGRESS_MONITOR_ITEMS display style.
  * @IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS: integer; number of items completed.
  * @IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS: integer; sent when new items are enqueued.
- * @IRIS_PROGRESS_MESSAGE_FRACTION: should contain a float between 0 and 1.
- *                                  This message should only be sent if the
- *                                  above two are not sent, in the case that
- *                                  progress is better represented as a
- *                                  fraction.
+ *                                     Note that there is no need to send
+ *                                     @IRIS_PROGRESS_MESSAGE_FRACTION if item
+ *                                     counts are being sent.
  * @IRIS_PROGRESS_MESSAGE_TITLE: string; sent when the title of the process changes
  *
  * An #IrisProgressMonitor listens for these messages to update its UI. It's
@@ -47,11 +53,17 @@
  **/
 typedef enum
 {
+	/* Control */
 	IRIS_PROGRESS_MESSAGE_COMPLETE,
 	IRIS_PROGRESS_MESSAGE_CANCELLED,
+
+	/* Progress */
+	IRIS_PROGRESS_MESSAGE_PULSE,
+	IRIS_PROGRESS_MESSAGE_FRACTION,
 	IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS,
 	IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS,
-	IRIS_PROGRESS_MESSAGE_FRACTION,
+
+	/* Display */
 	IRIS_PROGRESS_MESSAGE_TITLE
 } IrisProgressMessageType;
 

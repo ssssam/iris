@@ -34,6 +34,9 @@ struct _IrisProgressGroup
 	gchar *title,
 	      *plural;
 
+	/* Can't be ITEMS, that doesn't make sense for overall progress */
+	IrisProgressMonitorDisplayStyle display_style;
+
 	/* Used to calculate total progress */
 	gint   completed_watches;
 

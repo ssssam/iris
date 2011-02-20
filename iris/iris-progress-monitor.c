@@ -244,6 +244,8 @@ iris_progress_monitor_add_group (IrisProgressMonitor *progress_monitor,
 	group->title = g_strdup (title);
 	group->plural = g_strdup (plural);
 
+	group->display_style = IRIS_PROGRESS_MONITOR_PERCENTAGE;
+
 	group->visible = FALSE;
 
 	_iris_progress_group_reset (group);
@@ -275,6 +277,9 @@ iris_progress_monitor_add_watch_internal (IrisProgressMonitor             *progr
 		watch->group = group;
 
 		group->watch_list = g_list_prepend (group->watch_list, watch);
+
+		if (display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY)
+			group->display_style = IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY;
 	}
 
 	watch->title = g_strdup (title);
@@ -311,6 +316,11 @@ _iris_progress_watch_free (IrisProgressWatch *watch)
 		                                          watch);
 		iris_progress_group_unref (watch->group);
 		watch->group = NULL;
+
+		/* We don't check if the group can stop displaying in activity only
+		 * mode; either it was changed already when the watch completed, or the
+		 * whole group got cancelled so it makes no difference.
+		 */
 	}
 
 	g_object_unref (watch->port);
@@ -703,10 +713,35 @@ handle_cancelled (IrisProgressWatch *watch,
 }
 
 static void
-handle_complete (IrisProgressWatch *watch,
-                 IrisMessage *message)
+handle_complete (IrisProgressWatch *completed_watch,
+                 IrisMessage       *message)
 {
-	watch->complete = TRUE;
+	IrisProgressWatch *watch;
+	IrisProgressGroup *group;
+	GList             *node;
+	gboolean           need_activity_only_mode;
+
+	completed_watch->complete = TRUE;
+
+	group = completed_watch->group;
+	if (group != NULL) {
+		/* Can we take the group out of activity-only display mode? */
+		need_activity_only_mode = FALSE;
+
+		for (node=group->watch_list; node; node=node->next) {
+			watch = node->data;
+			if (watch->display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY &&
+			    !watch->complete) {
+				need_activity_only_mode = TRUE;
+				break;
+			}
+		}
+
+		if (need_activity_only_mode)
+			group->display_style = IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY;
+		else
+			group->display_style = IRIS_PROGRESS_MONITOR_PERCENTAGE;
+	}
 }
 
 static void

@@ -427,7 +427,7 @@ gtk_iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 	format_watch_title (title_label, watch->title, watch->group != NULL);
 
 	progress_bar = gtk_progress_bar_new ();
-	gtk_progress_bar_set_text (GTK_PROGRESS_BAR (progress_bar), _("Preparing"));
+	/*gtk_progress_bar_set_text (GTK_PROGRESS_BAR (progress_bar), _("Preparing"));*/
 
 	if (watch->group == NULL) {
 		/* Construction of stand-alone watch UI */
@@ -660,7 +660,9 @@ update_dialog_title (GtkIrisProgressDialog *progress_dialog,
 		if (head_group == NULL) {
 			title = head_watch->title;
 
-			if (watch_progress_text_precalculated)
+			if (head_watch->display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY)
+				progress_text = NULL;
+			else if (watch_progress_text_precalculated)
 				progress_text = watch_progress_text_precalculated;
 			else {
 				_iris_progress_monitor_format_watch_progress
@@ -671,10 +673,14 @@ update_dialog_title (GtkIrisProgressDialog *progress_dialog,
 		} else {
 			title = head_group->title;
 
-			_iris_progress_monitor_format_group_progress
-			    (IRIS_PROGRESS_MONITOR (progress_dialog),
-			     head_group, progress_text_buffer, NULL);
-			progress_text = progress_text_buffer;
+			if (head_group->display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY)
+				progress_text = NULL;
+			else {
+				_iris_progress_monitor_format_group_progress
+				    (IRIS_PROGRESS_MONITOR (progress_dialog),
+				     head_group, progress_text_buffer, NULL);
+				progress_text = progress_text_buffer;
+			}
 		}
 	}
 
@@ -781,12 +787,16 @@ handle_update (IrisProgressMonitor *progress_monitor,
 
 	progress_bar = GTK_WIDGET (watch->progress_bar);
 
-	_iris_progress_monitor_format_watch_progress (progress_monitor, watch,
-	                                              progress_text);
+	if (watch->display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY)
+		gtk_progress_bar_pulse (GTK_PROGRESS_BAR (progress_bar));
+	else {
+		_iris_progress_monitor_format_watch_progress (progress_monitor, watch,
+		                                              progress_text);
 
-	gtk_progress_bar_set_text (GTK_PROGRESS_BAR (progress_bar), progress_text);
-	gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (progress_bar),
-	                               watch->fraction);
+		gtk_progress_bar_set_text (GTK_PROGRESS_BAR (progress_bar), progress_text);
+		gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (progress_bar),
+		                               watch->fraction);
+	}
 
 	if (priv->watch_list->data == watch)
 		/* Update title if this is the head watch */
@@ -826,6 +836,7 @@ gtk_iris_progress_dialog_handle_message (IrisProgressMonitor *progress_monitor,
 		case IRIS_PROGRESS_MESSAGE_CANCELLED:
 			handle_stopped (progress_monitor, watch);
 			break;
+		case IRIS_PROGRESS_MESSAGE_PULSE:
 		case IRIS_PROGRESS_MESSAGE_FRACTION:
 		case IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS:
 		case IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS:

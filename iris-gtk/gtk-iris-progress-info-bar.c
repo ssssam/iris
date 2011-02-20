@@ -677,21 +677,31 @@ handle_update (IrisProgressMonitor *progress_monitor,
 	info_bar = GTK_IRIS_PROGRESS_INFO_BAR (progress_monitor);
 
 	progress_bar = GTK_WIDGET (watch->progress_bar);
-	_iris_progress_monitor_format_watch_progress (progress_monitor, watch,
-	                                              progress_text);
-	gtk_progress_bar_set_text (GTK_PROGRESS_BAR (progress_bar),
-	                           progress_text);
-	gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (progress_bar),
-	                               watch->fraction);
 
-	if (watch->group != NULL) {
-		progress_bar = GTK_WIDGET (watch->group->progress_bar);
-		_iris_progress_monitor_format_group_progress
-		  (progress_monitor, watch->group, progress_text, &group_fraction);
+	if (watch->display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY)
+		gtk_progress_bar_pulse (GTK_PROGRESS_BAR (progress_bar));
+	else {
+		_iris_progress_monitor_format_watch_progress (progress_monitor, watch,
+		                                              progress_text);
 		gtk_progress_bar_set_text (GTK_PROGRESS_BAR (progress_bar),
 		                           progress_text);
 		gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (progress_bar),
-		                               group_fraction);
+		                               watch->fraction);
+	}
+
+	if (watch->group != NULL) {
+		progress_bar = GTK_WIDGET (watch->group->progress_bar);
+
+		if (watch->group->display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY)
+			gtk_progress_bar_pulse (GTK_PROGRESS_BAR (progress_bar));
+		else {
+			_iris_progress_monitor_format_group_progress
+			  (progress_monitor, watch->group, progress_text, &group_fraction);
+			gtk_progress_bar_set_text (GTK_PROGRESS_BAR (progress_bar),
+			                           progress_text);
+			gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (progress_bar),
+			                               group_fraction);
+		}
 	}
 };
 
@@ -719,6 +729,7 @@ gtk_iris_progress_info_bar_handle_message (IrisProgressMonitor *progress_monitor
 		case IRIS_PROGRESS_MESSAGE_CANCELLED:
 			handle_stopped (progress_monitor, watch);
 			break;
+		case IRIS_PROGRESS_MESSAGE_PULSE:
 		case IRIS_PROGRESS_MESSAGE_FRACTION:
 		case IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS:
 		case IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS:
