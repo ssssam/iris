@@ -2,31 +2,43 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-* /progress-monitor/info-bar/finalize: IRIS_IS_PROGRESS_INFO_BAR in
-  remove_watch() failed one time
+Title changes after 'cancelled' are still sent, but this causes an error!
+- probably best to not send them since sometimes the progress monitor has been unset ...
 
-* IrisGtk stuff should be in irisgtk namespace :)
+Processes should 'feed forward' the totals when hooked up - makes no
+sense for B to have its total as A's processed count. It's normally the
+case that when A and B are connected, B has A->total_items left to process
+as well ... but this is not necessarily true. The solution must be to add an
+item_enqueued() class member, which by default calls
+iris_process_notify_future_work_item (B) .. but can be overridden by
+subclassing. Or maybe it should be a signal so the user does not need to
+subclass.
 
-* Cancel button, reimplement this! Make it work in progress-tasks too!!
-  Remember to doc. in iris-progress-monitor.c
+* why do the recursion tests take so long?
 
-* fix watch_chain using gtk_box_reorder_child
+* info-bar: size-group for titles? this would make progress-groups prettier
+
+* remove @temporary from remove_watch in dialog & infobar
 
 * Fix progress-tasks, current bugs include:
-   - progress-tasks actually sometimes misses tasks or does 2 at once
    - the type of progress monitor should change as soon as the toggle box changes :)
-   - cancelling does not work (probably not implemented :)
-   - minimum size for progress bar widgets, or give them some initial text, so that the
-     ones not running yet aren't a different size to the ones that are
-  -> remember to write unit tests for any bugs identified!!
 
 * Since STATUS_COMPLETE is sent when the task receives 'finish', why not rename it to 'finish'
   also???
 
+-- mail chergert about releasing ....
+- irisgtk, process and progress-monitor
+- running 1 control and 1 work scheduler
+- things finalize okay
+- fixed a bunch of bugs and races and general incompleteness and add a bunch more tests
+- add wscript (experimental only)
+
+--- Tidyups
+
 * How much of tests/progress-monitor-gtk-1 could use wait-func instead of count-sheep-func???
 
 * Note in docs that irisprocess will not send any progress messages until it is running,
-  and that probably won't change (too difficult)
+  and that probably won't change (too difficult). Really only affects waiting for titles etc ..
 
 * Tests should always use a fresh scheduler, no?
 
@@ -39,11 +51,36 @@ Iris 0.3.0
 
 * Fix freeing of process/tasks (see chergert mail)
 
-* Valgrind it a bit
+* Valgrind it a bit. Some things you need:
+  - test where you enqueue messages in a process and test they all get freed
+
+* What to do about gtk2/gtk3?
+  -> seems like the approach is to require gtk3; other projects eg. clutter-gtk I guess you have
+     to use an appropriately old version to run with gtk2, or peas-gtk which allows an "experimental"
+     gtk2 version only.
+
+* Put IrisProgressMonitorDisplayStyle into IrisProgressDisplayStyle? Or ...
+  How about removing DisplayStyle altogether, and adding
+    iris_task_set_progress_mode (IRIS_PROGRESS_ACTIVITY_ONLY /
+                                 IRIS_PROGRESS_CONTINUOUS /
+                                 IRIS_PROGRESS_DISCRETE)
+    ... so we can tell automatically. It could include a string too to describe
+    or format the text !!!!!
+    iris_task_set_progress_display_mode()? 
+  (Remember I might add other API iris_task_set_status() .. )
+  Also you should add some tests for these 3 styles.
+  Not sure if the terminology is great ... 
+
+
+* Grep FIXME
 
 * Bump version to 0.3, and maybe give Iris a blog post :)
 
-* What to do about gtk2/gtk3?
+---------------------------------------------------------------------------
+Known bugs
+---------------------------------------------------------------------------
+
+* The scheduling is very dumb.
 
 ---------------------------------------------------------------------------
 Missing or Incompleteness
@@ -91,8 +128,10 @@ IrisProcess
 	Currently IrisProcess is really, really dumb and inefficient (especially when
 	idle). The current system is to see if there is any work using try_pop() and if
 	not, re-enqueue the process back into the scheduler to check again immediately.
-	This is good for now because the scheduler does not get as blocked up but is
-	very wasteful when processes are waiting around.
+	We also yield to the scheduler in this way occasionally based on time to allow
+	the scheduler to decide if it wants to add more threads, etc. This is good for
+	now because the scheduler does not get as blocked up but is very wasteful
+	when processes are waiting around.
 
 	Things to consider:
 	  - we could create an IrisProcessScheduler, which could peek into queues
@@ -103,15 +142,15 @@ IrisProcess
 	    to wake up the scheduler's main thread, this might be a no go
 
 	  - is one thread per process a reasonable assumption? if the process runs
-	    IO-bound non-interdependent items, it really wants as many threads as
-	    are available within reason, and certainly sharing threads would not
-	    make sense. For CPU bound processes there is no reason to run more
-	    threads than there are cores, but a dedicated thread is still good
-	    perhaps to improve multitasking. The only time a process
-	    would not need its own dedicated thread is if it spends most of it's
-	    time waiting for work, but is that a valid use-case? The whole point
-	    of process is that it's stuff that takes a long time to process, if
-	    we have more occasional single-shot work then IrisTask is a better fit.
+	    IO-bound items, it really wants as many threads as are available within
+	    reason, and certainly sharing threads would not make sense. For CPU
+	    bound processes there is no reason to run more threads than there are
+	    cores, but a dedicated thread is still good perhaps to improve
+	    multitasking. The only time a process would not need its own dedicated
+	    thread is if it spends most of its time waiting for work, but is that a
+	    common use-case? The whole point of process is that it's stuff that
+	    takes a long time to process, if we have more occasional single-shot
+	    work then IrisTask, maybe wrapped by some IrisService, is a better fit.
 	
 	So the possible models:
 	  1. no dedicated threads, work items pulled from the process and scheduled
@@ -136,7 +175,17 @@ IrisProcess
 	    CPU time (in which case threads > cores is pointless) or IO (in which
 	    case more threads = better, to a point). Either the user could tell it,
 	    or it could experiment by adding one extra thread and seeing if work
-	    goes 2x as fast or the same speed.
+	    goes 2x as fast or the same speed. A sort of
+	    iris_task_set_performance_hint() taking IRIS_CPU_BOUND or IRIS_IO_BOUND
+	    ... would this be useful for tasks as well? Yes, it makes no sense
+	    scheduling a CPU bound task when one is already running ... I think
+	    tasks and processes should run in together in the special scheduler,
+	    so that (a) main one can be free for message delivery, and (b) we can
+	    do 'joined-up thinking' like this ... or move that control to the
+	    scheduler manager??? I don't know :(
+
+	A quick fix might be to allow setting a process on a thread, so it can
+	work out what to do a bit better .. 
 
 	Should we use IrisWSScheduler? I guess it can't hurt, although it shouldn't
 	be too much of an improvement just because process threads should mostly
@@ -170,6 +219,18 @@ Progress widgets
 
 	A useful addition might be a simple IrisProgressBar, which would watch a process,
 	group, task etc. and could just be embedded in an app's status bar or main window.
+
+	One thing we could do is give progress watches a textual status. So it
+	starts as "Preparing ..." and then goes NULL so the "1 item of 166" comes
+	in to play. But (and this stuff is most useful in activity mode) it can
+	also set the text to anything it wants. What about none? Maybe have
+	IRIS_PROGRESS_NO_TEXT display style? Would it make sense to give processes
+	and even tasks a way to set their status, or do it on the watch? Definitely
+	put the API in process and tasks, there could be more consumers than just
+	watchers ...  ... I like this idea.
+
+	We could also add custom display text, eg. "%i sheep of %i". Could that be
+	done through status text? Maybe not the best way ..
 
 Alex added warnings for GSimpleAsyncResult when not used from main thread.
 We need to implement our own now since this isn't reusable.
@@ -227,7 +288,7 @@ iris_receiver_deliver_real()
 
 	These related methods have significant wait time. This could be
 	both from the atomic operations as well as the locks incurred.
-	How can we reduce the potential for lock in these situations?
+	How can we redce the potential for lock in these situations?
 
 Valgrind everything to check for leaks
 
@@ -236,20 +297,13 @@ around but hidden throughout the running of the program rather than creating
 and then destroying one again. Is this actually the best way? I imagine that
 it is, that was why I recommended it.
 
+Remove tests that aren't any use any more
+
 ---------------------------------------------------------------------------
 Niceties
 ---------------------------------------------------------------------------
 
 Stress the point that all of libiris is MT-safe and all of libiris-gtk is not
-
-Processes should 'feed forward' the totals when hooked up - makes no
-sense for B to have its total as A's processed count. It's normally the
-case that when A and B are connected, B has A->total_items left to process
-as well ... but this is not necessarily true. The solution must be to add an
-item_enqueued() class member, which by default calls
-iris_process_notify_future_work_item (B) .. but can be overridden by
-subclassing. Or maybe it should be a signal so the user does not need to
-subclass.
 
 Processes should be throttleable - for example, say we are indexing the entire
 file system. A directory crawler process searches the FS for files recursively,
@@ -267,6 +321,19 @@ background behind their rounded corners as well.
 In the tests and examples, a lot of tasks are never unreferenced. This isn't
 setting a good example!!
 
+The cancel button is actually in quite an ugly place in GtkIrisProgressDialog.
+This is the best Gtk+ can do without some special case code. The ideal design
+is for the cancel button to line up centre-to-centre with the progress bar (in
+single watch cases) or the group title, but without causing any of the padding
+to change when the button is bigger than the widget it's in line with (which is
+normally the case). This leads to unevenly-padded dialogs that look even worse.
+The solution would be to put the buttons in a separate GtkFixed to the right of
+the progress widgets, and on size-allocated for the dialog or add/removal of
+widgets, the buttons are lined up with these widgets manually in a signal
+handler. (If for some reason the font size was miniature this might cause the
+buttons not to fit (b/c their icon size is fixed). This could be handled with
+some sort of size-request hack but is probably too rare a case to worry about.)
+
 ---------------------------------------------------------------------------
 The Future
 ---------------------------------------------------------------------------
@@ -275,6 +342,26 @@ If this project ever gets more adoption:
 	http://ssickert.wordpress.com/2010/11/22/taskview-release/
 it might be worth creating an IrisProgressMonitor that could send task status
 over dbus according to the spec.
+
+It's also worth looking at how Nautilus does things. A few differences are:
+  - a progress dialog can be closed, and it will then become a resident
+    notification or status icon and will stay that way if further watches are
+    added. This something it would be quite easy to implement outside of Iris,
+    so whether it should be added depends on if there are other uses/if it's
+    generally considered a good design feature.
+  - rather than a custom object for the overall progress monitor, there are
+    NautilusProgressInfoWidget and NautilusProgressUIManager classes ... it's
+    hard to see which is the better design, but I think the only real advantage
+    of the Nautilus way is it's easier to alter the way the dialog works while
+    still using the widget display code. I'm not sure why you would want to do
+    that though unless you were making a change big enough that you'd probably
+    want to display the watch in a different way anyway ..
+  - ProgressInfo (our equivalent of progresswatches I think) have a
+    GCancellable. IrisTask takes a totally different approach to cancelling, I
+    don't know enough about GCancellable to see which makes more sense ...
+  - ProgressInfo has a started signals, these could go on IrisTask if
+    necessary
+
 
 It would be cool to animate watches disappearing from the progress dialog. This
 is pie in the sky :)
