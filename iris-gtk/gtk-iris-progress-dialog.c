@@ -711,7 +711,9 @@ finish_dialog (GtkIrisProgressDialog *progress_dialog)
 	priv = progress_dialog->priv;
 
 	/* Emit IrisProgressMonitor::finished */
+	priv->in_finished = TRUE;
 	_iris_progress_monitor_finished (IRIS_PROGRESS_MONITOR (progress_dialog));
+	priv->in_finished = FALSE;
 
 	if (priv->permanent_mode) {
 		/* Check the 'finished' handler didn't destroy the dialog */

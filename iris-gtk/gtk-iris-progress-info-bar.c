@@ -316,6 +316,9 @@ gtk_iris_progress_info_bar_remove_group (IrisProgressMonitor *progress_monitor,
 	g_return_if_fail (GTK_IS_WIDGET (group->toplevel));
 	g_warn_if_fail (G_OBJECT (group->toplevel)->ref_count == 1);
 
+	g_return_if_fail (GTK_IS_WIDGET (group->cancel_widget));
+	g_warn_if_fail (G_OBJECT (group->cancel_widget)->ref_count == 1);
+
 	gtk_widget_destroy (group->toplevel);
 	gtk_widget_destroy (group->cancel_widget);
 
@@ -507,9 +510,10 @@ gtk_iris_progress_info_bar_remove_watch (IrisProgressMonitor *progress_monitor,
 		if (!temporary) {
 			g_warn_if_fail (g_list_length (watch->group->watch_list) > 0);
 
-			if (g_list_length (watch->group->watch_list) == 1)
+			if (g_list_length (watch->group->watch_list) == 1) {
+				g_warn_if_fail (watch->group->watch_list->data == watch);
 				hide_group (progress_info_bar, watch->group);
-			else if (!watch->cancelled && !temporary)
+			} else if (!watch->cancelled && !temporary)
 				watch->group->completed_watches ++;
 		}
 	} else {
@@ -604,7 +608,9 @@ finish_info_bar (GtkIrisProgressInfoBar *progress_info_bar)
 	priv = progress_info_bar->priv;
 
 	/* Emit IrisProgressMonitor::finished */
+	priv->in_finished = TRUE;
 	_iris_progress_monitor_finished (IRIS_PROGRESS_MONITOR (progress_info_bar));
+	priv->in_finished = FALSE;
 
 	if (priv->permanent_mode) {
 		/* Check the 'finished' handler didn't destroy the info bar */

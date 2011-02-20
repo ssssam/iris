@@ -234,7 +234,7 @@ iris_progress_monitor_add_group (IrisProgressMonitor *progress_monitor,
 
 	iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
 
-	group = g_slice_new (IrisProgressGroup);
+	group = g_slice_new0 (IrisProgressGroup);
 
 	group->progress_monitor = progress_monitor;
 	group->ref_count = 1;
@@ -243,6 +243,8 @@ iris_progress_monitor_add_group (IrisProgressMonitor *progress_monitor,
 
 	group->title = g_strdup (title);
 	group->plural = g_strdup (plural);
+
+	group->visible = FALSE;
 
 	_iris_progress_group_reset (group);
 
