@@ -804,10 +804,11 @@ _iris_progress_monitor_handle_message (IrisMessage  *message,
 	IrisProgressMonitorInterface *iface;
 
 	if (watch->cancelled || watch->complete)
-		g_warning ("IrisProgressMonitor: watch %lx sent a progress message "
-		           "after already sending %s.\n",
-		           (gulong)watch,
-		           watch->cancelled? "CANCELLED": "COMPLETE");
+		if (message->what != IRIS_PROGRESS_MESSAGE_TITLE)
+			g_warning ("IrisProgressMonitor: watch %lx sent a progress message "
+			           "after already sending %s.\n",
+			           (gulong)watch,
+			           watch->cancelled? "CANCELLED": "COMPLETE");
 
 	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
 

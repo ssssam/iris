@@ -219,6 +219,26 @@ gtk_iris_progress_info_bar_fixture_teardown (ProgressFixture *fixture,
 	g_main_loop_unref (fixture->main_loop);
 }
 
+static const gchar*
+ui_get_watch_title (IrisProgressMonitor *monitor,
+                    IrisTask            *watch_task)
+{
+	IrisProgressMonitorInterface *iface;
+	IrisProgressWatch            *watch;
+
+	iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (monitor);
+	watch = iface->get_watch (monitor, watch_task);
+
+	if (GTK_IRIS_IS_PROGRESS_DIALOG (monitor))
+		return gtk_label_get_text (watch->title_label);
+	else
+	if (GTK_IRIS_IS_PROGRESS_INFO_BAR (monitor))
+		return gtk_label_get_text (watch->title_label);
+
+	g_warn_if_reached ();
+	return NULL;
+}
+
 static void
 simple (ProgressFixture *fixture,
         gconstpointer data)
@@ -283,17 +303,13 @@ static void
 process_titles_2 (ProgressFixture *fixture,
                   gconstpointer    data)
 {
-	IrisProgressMonitorInterface *iface;
-
 	gint               counter = 0,
 	                   i;
 	IrisProcess       *process_1,
 	                  *process_2;
 
-	IrisProgressWatch *watch_1,
-	                  *watch_2;
-	const char        *displayed_title_1 = NULL,
-	                  *displayed_title_2 = NULL;
+	const char        *ui_title_1 = NULL,
+	                  *ui_title_2 = NULL;
 
 	/* Don't remove watches so we can test their UI elements */
 	iris_progress_monitor_set_watch_hide_delay (fixture->monitor, -1);
@@ -340,25 +356,59 @@ process_titles_2 (ProgressFixture *fixture,
 		g_main_context_iteration (NULL, FALSE);
 	}
 
-	iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (fixture->monitor);
-	watch_1 = iface->get_watch (fixture->monitor, IRIS_TASK (process_1));
-	watch_2 = iface->get_watch (fixture->monitor, IRIS_TASK (process_2));
-
 	/* Check that the UI reflects the title */
-	if (GTK_IRIS_IS_PROGRESS_DIALOG (fixture->monitor)) {
-		displayed_title_1 = gtk_label_get_text (watch_1->title_label);
-		displayed_title_2 = gtk_label_get_text (watch_2->title_label);
-	}
-	else if (GTK_IRIS_IS_PROGRESS_INFO_BAR (fixture->monitor)) {
-		displayed_title_1 = gtk_label_get_text (watch_1->title_label);
-		displayed_title_2 = gtk_label_get_text (watch_2->title_label);
-	}
+	ui_title_1 = ui_get_watch_title (fixture->monitor,
+	                                        IRIS_TASK (process_1));
+	ui_title_2 = ui_get_watch_title (fixture->monitor,
+	                                        IRIS_TASK (process_2));
 
-	g_assert_cmpstr (displayed_title_1, ==, "New Title");
-	g_assert_cmpstr (displayed_title_2, ==, "New Title");
+	g_assert_cmpstr (ui_title_1, ==, "New Title");
+	g_assert_cmpstr (ui_title_2, ==, "New Title");
 
 	g_object_unref (process_2);
 	g_object_unref (process_1);
+}
+
+/* process titles 3: test process can change its title after completion
+ *                   (more so nothing breaks than because it's a good use case)
+ */
+static void
+process_titles_3 (ProgressFixture *fixture,
+                  gconstpointer    data)
+{
+	IrisProcess *process;
+	const gchar *ui_title;
+	gint         i;
+
+	iris_progress_monitor_set_watch_hide_delay (fixture->monitor, -1);
+
+	process= iris_process_new_with_func (count_sheep_func,
+	                                        NULL, NULL);
+	iris_process_set_title (process, "tseT");
+	iris_progress_monitor_watch_process (fixture->monitor,
+	                                     process,
+	                                     IRIS_PROGRESS_MONITOR_ITEMS,
+	                                     0);
+	iris_process_run (process);
+	iris_process_no_more_work (process);
+
+	while (!iris_process_is_finished (process)) {
+		g_thread_yield ();
+		g_main_context_iteration (NULL, FALSE);
+	}
+
+	iris_process_set_title (process, "Test");
+
+	/* Let the spurious message deliver, if there was one */
+	for (i=0; i<100; i++) {
+		g_thread_yield ();
+		g_main_context_iteration (NULL, FALSE);
+	}
+
+	ui_title = ui_get_watch_title (fixture->monitor, IRIS_TASK (process));
+	g_assert_cmpstr (ui_title, ==, "Test");
+
+	g_object_unref (process);
 }
 
 /* recurse 1: basic check for recursive processes */
@@ -640,6 +690,9 @@ add_tests_with_fixture (void (*setup) (ProgressFixture *, gconstpointer),
 
 	g_snprintf (buf, 255, "/progress-monitor/%s/process titles 2", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, process_titles_2, teardown);
+
+	g_snprintf (buf, 255, "/progress-monitor/%s/process titles 3", name);
+	g_test_add (buf, ProgressFixture, NULL, setup, process_titles_3, teardown);
 
 	g_snprintf (buf, 255, "/progress-monitor/%s/recurse 1", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, recurse_1, teardown);
