@@ -30,7 +30,7 @@ test_load_spread ()
 	work_scheduler = iris_scheduler_new_full (4, 4);
 	iris_set_default_work_scheduler (work_scheduler);
 
-	memset (wait_state, 4 * sizeof(int), 0);
+	memset (wait_state, 0, 4 * sizeof(int));
 
 	for (i=0; i<4; i++) {
 		process[i] = iris_process_new_with_func (wait_func, &wait_state[i], NULL);
