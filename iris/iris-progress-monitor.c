@@ -29,26 +29,26 @@
  * SECTION:iris-progress-monitor
  * @title: IrisProgressMonitor
  * @short_description: Interface for progress monitor widgets
- * @see_also: #IrisProgressDialog, #IrisProgressInfoBar
+ * @see_also: #GtkIrisProgressDialog, #GtkIrisProgressInfoBar
  *
  * #IrisProgressMonitor is a generic interface for widgets that display the
  * progress of #IrisProcess<!-- -->es and #IrisTask<!-- -->s. For simple use,
- * just create an instance of a progress manager widget (#IrisProgressDialog
- * or #IrisProgressInfoBar) and call iris_progress_monitor_watch_process() or
- * iris_progress_monitor_watch_process_chain().
+ * just create an instance of a progress manager widget (#GtkIrisProgressDialog
+ * or #GtkIrisProgressInfoBar) and call iris_progress_monitor_watch_process()
+ * or iris_progress_monitor_watch_process_chain().
  *
  * <refsect2 id="grouping">
  * <title>Grouping</title>
  * <para>
  * If you have more than one or two watches active, it is a good idea to group
  * them together: this improves visual presentation and avoids the danger of
- * your app displaying an enourmous #IrisProgressInfoBar that shows six
+ * your app displaying an enourmous #GtkIrisProgressInfoBar that shows six
  * processes. The exact way grouping is handled depends on the
- * #IrisProgressMonitor widget, but a good example is #IrisProgressInfoBar,
+ * #IrisProgressMonitor widget, but a good example is #GtkIrisProgressInfoBar,
  * where grouping is very important as the the ideal info bar takes up very
- * little space. By default an #IrisProgressInfoBar will show a group as just a
- * title and an progress bar showing for overall completion; an expander arrow
- * allows the user to see details if they wish.
+ * little space. By default an #GtkIrisProgressInfoBar will show a group as
+ * just a title and an progress bar showing for overall completion; an
+ * expander arrow allows the user to see details if they wish.
  *
  * If you have a series of connected process, or <firstterm>chain</firstterm>,
  * they will often fit nicely into their own group. If you use
@@ -60,11 +60,11 @@
  * A watch group has both a <firstterm>title</firstterm> and a
  * <firstterm>plural</firstterm>; the plural is currently not
  * implemented but will be used to group together similar watch groups (to
- * further prevent giant #IrisProgressInfoBar<!-- -->s).
+ * further prevent giant #GtkIrisProgressInfoBar<!-- -->s).
  * For example, if you have several groups of processes each reading a
  * location on disk, you could give them the plural "Reading directories", and
- * #IrisProgressInfoBar would be able to display them as just one progress group
- * unless the user clicked on the expander to view the details.
+ * #GtkIrisProgressInfoBar would be able to display them as just one progress
+ * group unless the user clicked on the expander to view the details.
  *
  * The #IrisProgressWatch object will not be freed automatically. If you have
  * added all of the watches to a group, you can drop your reference using
@@ -78,14 +78,14 @@
  * <title>Lifecycle</title>
  * <para>
  * The typical use case for #IrisProgressMonitor is that you want for example
- * an #IrisProgressInfoBar in your application's main window that displays any
- * slow processes that are currently in progress. If no processes are running
- * the info bar should be hidden. The recommended way to achieve this is by
- * creating one #IrisProgressInfoBar object, during the initialization of your
- * program, and then showing and hiding this one widget appropriately.
+ * an #GtkIrisProgressInfoBar in your application's main window that displays
+ * any slow processes that are currently in progress. If no processes are
+ * running the info bar should be hidden. The recommended way to achieve this
+ * is by creating one #GtkIrisProgressInfoBar object, during the initialization
+ * of your program, and then showing and hiding this one widget appropriately.
  * You can get the widget to do this automatically by calling
- * iris_progress_monitor_set_permanent_mode(): the widget will then make sure it
- * is visible whenever it has any watches active, and will hide itself again
+ * iris_progress_monitor_set_permanent_mode(): the widget will then make sure
+ * it is visible whenever it has any watches active, and will hide itself again
  * when the last process it is watching finishes.
  *
  * A more powerful mechanism exists if you need to go beyond this behaviour -

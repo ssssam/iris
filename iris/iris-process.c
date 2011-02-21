@@ -46,7 +46,7 @@
  * function up into a series of chained processes.
  *
  * The progress of an #IrisProcess can be monitored using some kind of
- * #IrisProgressMonitor, such as an #IrisProgressDialog. If you want to do this
+ * #IrisProgressMonitor, such as an #GtkIrisProgressDialog. If you want to do this
  * you may want to call iris_process_set_title() to give the process a label.
  *
  * <note><para>
@@ -197,7 +197,7 @@ iris_process_run (IrisProcess *process)
  *
  * Cancels a process.  The process will exit after a work item is complete, and
  * the task function can also periodically check the cancelled state with
- * iris_task_wa_canceled() and quit execution.
+ * iris_task_was_canceled() and quit execution.
  *
  * If @process has any predecessors, they will also be cancelled. For more
  * information, see iris_process_connect().
