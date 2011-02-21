@@ -50,7 +50,7 @@ G_BEGIN_DECLS
 #define IRIS_TASK_THROW_NEW(t,q,c,f,...)                                    \
         G_STMT_START {                                                      \
                 GError *_iris_task_error = g_error_new(q,c,f,##__VA_ARGS__);\
-                iris_task_take_error (t,_iris_task_error);                  \
+                iris_task_take_fatal_error (t, _iris_task_error);           \
         } G_STMT_END
 
 /**
@@ -62,7 +62,7 @@ G_BEGIN_DECLS
  */
 #define IRIS_TASK_THROW(t,e)                                                \
         G_STMT_START {                                                      \
-                iris_task_take_error(t,e);                                  \
+                iris_task_take_fatal_error(t, e);                            \
         } G_STMT_END
 
 /**
@@ -77,8 +77,8 @@ G_BEGIN_DECLS
 #define IRIS_TASK_CATCH(t,e)                                                \
         G_STMT_START {                                                      \
                 if (e != NULL)                                              \
-                	iris_task_get_error (t,e);                          \
-                iris_task_set_error (t,NULL);                               \
+                    iris_task_get_fatal_error (t,e);                        \
+                iris_task_set_fatal_error (t, NULL);                        \
         } G_STMT_END
 
 /**
@@ -188,7 +188,7 @@ void          iris_task_run_async             (IrisTask            *task,
                                                GAsyncReadyCallback  callback,
                                                gpointer             user_data);
 void          iris_task_cancel                (IrisTask            *task);
-void          iris_task_complete              (IrisTask            *task);
+void          iris_task_work_finished         (IrisTask            *task);
 
 void          iris_task_add_callback          (IrisTask            *task,
                                                IrisTaskFunc         callback,
@@ -220,24 +220,18 @@ void          iris_task_remove_dependency_sync
                                                IrisTask            *dependency);
 
 gboolean      iris_task_is_async              (IrisTask            *task);
+
 gboolean      iris_task_is_executing          (IrisTask            *task);
-gboolean      iris_task_is_canceled           (IrisTask            *task);
 gboolean      iris_task_is_finished           (IrisTask            *task);
+gboolean      iris_task_has_succeeded         (IrisTask            *task);
+gboolean      iris_task_has_failed            (IrisTask            *task);
+gboolean      iris_task_was_canceled          (IrisTask            *task);
 
-void          iris_task_set_main_context      (IrisTask            *task,
-                                               GMainContext        *context);
-GMainContext* iris_task_get_main_context      (IrisTask            *task);
-void          iris_task_set_work_scheduler    (IrisTask            *task,
-                                               IrisScheduler       *work_scheduler);
-void          iris_task_set_control_scheduler (IrisTask            *task,
-                                               IrisScheduler       *control_scheduler);
-
-gboolean      iris_task_has_error             (IrisTask            *task);
-gboolean      iris_task_get_error             (IrisTask            *task,
+gboolean      iris_task_get_fatal_error       (IrisTask            *task,
                                                GError             **error);
-void          iris_task_set_error             (IrisTask            *task,
+void          iris_task_set_fatal_error       (IrisTask            *task,
                                                const GError        *error);
-void          iris_task_take_error            (IrisTask            *task,
+void          iris_task_take_fatal_error      (IrisTask            *task,
                                                GError              *error);
 
 void          iris_task_get_result            (IrisTask            *task,
@@ -246,6 +240,14 @@ void          iris_task_set_result            (IrisTask            *task,
                                                const GValue        *value);
 void          iris_task_set_result_gtype      (IrisTask            *task,
                                                GType                type, ...);
+
+void          iris_task_set_main_context      (IrisTask            *task,
+                                               GMainContext        *context);
+GMainContext* iris_task_get_main_context      (IrisTask            *task);
+void          iris_task_set_work_scheduler    (IrisTask            *task,
+                                               IrisScheduler       *work_scheduler);
+void          iris_task_set_control_scheduler (IrisTask            *task,
+                                               IrisScheduler       *control_scheduler);
 
 IrisTask*     iris_task_vall_of               (IrisTask            *first_task, ...) __attribute__ ((__sentinel__));
 IrisTask*     iris_task_all_of                (GList *tasks);

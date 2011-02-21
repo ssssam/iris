@@ -96,8 +96,10 @@ void          iris_process_recurse              (IrisProcess            *process
                                                  IrisMessage            *work_item);
 
 gboolean      iris_process_is_executing         (IrisProcess            *process);
-gboolean      iris_process_is_canceled          (IrisProcess            *process);
 gboolean      iris_process_is_finished          (IrisProcess            *process);
+gboolean      iris_process_has_succeeded        (IrisProcess            *process);
+gboolean      iris_process_was_canceled         (IrisProcess            *process);
+
 gboolean      iris_process_has_predecessor      (IrisProcess            *process);
 gboolean      iris_process_has_successor        (IrisProcess            *process);
 

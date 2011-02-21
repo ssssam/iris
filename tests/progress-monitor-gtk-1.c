@@ -110,7 +110,7 @@ thinking_task_func (IrisTask *task,
 	for (i=0; i<count; i++) {
 		g_usleep (1000);
 
-		if (iris_task_is_canceled (task)) {
+		if (iris_task_was_canceled (task)) {
 			cancelled = TRUE;
 			break;
 		}

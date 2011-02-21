@@ -45,7 +45,6 @@
  * each other, you will be better served by #IrisTask, or by breaking the
  * function up into a series of chained processes.
  *
- *
  * The progress of an #IrisProcess can be monitored using some kind of
  * #IrisProgressMonitor, such as an #IrisProgressDialog. If you want to do this
  * you may want to call iris_process_set_title() to give the process a label.
@@ -189,7 +188,7 @@ iris_process_run (IrisProcess *process)
 
 	iris_task_run (IRIS_TASK (process));
 
-	/* Starting successors occurs in the execute handler. */
+	/* Starting successors occurs in the run handler. */
 }
 
 /**
@@ -198,7 +197,7 @@ iris_process_run (IrisProcess *process)
  *
  * Cancels a process.  The process will exit after a work item is complete, and
  * the task function can also periodically check the cancelled state with
- * iris_task_is_canceled() and quit execution.
+ * iris_task_wa_canceled() and quit execution.
  *
  * If @process has any predecessors, they will also be cancelled. For more
  * information, see iris_process_connect().
@@ -352,13 +351,14 @@ iris_process_connect (IrisProcess *head,
 	head_task_priv = IRIS_TASK (head)->priv;
 	tail_task_priv = IRIS_TASK (tail)->priv;
 
-	if (FLAG_IS_ON (head, IRIS_TASK_FLAG_EXECUTING) ||
-	    FLAG_IS_ON (tail, IRIS_TASK_FLAG_EXECUTING)) {
+	/* FIXME: use task mutability flag .. */
+	if (FLAG_IS_ON (head, IRIS_TASK_FLAG_WORK_ACTIVE) ||
+	    FLAG_IS_ON (tail, IRIS_TASK_FLAG_WORK_ACTIVE)) {
 		g_warning ("iris_process_connect: %s process is already running.\n"
 		           "You can only chain processes together when the head "
 		           "process is not yet executing.",
-		           FLAG_IS_ON (head, IRIS_TASK_FLAG_EXECUTING) ? "head"
-		                                                       : "tail");
+		           FLAG_IS_ON (head, IRIS_TASK_FLAG_WORK_ACTIVE) ? "head"
+		                                                         : "tail");
 		return;
 	}
 
@@ -467,7 +467,22 @@ iris_process_is_executing (IrisProcess *process)
 }
 
 /**
- * iris_process_is_canceled:
+ * iris_process_is_finished:
+ * @process: An #IrisProcess
+ *
+ * Checks if a process has succeeded, thrown a fatal error or been
+ * cancelled.
+ *
+ * Return value: %TRUE if the process will not any more work
+ */
+gboolean
+iris_process_is_finished (IrisProcess *process)
+{
+	return iris_task_is_finished (IRIS_TASK (process));
+}
+
+/**
+ * iris_process_was_canceled:
  * @process: An #IrisProcess
  *
  * Checks if a process has been cancelled.  Note that if the process handles
@@ -476,25 +491,25 @@ iris_process_is_executing (IrisProcess *process)
  * Return value: %TRUE if the process was canceled.
  */
 gboolean
-iris_process_is_canceled (IrisProcess *process)
+iris_process_was_canceled (IrisProcess *process)
 {
-	return iris_task_is_canceled (IRIS_TASK (process));
+	return iris_task_was_canceled (IRIS_TASK (process));
 }
 
 /**
- * iris_process_is_finished:
+ * iris_process_has_succeeded:
  * @process: An #IrisProcess
  *
- * Checks to see if the process has finished all of its work, and had
+ * Checks to see if the process has completed all of its work, and had
  * iris_process_no_more_work() called on it.
  *
- * If @process is chained to a source process, it has finished when it has
- * completed all of its work and the first process in the chain has finished.
+ * If @process is chained to a source process, it has completed when it has
+ * finished all of its work and the first process in the chain has completed.
  *
- * Return value: %TRUE if the process has completed
+ * Return value: %TRUE if the process has completed its work successfully
  */
 gboolean
-iris_process_is_finished (IrisProcess *process)
+iris_process_has_succeeded (IrisProcess *process)
 {
 	IrisProcessPrivate *priv;
 
@@ -502,15 +517,16 @@ iris_process_is_finished (IrisProcess *process)
 
 	priv = process->priv;
 
-	if (iris_process_has_predecessor (process)) {
-		if (iris_process_get_queue_length (process) > 0 &&
-		    FLAG_IS_OFF (process, IRIS_TASK_FLAG_CANCELED))
-		    return FALSE;
+	if (!iris_process_has_predecessor (process))
+		return iris_task_has_succeeded (IRIS_TASK (process));
+	else {
+		/*if (iris_process_get_queue_length (process) > 0 &&
+		    !iris_process_is_FLAG_IS_OFF (process, IRIS_TASK_FLAG_CANCELED))
+		    return FALSE;*/
 		    
-		return iris_process_is_finished (priv->source);
+		return iris_process_has_succeeded (priv->source) &&
+		       iris_process_has_succeeded (priv->source);
 	}
-	else
-		return iris_task_is_finished (IRIS_TASK (process));
 };
 
 /**
@@ -656,7 +672,7 @@ iris_process_set_func (IrisProcess     *process,
 	GClosure    *closure;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
-	g_return_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_EXECUTING));
+	/*g_return_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_EXECUTING));*/
 
 	if (!func)
 		func = iris_process_dummy;
@@ -825,14 +841,13 @@ handle_cancel (IrisProcess *process,
 	  (IRIS_TASK (process), message);
 
 	/* Superclass could have ignored the cancel. */
-	if (!iris_process_is_canceled (process))
+	if (!iris_process_was_canceled (process))
 		return;
 
 	g_return_if_fail (FLAG_IS_ON(process, IRIS_TASK_FLAG_FINISHED));
 
 	if (iris_process_has_predecessor (process)) {
-		if (!iris_process_is_finished (priv->source) &&
-		    !iris_process_is_canceled (priv->source))
+		if (!iris_process_is_finished (priv->source))
 			iris_process_cancel (priv->source);
 	}
 
@@ -842,7 +857,7 @@ handle_cancel (IrisProcess *process,
 }
 
 static void
-handle_execute (IrisProcess *process,
+handle_start_work (IrisProcess *process,
                 IrisMessage *message)
 {
 	IrisProcessPrivate *priv;
@@ -862,8 +877,8 @@ handle_execute (IrisProcess *process,
 }
 
 static void
-handle_finish (IrisProcess *process,
-               IrisMessage *message)
+handle_callbacks_finished (IrisProcess *process,
+                           IrisMessage *message)
 {
 	IrisProcessPrivate *priv;
 	IrisMessage        *progress_message;
@@ -937,8 +952,8 @@ handle_add_sink (IrisProcess *process,
 
 	g_return_if_fail (IRIS_IS_PROCESS (sink_process));
 
-	g_warn_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_EXECUTING));
-	g_warn_if_fail (FLAG_IS_OFF (sink_process, IRIS_TASK_FLAG_EXECUTING));
+	/*g_warn_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_EXECUTING));
+	g_warn_if_fail (FLAG_IS_OFF (sink_process, IRIS_TASK_FLAG_EXECUTING));*/
 
 	priv = process->priv;
 	priv->sink = sink_process;
@@ -1007,17 +1022,12 @@ iris_process_handle_message_real (IrisTask    *task,
 		handle_cancel (process, message);
 		break;
 
-	case IRIS_TASK_MESSAGE_EXECUTE:
-		handle_execute (process, message);
+	case IRIS_TASK_MESSAGE_START_WORK:
+		handle_start_work (process, message);
 		break;
 
-	/* Note that COMPLETE means the work is done, while FINISH comes after when
-	 * all callbacks have executed as well. IRIS_TASK_FLAG_FINISHED is not set
-	 * (hence iris_process_is_finished will return FALSE) until this second
-	 * message is sent.
-	 */
-	case IRIS_TASK_MESSAGE_FINISH:
-		handle_finish (process, message);
+	case IRIS_TASK_MESSAGE_CALLBACKS_FINISHED:
+		handle_callbacks_finished (process, message);
 		break;
 
 	case IRIS_PROCESS_MESSAGE_NO_MORE_WORK:
@@ -1081,7 +1091,8 @@ iris_process_execute_real (IrisTask *task)
 	GValue    params[2] = { {0,}, {0,} };
 	gboolean  cancelled;
 	GTimer   *timer;
-	IrisProcess        *process;
+	IrisProcess        *process,
+	                   *source;
 	IrisProcessPrivate *priv;
 	IrisScheduler      *work_scheduler;
 	IrisMessage        *message;
@@ -1102,7 +1113,7 @@ iris_process_execute_real (IrisTask *task)
 	while (1) {
 		IrisMessage *work_item;
 
-		cancelled = iris_process_is_canceled (process);
+		cancelled = iris_process_was_canceled (process);
 
 		/* Update progress monitors, no more than four times a second */
 		if (priv->watch_port_list != NULL &&
@@ -1120,11 +1131,11 @@ iris_process_execute_real (IrisTask *task)
 		work_item = iris_queue_try_pop (priv->work_queue);
 
 		if (!work_item) {
-			if (iris_process_has_predecessor (process)) {
-				if (iris_process_is_finished (process))
+			source = iris_process_get_predecessor (process);
+			if (source != NULL && iris_process_is_finished (source)) {
+				if (iris_process_get_queue_length (process) == 0)
 					break;
-			}
-			else if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_NO_MORE_WORK)) {
+			} else if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_NO_MORE_WORK)) {
 				/* No races possible: only recursive work items can post more work if the above flag
 				 * is set, and they must do so before they are marked as complete. Therefore
 				 * 'processed' can never reach 'total' before the last work item completes.
@@ -1173,7 +1184,7 @@ _yield:
 
 	if (!cancelled)
 		// Execute callbacks and then mark finished.
-		iris_task_complete (IRIS_TASK (process));
+		iris_task_work_finished (IRIS_TASK (process));
 
 	/* IRIS_PROGRESS_MESSAGE_COMPLETE will be sent when
 	 * IRIS_TASK_MESSAGE_FINISH is received; ie. when all callbacks have

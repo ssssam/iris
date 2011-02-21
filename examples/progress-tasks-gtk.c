@@ -51,7 +51,7 @@ thinking_task_func (IrisTask *task,
 		/* The 'work' of this task is just sleeping, of course */
 		g_usleep (50000);
 
-		if (iris_task_is_canceled (task)) {
+		if (iris_task_was_canceled (task)) {
 			cancelled = TRUE;
 			break;
 		}
