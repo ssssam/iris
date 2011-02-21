@@ -627,6 +627,7 @@ iris_task_has_succeeded (IrisTask *task)
 	priv = task->priv;
 
 	return (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED) &&
+	        FLAG_IS_OFF (task, IRIS_TASK_FLAG_CANCELED) &&
 	        (priv->error == NULL));
 }
 
@@ -645,7 +646,9 @@ iris_task_has_failed (IrisTask *task)
 
 	priv = task->priv;
 
-	return (priv->error != NULL);
+	return (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED) &&
+	        FLAG_IS_OFF (task, IRIS_TASK_FLAG_CANCELED) &&
+	        priv->error != NULL);
 }
 
 /**
@@ -1575,6 +1578,16 @@ iris_task_init (IrisTask *task)
 	priv->work_scheduler = g_object_ref (iris_get_default_work_scheduler ());
 
 	priv->mutex = g_mutex_new ();
+
+	priv->error = NULL;
+	priv->handlers = NULL;
+
+	priv->dependencies = NULL;
+	priv->observers = NULL;
+
+	priv->flags = 0;
+
+	priv->context = NULL;
 
 	/* FIXME: We should have a teardown port for dispose */
 	iris_arbiter_coordinate (priv->receiver, NULL, NULL);
