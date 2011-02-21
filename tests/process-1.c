@@ -24,7 +24,9 @@
 
 #include "iris/iris-process-private.h"
 
-/* Work item to increment a global counter, so we can tell if the hole queue
+#include "g-repeated-test.h"
+
+/* Work item to increment a global counter, so we can tell if the whole queue
  * gets executed propertly
  */
 static void
@@ -78,28 +80,75 @@ time_waster_callback (IrisProcess *process,
 	g_usleep (1 * G_USEC_PER_SEC);
 }
 
+static void
+enqueue_counter_work (IrisProcess *process,
+                      gint        *p_counter,
+                      gint         times)
+{
+	gint i;
+
+	for (i=0; i < times; i++) {
+		IrisMessage *work_item = iris_message_new (0);
+		iris_message_set_pointer (work_item, "counter", p_counter);
+		iris_process_enqueue (process, work_item);
+	}
+	iris_process_no_more_work (process);
+}
 
 static void
 simple (void)
 {
-	gint counter = 0,
-	     i;
+	gint counter = 0;
 
 	IrisProcess *process = iris_process_new_with_func (counter_callback, NULL, NULL);
 
 	iris_process_run (process);
-
-	for (i=0; i < 50; i++) {
-		IrisMessage *work_item = iris_message_new (0);
-		iris_message_set_pointer (work_item, "counter", &counter);
-		iris_process_enqueue (process, work_item);
-	}
-	iris_process_no_more_work (process);
+	enqueue_counter_work (process, &counter, 50);
 
 	while (!iris_process_is_finished (process))
 		g_thread_yield ();
 
 	g_assert_cmpint (counter, ==, 50);
+
+	g_object_unref (process);
+}
+
+static void
+test_has_succeeded (void)
+{
+	IrisProcess *process;
+	gint         counter;
+
+	/* Test TRUE on success */
+	process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	counter = 0;
+	enqueue_counter_work (process, &counter, 50);
+
+	g_assert (iris_process_has_succeeded (process) == FALSE);
+
+	iris_process_run (process);
+
+	g_assert (iris_process_has_succeeded (process) == FALSE);
+
+	while (!iris_process_is_finished (process))
+		g_thread_yield ();
+
+	g_assert (iris_process_has_succeeded (process) == TRUE);
+
+	g_object_unref (process);
+
+	/* Test FALSE on cancel */
+
+	process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	counter = 0;
+	enqueue_counter_work (process, &counter, 50);
+	iris_process_run (process);
+
+	iris_process_cancel (process);
+	while (!iris_process_was_canceled (process))
+		g_thread_yield ();
+
+	g_assert (iris_process_has_succeeded (process) == FALSE);
 
 	g_object_unref (process);
 }
@@ -337,7 +386,10 @@ int main(int argc, char *argv[]) {
 	g_thread_init (NULL);
 
 	g_test_add_func ("/process/simple", simple);
+	g_test_add_func_repeated ("/process/has_succeeded()", 50, test_has_succeeded);
+
 	g_test_add_func ("/process/titles", titles);
+
 	g_test_add_func ("/process/cancelling 1", cancelling_1);
 	g_test_add_func ("/process/cancelling 2", cancelling_2);
 	g_test_add_func ("/process/recurse 1", recurse_1);
