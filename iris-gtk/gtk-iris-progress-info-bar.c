@@ -513,7 +513,7 @@ gtk_iris_progress_info_bar_remove_watch (IrisProgressMonitor *progress_monitor,
 			if (g_list_length (watch->group->watch_list) == 1) {
 				g_warn_if_fail (watch->group->watch_list->data == watch);
 				hide_group (progress_info_bar, watch->group);
-			} else if (!watch->cancelled && !temporary)
+			} else if (!watch->canceled && !temporary)
 				watch->group->completed_watches ++;
 		}
 	} else {
@@ -630,7 +630,7 @@ watch_delayed_remove (gpointer data)
 	return FALSE;
 }
 
-/* When a watch completes/is cancelled, we check to see if any are still running
+/* When a watch completes/is canceled, we check to see if any are still running
  * and if they are all done, we self destruct. */
 static void
 handle_stopped (IrisProgressMonitor *progress_monitor,
@@ -726,7 +726,7 @@ gtk_iris_progress_info_bar_handle_message (IrisProgressMonitor *progress_monitor
 
 	switch (message->what) {
 		case IRIS_PROGRESS_MESSAGE_COMPLETE:
-		case IRIS_PROGRESS_MESSAGE_CANCELLED:
+		case IRIS_PROGRESS_MESSAGE_CANCELED:
 			handle_stopped (progress_monitor, watch);
 			break;
 		case IRIS_PROGRESS_MESSAGE_PULSE:

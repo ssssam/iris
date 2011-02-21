@@ -24,7 +24,7 @@
 /**
  * IrisProgressMessageType:
  * @IRIS_PROGRESS_MESSAGE_COMPLETE: the task has completed.
- * @IRIS_PROGRESS_MESSAGE_CANCELLED: the task was cancelled.
+ * @IRIS_PROGRESS_MESSAGE_CANCELED: the task was canceled.
  * @IRIS_PROGRESS_MESSAGE_PULSE: sent when it's not possible to calculate
  *                               actual progress. Watch must have
  *                               @IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY display
@@ -44,7 +44,7 @@
  * recommended you don't send status messages more than once every 250ms or so;
  * there's no point.
  *
- * No messages should be sent after IRIS_PROGRESS_MESSAGE_CANCELLED or
+ * No messages should be sent after IRIS_PROGRESS_MESSAGE_CANCELED or
  * IRIS_PROGRESS_MESSAGE_COMPLETE.
  *
  * FIXME: is this still TRUE?
@@ -55,7 +55,7 @@ typedef enum
 {
 	/* Control */
 	IRIS_PROGRESS_MESSAGE_COMPLETE,
-	IRIS_PROGRESS_MESSAGE_CANCELLED,
+	IRIS_PROGRESS_MESSAGE_CANCELED,
 
 	/* Progress */
 	IRIS_PROGRESS_MESSAGE_PULSE,

@@ -103,7 +103,7 @@
  * To do this you must first call iris_progress_monitor_add_watch(). This
  * returns an #IrisPort object where you should then send messages of
  * #IrisProgressMessageType to update the UI. The progress monitor will watch
- * the task until it receives #IRIS_PROGRESS_MESSAGE_CANCELLED or
+ * the task until it receives #IRIS_PROGRESS_MESSAGE_CANCELED or
  * #IRIS_PROGRESS_MESSAGE_COMPLETE. You can find an example implementation of
  * this in <filename>examples/progress-tasks</filename> in the iris source tree.
  * </para>
@@ -165,7 +165,7 @@ iris_progress_monitor_base_init (gpointer g_class)
 	* @progress_monitor: the #IrisProgressMonitor that received the signal
 	*
 	* Emitted when a 'cancel' button is pressed on a progress widget. Any
-	* #IrisProcess objects being watched are cancelled automatically, but if
+	* #IrisProcess objects being watched are canceled automatically, but if
 	* you are doing something more advanced you will need to handle this signal
 	* yourself.
 	*/
@@ -200,7 +200,7 @@ iris_progress_monitor_base_init (gpointer g_class)
 void
 _iris_progress_group_reset (IrisProgressGroup *group)
 {
-	group->cancelled = FALSE;
+	group->canceled = FALSE;
 
 	group->completed_watches = 0;
 }
@@ -319,7 +319,7 @@ _iris_progress_watch_free (IrisProgressWatch *watch)
 
 		/* We don't check if the group can stop displaying in activity only
 		 * mode; either it was changed already when the watch completed, or the
-		 * whole group got cancelled so it makes no difference.
+		 * whole group got canceled so it makes no difference.
 		 */
 	}
 
@@ -342,7 +342,7 @@ _iris_progress_watch_free (IrisProgressWatch *watch)
  * a progress bar) for a task, which needs to update it by posting messages on
  * the #IrisPort that is returned. These messages should be from
  * #IrisProgressMessageType. The watch will be removed when the port receives
- * #IRIS_PROGRESS_MESSAGE_CANCELLED or #IRIS_PROGRESS_MESSAGE_COMPLETE.
+ * #IRIS_PROGRESS_MESSAGE_CANCELED or #IRIS_PROGRESS_MESSAGE_COMPLETE.
  *
  * See iris_progress_monitor_add_group() for more info on watch groups.
  *
@@ -405,7 +405,7 @@ iris_progress_monitor_set_permanent_mode (IrisProgressMonitor *progress_monitor,
  * iris_progress_monitor_set_watch_hide_delay:
  * @progress_monitor: an #IrisProgressMonitor
  * @milliseconds: time in milliseconds to display progress information for a task
- *             or process after it has completed or been cancelled. Default
+ *             or process after it has completed or been canceled. Default
  *             value: 750 ms.
  *
  * It is slightly visually jarring for a process or group of processes that are
@@ -611,7 +611,7 @@ _iris_progress_group_is_stopped (IrisProgressGroup *group)
 
 	for (node=group->watch_list; node; node=node->next) {
 		watch = node->data;
-		if (!watch->complete && !watch->cancelled)
+		if (!watch->complete && !watch->canceled)
 			return FALSE;
 	}
 
@@ -634,7 +634,7 @@ _iris_progress_monitor_cancel_group   (IrisProgressMonitor *progress_monitor,
 		watch = node->data;
 
 		/* Allowed, it's possible with a long watch_hide_delay .. */
-		if (watch->cancelled || watch->complete)
+		if (watch->canceled || watch->complete)
 			continue;
 
 		iris_task_cancel (IRIS_TASK (watch->task));
@@ -647,7 +647,7 @@ void
 _iris_progress_monitor_cancel_watch   (IrisProgressMonitor *progress_monitor,
                                        IrisProgressWatch   *watch)
 {
-	g_return_if_fail (!watch->cancelled);
+	g_return_if_fail (!watch->canceled);
 
 	iris_task_cancel (IRIS_TASK (watch->task));
 
@@ -706,10 +706,10 @@ watch_chain (IrisProgressMonitor             *progress_monitor,
 }
 
 static void
-handle_cancelled (IrisProgressWatch *watch,
+handle_canceled (IrisProgressWatch *watch,
                   IrisMessage *message)
 {
-	watch->cancelled = TRUE;
+	watch->canceled = TRUE;
 }
 
 static void
@@ -803,12 +803,12 @@ _iris_progress_monitor_handle_message (IrisMessage  *message,
 	IrisProgressMonitor          *progress_monitor = watch->monitor;
 	IrisProgressMonitorInterface *iface;
 
-	if (watch->cancelled || watch->complete)
+	if (watch->canceled || watch->complete)
 		if (message->what != IRIS_PROGRESS_MESSAGE_TITLE)
 			g_warning ("IrisProgressMonitor: watch %lx sent a progress message "
 			           "after already sending %s.\n",
 			           (gulong)watch,
-			           watch->cancelled? "CANCELLED": "COMPLETE");
+			           watch->canceled? "CANCELED": "COMPLETE");
 
 	g_return_if_fail (IRIS_IS_PROGRESS_MONITOR (progress_monitor));
 
@@ -823,8 +823,8 @@ _iris_progress_monitor_handle_message (IrisMessage  *message,
 	}
 
 	switch (message->what) {
-		case IRIS_PROGRESS_MESSAGE_CANCELLED:
-			handle_cancelled (watch, message);
+		case IRIS_PROGRESS_MESSAGE_CANCELED:
+			handle_canceled (watch, message);
 			break;
 		case IRIS_PROGRESS_MESSAGE_COMPLETE:
 			handle_complete (watch, message);
@@ -880,7 +880,7 @@ _iris_progress_monitor_format_watch_progress (IrisProgressMonitor *progress_moni
 	if (watch->complete) {
 		g_snprintf (p_progress_text, 255, _("Complete"));
 		return;
-	} else if (watch->cancelled) {
+	} else if (watch->canceled) {
 		g_snprintf (p_progress_text, 255, _("Cancelled"));
 		return;
 	}
@@ -904,7 +904,7 @@ _iris_progress_monitor_format_group_progress (IrisProgressMonitor *progress_moni
 
 	g_return_if_fail (group->watch_list != NULL);
 
-	if (group->cancelled) {
+	if (group->canceled) {
 		g_snprintf (p_progress_text, 255, _("Cancelled"));
 		return;
 	}

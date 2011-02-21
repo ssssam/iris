@@ -64,7 +64,7 @@ thinking_task_func (IrisTask *task,
 	}
 
 	if (cancelled) {
-		status_message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
+		status_message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELED);
 		iris_port_post (watch_port, status_message);
 	} else {
 		/* Make sure the 100% mark is reached, it looks strange for a watch to

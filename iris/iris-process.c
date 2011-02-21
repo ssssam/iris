@@ -196,10 +196,10 @@ iris_process_run (IrisProcess *process)
  * @process: An #IrisProcess
  *
  * Cancels a process.  The process will exit after a work item is complete, and
- * the task function can also periodically check the cancelled state with
+ * the task function can also periodically check the canceled state with
  * iris_task_was_canceled() and quit execution.
  *
- * If @process has any predecessors, they will also be cancelled. For more
+ * If @process has any predecessors, they will also be canceled. For more
  * information, see iris_process_connect().
  */
 void
@@ -471,7 +471,7 @@ iris_process_is_executing (IrisProcess *process)
  * @process: An #IrisProcess
  *
  * Checks if a process has succeeded, thrown a fatal error or been
- * cancelled.
+ * canceled.
  *
  * Return value: %TRUE if the process will not any more work
  */
@@ -485,7 +485,7 @@ iris_process_is_finished (IrisProcess *process)
  * iris_process_was_canceled:
  * @process: An #IrisProcess
  *
- * Checks if a process has been cancelled.  Note that if the process handles
+ * Checks if a process has been canceled.  Note that if the process handles
  * the cancel and chooses to ignore it, %FALSE will be returned.
  *
  * Return value: %TRUE if the process was canceled.
@@ -851,7 +851,7 @@ handle_cancel (IrisProcess *process,
 			iris_process_cancel (priv->source);
 	}
 
-	/* We post IRIS_PROGRESS_MESSAGE_CANCELLED from the work function to make
+	/* We post IRIS_PROGRESS_MESSAGE_CANCELED from the work function to make
 	 * sure it's our last message.
 	 */
 }
@@ -1089,7 +1089,7 @@ static void
 iris_process_execute_real (IrisTask *task)
 {
 	GValue    params[2] = { {0,}, {0,} };
-	gboolean  cancelled;
+	gboolean  canceled;
 	GTimer   *timer;
 	IrisProcess        *process,
 	                   *source;
@@ -1113,7 +1113,7 @@ iris_process_execute_real (IrisTask *task)
 	while (1) {
 		IrisMessage *work_item;
 
-		cancelled = iris_process_was_canceled (process);
+		canceled = iris_process_was_canceled (process);
 
 		/* Update progress monitors, no more than four times a second */
 		if (priv->watch_port_list != NULL &&
@@ -1122,7 +1122,7 @@ iris_process_execute_real (IrisTask *task)
 			update_status (process, FALSE);
 		}
 
-		if (cancelled)
+		if (canceled)
 			break;
 
 		if (G_UNLIKELY (g_timer_elapsed(timer, NULL) > 1.0))
@@ -1176,13 +1176,13 @@ _yield:
 	if (priv->watch_port_list != NULL) {
 		update_status (process, TRUE);
 
-		if (cancelled) {
-			message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
+		if (canceled) {
+			message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELED);
 			post_progress_message (process, message);
 		}
 	}
 
-	if (!cancelled)
+	if (!canceled)
 		// Execute callbacks and then mark finished.
 		iris_task_work_finished (IRIS_TASK (process));
 

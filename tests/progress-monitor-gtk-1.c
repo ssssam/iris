@@ -122,7 +122,7 @@ thinking_task_func (IrisTask *task,
 	}
 
 	if (cancelled) {
-		status_message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
+		status_message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELED);
 	} else {
 		status_message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_FRACTION,
 		                                        G_TYPE_FLOAT, 1.0);
