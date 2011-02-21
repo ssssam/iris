@@ -5,6 +5,8 @@
 #include <iris/iris-receiver-private.h>
 #include <iris/iris-scheduler-private.h>
 
+#include "g-repeated-test.h"
+
 /* FIXME: maybe rename this test suite to messages-live-1 or something */
 
 /* Testing if receiver gets messages after its own destruction, because we
@@ -226,51 +228,6 @@ test_destruction (SchedulerFixture *fixture,
 }
 
 
-
-/* Utility to run a test x times.
- *
- * FIXME: would this be useful merged into glib? 
- */
-typedef struct {
-	gint          times;
-	gint          fixture_size;
-	gconstpointer tdata;
-	void (*fsetup)    (SchedulerFixture *, gconstpointer);
-	void (*ftest)     (SchedulerFixture *, gconstpointer);
-	void (*fteardown) (SchedulerFixture *, gconstpointer);
-} RepeatedTestCase;
-
-static void repeated_test (gconstpointer data)
-{
-	RepeatedTestCase *test_case = (gpointer)data;
-	gpointer fixture;
-	int i;
-
-	fixture = g_slice_alloc (test_case->fixture_size);
-
-	for (i=0; i<test_case->times; i++) {
-		test_case->fsetup (fixture, test_case->tdata);
-		test_case->ftest (fixture, test_case->tdata);
-		test_case->fteardown (fixture, test_case->tdata);
-	}
-
-	g_slice_free1 (test_case->fixture_size, fixture);
-	g_slice_free (RepeatedTestCase, test_case);
-}
-
-#define test_add_repeated(testpath, _times, Fixture, _tdata, _fsetup, _ftest, _fteardown) \
-  G_STMT_START { \
-      RepeatedTestCase *test_case = g_slice_new (RepeatedTestCase); \
-      test_case->times = _times;    \
-      test_case->fixture_size = sizeof(Fixture); \
-      test_case->tdata = _tdata; \
-      test_case->fsetup = _fsetup; \
-      test_case->ftest = _ftest; \
-      test_case->fteardown = _fteardown; \
-      g_test_add_data_func (testpath, test_case, repeated_test); \
-  } G_STMT_END
-
-
 static void
 add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
                         void (*teardown) (SchedulerFixture *, gconstpointer),
@@ -283,12 +240,12 @@ add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
 	            test_integrity, teardown);
 
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/integrity 2", name);
-	test_add_repeated (buf, 250, SchedulerFixture, GINT_TO_POINTER (TRUE), setup,
-	                   test_integrity, teardown);
+	g_test_add_repeated (buf, 250, SchedulerFixture, GINT_TO_POINTER (TRUE), setup,
+	                     test_integrity, teardown);
 
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/order", name);
-	test_add_repeated (buf, 250, SchedulerFixture, NULL, setup, test_order,
-	                   teardown);
+	g_test_add_repeated (buf, 250, SchedulerFixture, NULL, setup, test_order,
+	                     teardown);
 
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/destruction", name);
 	g_test_add (buf, SchedulerFixture, NULL, setup, test_destruction, teardown);
