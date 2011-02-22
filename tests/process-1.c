@@ -444,11 +444,9 @@ test_output_estimates_basic (void)
 		iris_process_get_status (process[0], &processed_items, &total_items);
 	while (total_items != 100);
 
-	/* Let the message loop run a couple of times to the CHAIN_ESTIMATE message
-	 * gets received. FIXME: might be better to wait by watching their
-	 * communication channel ??
-	 */
-	g_usleep (10000);
+	/* Empty message loop to ensure CHAIN_ESTIMATE messages get through */
+	for (i=0; i<3; i++)
+		wait_messages (process[i]);
 
 	iris_process_get_status (process[1], &processed_items, &total_items);
 	g_assert_cmpint (total_items, ==, 100);
@@ -510,7 +508,7 @@ static void
 test_output_estimates_cancel (void)
 {
 	IrisProcess *process_1, *process_2;
-	gint         j, wait_state,
+	gint         j, wait_state = 0,
 	             processed_items, total_items;
 
 	process_1 = iris_process_new_with_func (push_next_func, NULL, NULL);
