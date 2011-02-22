@@ -877,6 +877,7 @@ iris_process_add_watch (IrisProcess               *process,
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (IRIS_IS_PORT (watch_port));
 
+	g_object_ref (watch_port);
 	message = iris_message_new_data (IRIS_PROCESS_MESSAGE_ADD_WATCH,
 	                                 IRIS_TYPE_PORT, watch_port);
 	iris_port_post (IRIS_TASK(process)->priv->port, message);
@@ -1147,7 +1148,6 @@ handle_add_watch (IrisProcess *process,
 	data = iris_message_get_data (message);
 	watch_port = IRIS_PORT (g_value_get_object (data));
 
-	g_object_ref (watch_port);
 	priv->watch_port_list = g_list_append (priv->watch_port_list,
 	                                       watch_port);
 
