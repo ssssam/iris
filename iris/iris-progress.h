@@ -61,7 +61,7 @@ typedef enum
  * @IRIS_PROGRESS_MESSAGE_TITLE: string; sent when the title of the process changes
  *
  * An #IrisProgressMonitor listens for these messages to update its UI. It's
- * recommended you don't send status messages more than once every 250ms or so;
+ * recommended you don't send status messages more than once every 200ms or so;
  * there's no point.
  *
  * No messages should be sent after %IRIS_PROGRESS_MESSAGE_CANCELED or

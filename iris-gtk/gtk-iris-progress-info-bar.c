@@ -387,6 +387,7 @@ gtk_iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 {
 	GtkIrisProgressInfoBar        *progress_info_bar;
 	GtkIrisProgressInfoBarPrivate *priv;
+	IrisProgressGroup             *group;
 
 	GtkWidget    *vbox, *hbox, *hbox_indent,
 	             *title_label,
@@ -410,6 +411,15 @@ gtk_iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 
 	priv->watch_list = g_list_append (priv->watch_list, watch);
 
+	group = watch->group;
+
+	if (group != NULL)
+		/* If we have 3 watches updating the group progress bar, in activity
+		 * mode it needs to move at 1/3 the speed ...
+		 */
+		gtk_progress_bar_set_pulse_step (GTK_PROGRESS_BAR (group->progress_bar),
+		                                 0.1 / g_list_length (group->watch_list));
+
 	/* Add UI for watch */
 
 	hbox_indent = gtk_hbox_new (FALSE, 0);
@@ -423,7 +433,7 @@ gtk_iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 
 	gtk_box_pack_start (GTK_BOX (hbox), title_label, FALSE, TRUE, 0);
 
-	if (watch->group == NULL) {
+	if (group == NULL) {
 		gtk_box_pack_start (GTK_BOX (hbox), progress_bar, FALSE, TRUE, 0);
 
 		gtk_box_pack_start (GTK_BOX (hbox_indent), hbox, FALSE, TRUE, EXPANDER_INDENT);
@@ -456,7 +466,7 @@ gtk_iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 	else {
 		gtk_box_pack_start (GTK_BOX (hbox), progress_bar, TRUE, TRUE, 0);
 
-		gtk_size_group_add_widget (GTK_SIZE_GROUP (watch->group->user_data1),
+		gtk_size_group_add_widget (GTK_SIZE_GROUP (group->user_data1),
 		                           title_label);
 
 		hbox_indent = gtk_hbox_new (FALSE, 0);
@@ -467,7 +477,7 @@ gtk_iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 		gtk_box_pack_start (GTK_BOX (vbox), hbox_indent, FALSE, TRUE, 0);
 
 		if (!watch->group->visible)
-			show_group (progress_info_bar, watch->group);
+			show_group (progress_info_bar, group);
 
 		cancel_button = gtk_bin_get_child (GTK_BIN (watch->group->cancel_widget));
 		gtk_widget_set_sensitive (cancel_button, TRUE);
@@ -495,23 +505,32 @@ gtk_iris_progress_info_bar_remove_watch (IrisProgressMonitor *progress_monitor,
 {
 	GtkIrisProgressInfoBar        *progress_info_bar;
 	GtkIrisProgressInfoBarPrivate *priv;
+	IrisProgressGroup             *group;
 
 	g_return_if_fail (GTK_IRIS_IS_PROGRESS_INFO_BAR (watch->monitor));
 
 	progress_info_bar = GTK_IRIS_PROGRESS_INFO_BAR (watch->monitor);
 	priv = progress_info_bar->priv;
 
-	if (watch->group != NULL) {
-		gtk_size_group_remove_widget (GTK_SIZE_GROUP (watch->group->user_data1),
+	group = watch->group;
+
+	if (group != NULL) {
+		gtk_size_group_remove_widget (GTK_SIZE_GROUP (group->user_data1),
 		                              watch->title_label);
 
-		g_warn_if_fail (g_list_length (watch->group->watch_list) > 0);
+		g_warn_if_fail (g_list_length (group->watch_list) > 0);
 
-		if (g_list_length (watch->group->watch_list) == 1) {
-			g_warn_if_fail (watch->group->watch_list->data == watch);
-			hide_group (progress_info_bar, watch->group);
-		} else if (!watch->canceled)
-			watch->group->completed_watches ++;
+		if (g_list_length (group->watch_list) == 1) {
+			g_warn_if_fail (group->watch_list->data == watch);
+			hide_group (progress_info_bar, group);
+		} else
+		if (!watch->canceled) {
+			group->completed_watches ++;
+
+			gtk_progress_bar_set_pulse_step
+			  (GTK_PROGRESS_BAR (group->progress_bar),
+			   0.1 / g_list_length (group->watch_list));
+		}
 	} else {
 		/* Remove cancel button from action area */
 		gtk_container_remove (GTK_CONTAINER (priv->action_box),
@@ -687,9 +706,9 @@ handle_update (IrisProgressMonitor *progress_monitor,
 	if (watch->group != NULL) {
 		progress_bar = GTK_WIDGET (watch->group->progress_bar);
 
-		if (watch->group->progress_mode == IRIS_PROGRESS_ACTIVITY_ONLY)
+		if (watch->group->progress_mode == IRIS_PROGRESS_ACTIVITY_ONLY) {
 			gtk_progress_bar_pulse (GTK_PROGRESS_BAR (progress_bar));
-		else {
+		} else {
 			_iris_progress_monitor_format_group_progress
 			  (progress_monitor, watch->group, progress_text, &group_fraction);
 			gtk_progress_bar_set_text (GTK_PROGRESS_BAR (progress_bar),

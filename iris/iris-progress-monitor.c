@@ -809,6 +809,8 @@ _iris_progress_monitor_handle_message (IrisMessage  *message,
 		case IRIS_PROGRESS_MESSAGE_COMPLETE:
 			handle_complete (watch, message);
 			break;
+		case IRIS_PROGRESS_MESSAGE_PULSE:
+			break;
 		case IRIS_PROGRESS_MESSAGE_FRACTION:
 			handle_fraction (watch, message);
 			break;

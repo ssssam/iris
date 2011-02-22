@@ -946,40 +946,41 @@ update_status (IrisProcess *process, gboolean force)
 	IrisProcessPrivate *priv;
 	IrisProcess        *source;
 	IrisMessage        *message;
-	int                 total;
+	int                 total, processed;
 
 	priv = process->priv;
 
-	/* This code executes even if the process is being watched in activity only
-	 * mode. That doesn't actually matter other than the wasted energy
-	 * calculating values.
-	 */
+	if (IRIS_TASK (process)->priv->progress_mode == IRIS_PROGRESS_ACTIVITY_ONLY)
+		message = iris_message_new (IRIS_PROGRESS_MESSAGE_PULSE);
+	else {
+		source = iris_process_get_predecessor (process);
+		total = g_atomic_int_get (&priv->total_items);
 
-	source = iris_process_get_predecessor (process);
-	total = g_atomic_int_get (&priv->total_items);
+		if (source != NULL) {
+				if (iris_process_has_succeeded (source))
+				/* Quicker to do this than to check if we have done it */
+				g_atomic_int_set (&priv->estimated_total_items, total);
+			else
+				total = g_atomic_int_get (&priv->estimated_total_items);
+		}
 
-	if (source != NULL) {
-		if (iris_process_has_succeeded (source))
-			/* Quicker to do this than to check if we have done it */
-			g_atomic_int_set (&priv->estimated_total_items, total);
-		else
-			total = g_atomic_int_get (&priv->estimated_total_items);
+		/* Send total items first, so we don't risk processed_items > total_items */
+		if (force || priv->watch_total_items < total) {
+			priv->watch_total_items = total;
+
+			message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS,
+			                                 G_TYPE_INT, total);
+			post_progress_message (process, message);
+			iris_message_unref (message);
+		}
+
+		/* Now send processed items */
+		processed = g_atomic_int_get (&priv->processed_items);
+		message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS,
+		                                 G_TYPE_INT,
+		                                 processed);
 	}
 
-	/* Send total items first, so we don't risk processed_items > total_items */
-	if (force || priv->watch_total_items < total) {
-		priv->watch_total_items = total;
-
-		message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS,
-		                                 G_TYPE_INT, total);
-		post_progress_message (process, message);
-		iris_message_unref (message);
-	}
-
-	/* Now send processed items */
-	message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS,
-	                                 G_TYPE_INT,
-	                                 g_atomic_int_get (&priv->processed_items));
 	post_progress_message (process, message);
 	iris_message_unref (message);
 }
@@ -1316,7 +1317,7 @@ iris_process_execute_real (IrisTask *task)
 
 		/* Update progress monitors, no more than four times a second */
 		if (priv->watch_port_list != NULL &&
-		    g_timer_elapsed (priv->watch_timer, NULL) >= 0.250) {
+		    g_timer_elapsed (priv->watch_timer, NULL) >= 0.200) {
 			g_timer_reset (priv->watch_timer);
 			update_status (process, FALSE);
 		}
