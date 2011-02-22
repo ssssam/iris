@@ -74,7 +74,7 @@ typedef enum
 typedef enum
 {
 	/* Control */
-	IRIS_PROGRESS_MESSAGE_COMPLETE,
+	IRIS_PROGRESS_MESSAGE_COMPLETE = 1,
 	IRIS_PROGRESS_MESSAGE_CANCELED,
 
 	/* Progress */
