@@ -342,7 +342,9 @@ iris_task_set_progress_mode (IrisTask         *task,
  * iris_task_get_progress_mode:
  * @task: An #IrisTask
  *
- * Returns the #IrisProgressMode that should be used to display @task.
+ * Returns @task's progress mode.
+ *
+ * Return value: the #IrisProgressMode that should be used to display @task.
  */
 IrisProgressMode
 iris_task_get_progress_mode (IrisTask *task)
