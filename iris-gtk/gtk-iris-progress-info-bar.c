@@ -622,16 +622,24 @@ finish_info_bar (GtkIrisProgressInfoBar *progress_info_bar)
 	priv = progress_info_bar->priv;
 
 	/* Emit IrisProgressMonitor::finished */
+	g_object_ref (progress_info_bar);
+
 	priv->in_finished = TRUE;
 	_iris_progress_monitor_finished (IRIS_PROGRESS_MONITOR (progress_info_bar));
 	priv->in_finished = FALSE;
 
 	if (priv->permanent_mode) {
 		/* Check the 'finished' handler didn't destroy the info bar */
-		g_return_if_fail (GTK_IRIS_IS_PROGRESS_INFO_BAR (progress_info_bar));
+		if (g_atomic_int_get (&G_OBJECT(progress_info_bar)->ref_count) <= 1)
+			g_warning ("GtkIrisProgressInfoBar: widget seems to have been "
+			            "destroyed in ::finished signal, but permanent mode "
+			            "was enabled. Please turn off permanent mode if you "
+			            "don't want it!");
 
 		gtk_widget_hide (GTK_WIDGET (progress_info_bar));
 	}
+
+	g_object_unref (progress_info_bar);
 }
 
 static gboolean
@@ -777,13 +785,22 @@ static void
 gtk_iris_progress_info_bar_set_permanent_mode (IrisProgressMonitor *progress_monitor,
                                                gboolean             enable)
 {
-	GtkIrisProgressInfoBar *progress_info_bar;
+	GtkIrisProgressInfoBar        *progress_info_bar;
+	GtkIrisProgressInfoBarPrivate *priv;
 
 	g_return_if_fail (GTK_IRIS_IS_PROGRESS_INFO_BAR (progress_monitor));
 
 	progress_info_bar = GTK_IRIS_PROGRESS_INFO_BAR (progress_monitor);
+	priv = progress_info_bar->priv;
 
-	progress_info_bar->priv->permanent_mode = enable;
+	priv->permanent_mode = enable;
+
+	if (enable) {
+		if (priv->watch_list == NULL)
+			gtk_widget_hide (GTK_WIDGET (progress_info_bar));
+		else
+			gtk_widget_show (GTK_WIDGET (progress_info_bar));
+	}
 }
 
 static void

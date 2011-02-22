@@ -708,19 +708,28 @@ finish_dialog (GtkIrisProgressDialog *progress_dialog)
 
 	priv = progress_dialog->priv;
 
-	/* Emit IrisProgressMonitor::finished */
+	/* Emit IrisProgressMonitor::finished. Keep it reffed so that if it gets
+	 * destroyed we don't crash. */
+	g_object_ref (progress_dialog);
+
 	priv->in_finished = TRUE;
 	_iris_progress_monitor_finished (IRIS_PROGRESS_MONITOR (progress_dialog));
 	priv->in_finished = FALSE;
 
 	if (priv->permanent_mode) {
 		/* Check the 'finished' handler didn't destroy the dialog */
-		g_return_if_fail (GTK_IRIS_IS_PROGRESS_DIALOG (progress_dialog));
+		if (g_atomic_int_get (&G_OBJECT(progress_dialog)->ref_count) <= 1)
+			g_warning ("GtkIrisProgressDialog: dialog seems to have been "
+			            "destroyed in ::finished signal, but permanent mode "
+			            "was enabled. Please turn off permanent mode if you "
+			            "don't want it!");
 
 		priv->max_width = 0;
 
 		gtk_widget_hide (GTK_WIDGET (progress_dialog));
 	}
+
+	g_object_unref (progress_dialog);
 }
 
 /* Called by watch hide timeout */
@@ -936,13 +945,22 @@ void
 gtk_iris_progress_dialog_set_permanent_mode (IrisProgressMonitor *progress_monitor,
                                              gboolean             enable)
 {
-	GtkIrisProgressDialog *progress_dialog;
+	GtkIrisProgressDialog        *progress_dialog;
+	GtkIrisProgressDialogPrivate *priv;
 
 	g_return_if_fail (GTK_IRIS_IS_PROGRESS_DIALOG (progress_monitor));
 
 	progress_dialog = GTK_IRIS_PROGRESS_DIALOG (progress_monitor);
+	priv = progress_dialog->priv;
 
-	progress_dialog->priv->permanent_mode = enable;
+	priv->permanent_mode = enable;
+
+	if (enable) {
+		if (priv->watch_list == NULL)
+			gtk_widget_hide (GTK_WIDGET (progress_dialog));
+		else
+			gtk_widget_show (GTK_WIDGET (progress_dialog));
+	}
 }
 
 void
