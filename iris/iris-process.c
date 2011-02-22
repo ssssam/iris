@@ -99,12 +99,14 @@ enum {
 	PROP_TITLE
 };
 
-static void             post_progress_message      (IrisProcess *process,
-                                                    IrisMessage *progress_message);
+static void             post_output_estimate         (IrisProcess *process);
 
-static void             iris_process_dummy         (IrisProcess *task,
-                                                    IrisMessage *work_item,
-                                                    gpointer user_data);
+static void             post_progress_message        (IrisProcess *process,
+                                                      IrisMessage *progress_message);
+
+static void             iris_process_dummy           (IrisProcess *task,
+                                                      IrisMessage *work_item,
+                                                      gpointer user_data);
 
 
 /**************************************************************************
@@ -231,6 +233,7 @@ iris_process_enqueue (IrisProcess *process,
                       IrisMessage *work_item)
 {
 	IrisProcessPrivate *priv;
+	gint                total_items, estimated_total_items;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 
@@ -245,7 +248,21 @@ iris_process_enqueue (IrisProcess *process,
 
 	g_atomic_int_inc (&priv->total_items);
 
+	total_items = g_atomic_int_get (&priv->total_items);
+	estimated_total_items = g_atomic_int_get (&priv->estimated_total_items);
+
+	/* Don't allow estimated total inputs to be lower than the real value */
+	if (total_items > estimated_total_items)
+		g_atomic_int_set (&priv->estimated_total_items, total_items);
+
 	iris_port_post (priv->work_port, work_item);
+
+	/* FIXME: it's bad that we call this function on every queued work item.
+	 * The best way I can think of to avoid this is to implement
+	 * iris_scheduler_queue_timeout() and send the message from a timeout. You
+	 * can see why I haven't done that yet :)
+	 */
+	post_output_estimate (process);
 };
 
 /**
@@ -519,14 +536,9 @@ iris_process_has_succeeded (IrisProcess *process)
 
 	if (!iris_process_has_predecessor (process))
 		return iris_task_has_succeeded (IRIS_TASK (process));
-	else {
-		/*if (iris_process_get_queue_length (process) > 0 &&
-		    !iris_process_is_FLAG_IS_OFF (process, IRIS_TASK_FLAG_CANCELED))
-		    return FALSE;*/
-		    
+	else
 		return iris_process_has_succeeded (priv->source) &&
-		       iris_process_has_succeeded (priv->source);
-	}
+		       iris_task_has_succeeded (IRIS_TASK (process));
 };
 
 /**
@@ -569,32 +581,6 @@ iris_process_has_successor (IrisProcess *process)
 	g_return_val_if_fail (IRIS_IS_PROCESS (process), FALSE);
 
 	return FLAG_IS_ON (process, IRIS_PROCESS_FLAG_HAS_SINK);
-}
-
-/**
- * iris_process_get_queue_length:
- * @process: An #IrisProcess
- *
- * Returns the number of work items enqueued in @process but not yet
- * executed.
- *
- * Return value: how many items @process has left to complete.
- */
-gint
-iris_process_get_queue_length (IrisProcess *process) {
-	IrisProcessPrivate *priv;
-	gint               processed_items, total_items;
-
-	g_return_val_if_fail (IRIS_IS_PROCESS (process), 0);
-
-	priv = process->priv;
-
-	/* Reading the values in this order means could ignore items that complete
-	 * concurrently, and give a queue lengths which is too high.
-	 */
-	processed_items = g_atomic_int_get (&priv->processed_items);
-	total_items = g_atomic_int_get (&priv->total_items);
-	return total_items - processed_items;
 }
 
 /**
@@ -651,6 +637,68 @@ iris_process_get_title (IrisProcess  *process)
 	g_return_val_if_fail (IRIS_IS_PROCESS (process), NULL);
 
 	return g_atomic_pointer_get (&process->priv->title);
+}
+
+/**
+ * iris_process_get_status:
+ * @process: An #IrisProcess
+ * @p_processed_items: Location to store the number of items completed by
+ *                     @process, or %NULL
+ * @p_total_items: Location to store the total number of items that @process
+ *                 will handle.
+ *
+ * Gets the status of @process, returning how much work has been done and the
+ * total amount of work. Note that the total amount of work is likely to be an
+ * estimate if @process is still receiving work items from another process,
+ * since the its predecessor in this chain may not know exactly how many times
+ * itwill call iris_process_forward(). For more information, see
+ * iris_process_set_output_estimation().
+ */
+void
+iris_process_get_status (IrisProcess *process,
+                         gint        *p_processed_items,
+                         gint        *p_total_items)
+{
+	IrisProcessPrivate *priv;
+
+	g_return_if_fail (IRIS_IS_PROCESS (process));
+
+	priv = process->priv;
+
+	if (p_processed_items != NULL)
+		*p_processed_items = g_atomic_int_get (&priv->processed_items);
+
+	if (p_total_items != NULL) {
+		*p_total_items = g_atomic_int_get (&priv->estimated_total_items);
+		if (*p_total_items == 0)
+			*p_total_items = g_atomic_int_get (&priv->total_items);
+	}
+}
+
+/**
+ * iris_process_get_queue_length:
+ * @process: An #IrisProcess
+ *
+ * Returns the number of work items enqueued in @process but not yet
+ * executed.
+ *
+ * Return value: how many items @process has left to complete.
+ */
+gint
+iris_process_get_queue_length (IrisProcess *process) {
+	IrisProcessPrivate *priv;
+	gint               processed_items, total_items;
+
+	g_return_val_if_fail (IRIS_IS_PROCESS (process), 0);
+
+	priv = process->priv;
+
+	/* Reading the values in this order means could ignore items that complete
+	 * concurrently, and give a queue lengths which is too high.
+	 */
+	processed_items = g_atomic_int_get (&priv->processed_items);
+	total_items = g_atomic_int_get (&priv->total_items);
+	return total_items - processed_items;
 }
 
 /**
@@ -742,6 +790,70 @@ iris_process_set_title (IrisProcess *process,
 
 
 /**
+ * iris_process_set_output_estimation:
+ * @process: An #IrisProcess
+ * @factor: ratio between number of input items and estimated number of output
+ *          items. (Default: 1.0)
+ *
+ * When processes are chained together, it is hard to show progress widgets for
+ * the later ones because they don't know how many items they will have to
+ * process. Without some estimation, they only know how many have been
+ * forwarded from their predecessor, which leads to their progress bar jumping
+ * to 50% and going steadily backwards as more work items are forwarded.
+ *
+ * For this reason, processes track the <emphasis>estimated</emphasis> amount of
+ * of work they have left as well as their actual queue. By default each process
+ * sends an estimation to the next one in the queue, which is its queue length if it
+ * is the first process, or its estimated total work if it is further down the
+ * chain. You may alter the calculation using @factor. For example, if each input
+ * normally generates two output work items, set it to 2.0.
+ */
+/* FIXME: when processes track their own progress display mode, should we force
+ * chains that don't do estimation to IRIS_PROGRESS_ACTIVITY_ONLY ??
+ */
+/* A quick API design note: I considered much more powerful ways of estimation,
+ * but decided it was needless. You could have a hook/signal called from
+ * iris_process_enqueue(), which could look at the work item and decide how
+ * many work items it will produce. However, the best use case I could come up
+ * with was some sort of demuxing, where either the work item could be parsed and
+ * split into the separate elements in the enqueue callback (which removes the
+ * need for the process, and could just be done before the items were enqueued)
+ * or the calculation of how many items will result from one input is too
+ * involved to be estimated easily. 
+ */
+void
+iris_process_set_output_estimation (IrisProcess *process,
+                                    gfloat       factor)
+{
+	IrisProcessPrivate *priv;
+	gfloat             *p_old_factor, *p_new_factor;
+
+	g_return_if_fail (IRIS_IS_PROCESS (process));
+	g_return_if_fail (factor > 0.0);
+
+	priv = process->priv;
+
+	/* Set now, in a nasty atomic way. We post the estimates from
+	 * iris_process_enqueue() so it's vital to keep the factor updated in time
+	 */
+	p_new_factor = g_slice_new (float);
+	*p_new_factor = factor;
+
+	while (1) {
+		p_old_factor = g_atomic_pointer_get (&priv->output_estimate_factor);
+		if (g_atomic_pointer_compare_and_exchange
+		      ((gpointer *)&priv->output_estimate_factor,
+		       p_old_factor, p_new_factor))
+			break;
+	}
+
+	g_slice_free (gfloat, p_old_factor);
+
+	post_output_estimate (process);
+}
+
+
+/**
  * iris_process_add_watch:
  * @process: An #IrisProcess
  * @watch_port: An #IrisPort
@@ -771,6 +883,45 @@ iris_process_add_watch (IrisProcess               *process,
  *                      IrisProcess Internal Helpers                      *
  *************************************************************************/
 
+/* This must be MT-safe, it's called from iris_process_enqueue() */
+static void
+post_output_estimate (IrisProcess *process)
+{
+	IrisProcessPrivate *priv;
+	IrisProcess        *sink;
+	IrisMessage        *message;
+	float              *p_factor;
+	gint                our_total_items;
+	gint                estimate;
+
+	priv = process->priv;
+
+	sink = iris_process_get_successor (process);
+
+	if (sink == NULL)
+		return;
+
+	/* Always calculate from estimated_total_items if set; when the source
+	 * process completes we update it to the actual value in update_status()
+	 */
+	our_total_items = g_atomic_int_get (&priv->estimated_total_items);
+
+	if (our_total_items == 0)
+		our_total_items = g_atomic_int_get (&priv->total_items);
+
+	if (our_total_items == 0)
+		return;
+
+	p_factor = g_atomic_pointer_get (&priv->output_estimate_factor);
+
+	estimate = our_total_items * (*p_factor);
+
+	message = iris_message_new_data (IRIS_PROCESS_MESSAGE_CHAIN_ESTIMATE,
+	                                 G_TYPE_INT, estimate);
+	iris_port_post (IRIS_TASK (sink)->priv->port, message);
+	iris_message_unref (message);
+}
+
 static void
 post_progress_message (IrisProcess *process,
                        IrisMessage *progress_message)
@@ -791,6 +942,7 @@ static void
 update_status (IrisProcess *process, gboolean force)
 {
 	IrisProcessPrivate *priv;
+	IrisProcess        *source;
 	IrisMessage        *message;
 	int                 total;
 
@@ -801,15 +953,23 @@ update_status (IrisProcess *process, gboolean force)
 	 * calculating values.
 	 */
 
-	/* Send total items first, so we don't risk processed_items > total_items */
+	source = iris_process_get_predecessor (process);
 	total = g_atomic_int_get (&priv->total_items);
 
-	if (force || priv->total_items_pushed < total) {
-		priv->total_items_pushed = total;
+	if (source != NULL) {
+		if (iris_process_has_succeeded (source))
+			/* Quicker to do this than to check if we have done it */
+			g_atomic_int_set (&priv->estimated_total_items, total);
+		else
+			total = g_atomic_int_get (&priv->estimated_total_items);
+	}
+
+	/* Send total items first, so we don't risk processed_items > total_items */
+	if (force || priv->watch_total_items < total) {
+		priv->watch_total_items = total;
 
 		message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS,
-	                                     G_TYPE_INT,
-	                                     total);
+		                                 G_TYPE_INT, total);
 		post_progress_message (process, message);
 		iris_message_unref (message);
 	}
@@ -959,6 +1119,8 @@ handle_add_sink (IrisProcess *process,
 	priv->sink = sink_process;
 
 	ENABLE_FLAG (process, IRIS_PROCESS_FLAG_HAS_SINK);
+
+	post_output_estimate (process);
 }
 
 static void
@@ -1007,6 +1169,37 @@ handle_add_watch (IrisProcess *process,
 }
 
 static void
+handle_chain_estimate (IrisProcess *process,
+                       IrisMessage *message)
+{
+	IrisProcessPrivate *priv;
+	IrisProcess        *source;
+	const GValue       *value;
+	gint                source_estimated_total_items;
+
+	g_return_if_fail (IRIS_IS_PROCESS (process));
+	g_return_if_fail (message != NULL);
+
+	priv = process->priv;
+
+	source = iris_process_get_predecessor (process);
+
+	if (!source)
+		return;
+
+	value = iris_message_get_data (message);
+	source_estimated_total_items = g_value_get_int (value);
+
+	if (source_estimated_total_items <= g_atomic_int_get (&priv->estimated_total_items))
+		return;
+
+	g_atomic_int_set (&priv->estimated_total_items, source_estimated_total_items);
+
+	post_output_estimate (process);
+}
+
+
+static void
 iris_process_handle_message_real (IrisTask    *task,
                                   IrisMessage *message)
 {
@@ -1046,6 +1239,10 @@ iris_process_handle_message_real (IrisTask    *task,
 		handle_add_watch (process, message);
 		break;
 
+	case IRIS_PROCESS_MESSAGE_CHAIN_ESTIMATE:
+		handle_chain_estimate (process, message);
+		break;
+
 	default:
 		IRIS_TASK_CLASS (iris_process_parent_class)->handle_message (IRIS_TASK (process),
 		                                                             message);
@@ -1065,6 +1262,8 @@ iris_task_post_work_item_real (IrisProcess *process,
 
 	iris_message_ref (work_item);
 	iris_queue_push (priv->work_queue, work_item);
+
+	/* total_items and estimated_total_items are updated in iris_process_enqueue() */
 }
 
 /**************************************************************************
@@ -1082,8 +1281,6 @@ iris_process_post_work_item (IrisMessage *work_item,
 	process = IRIS_PROCESS (data);
 	IRIS_PROCESS_GET_CLASS (process)->post_work_item (process, work_item);
 }
-
-
 
 static void
 iris_process_execute_real (IrisTask *task)
@@ -1177,6 +1374,7 @@ _yield:
 		update_status (process, TRUE);
 
 		if (canceled) {
+			/* Send CANCELED once we know nothing else will be sent after */
 			message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELED);
 			post_progress_message (process, message);
 		}
@@ -1207,6 +1405,8 @@ iris_process_finalize (GObject *object)
 	g_list_free (priv->watch_port_list);
 
 	g_timer_destroy (priv->watch_timer);
+
+	g_slice_free (gfloat, (gfloat *)priv->output_estimate_factor);
 
 	G_OBJECT_CLASS (iris_process_parent_class)->finalize (object);
 }
@@ -1289,6 +1489,7 @@ static void
 iris_process_init (IrisProcess *process)
 {
 	IrisProcessPrivate *priv;
+	float              *p_output_estimation_factor;
 
 	priv = process->priv = IRIS_PROCESS_GET_PRIVATE (process);
 
@@ -1315,7 +1516,14 @@ iris_process_init (IrisProcess *process)
 
 	priv->processed_items = 0;
 	priv->total_items = 0;
-	priv->total_items_pushed = 0;
+	priv->estimated_total_items = 0;
+
+	priv->watch_total_items = 0;
+
+	/* No atomic float access :( */
+	p_output_estimation_factor = g_slice_new (float);
+	*p_output_estimation_factor = 1.0;
+	priv->output_estimate_factor = p_output_estimation_factor;
 
 	priv->title = NULL;
 

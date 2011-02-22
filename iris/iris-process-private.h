@@ -46,7 +46,8 @@ typedef enum
 	IRIS_PROCESS_MESSAGE_NO_MORE_WORK = IRIS_TASK_MESSAGE_ADD_OBSERVER + 10,
 	IRIS_PROCESS_MESSAGE_ADD_SOURCE,
 	IRIS_PROCESS_MESSAGE_ADD_SINK,
-	IRIS_PROCESS_MESSAGE_ADD_WATCH
+	IRIS_PROCESS_MESSAGE_ADD_WATCH,
+	IRIS_PROCESS_MESSAGE_CHAIN_ESTIMATE
 } IrisProcessMessageType;
 
 struct _IrisProcessPrivate
@@ -59,21 +60,25 @@ struct _IrisProcessPrivate
 	/* Connections */
 	IrisProcess  *source, *sink;
 
-	volatile gint processed_items,    /* updated atomically from the worker
-	                                     thread as work items are completed */
-	              total_items;        /* updated atomically by
-	                                     iris_process_enqueue() */
-	                   
-	gint          total_items_pushed; /* tracks the last value of total_items
-	                                     sent to watchers (only accessed in the
-	                                     control message handler) */
+	/* These are updated atomically from multiple threads. */
+	volatile gint processed_items,
+	              total_items,
+	              estimated_total_items;
+
+	/* Atomically accessed as a pointer ... */
+	volatile gfloat *output_estimate_factor;
+
+	/* These two are accessed from control message handler only */
+	gint          watch_total_items;      /* the last value of total_items sent
+	                                         to watchers */
+
 
 	/* For status indicators. */
 	volatile gchar *title;
 
 	/* Monitoring UI */
-	GList          *watch_port_list;  /* list of watchers */
-	GTimer         *watch_timer;      /* timeouts to throttle status messages */
+	GList          *watch_port_list;      /* list of watchers */
+	GTimer         *watch_timer;          /* timeouts to throttle status messages */
 };
 
 #endif /* __IRIS_PROCESS_PRIVATE_H__ */

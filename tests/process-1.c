@@ -23,8 +23,50 @@
 #include <iris.h>
 
 #include "iris/iris-process-private.h"
+#include "iris/iris-receiver-private.h"
 
 #include "g-repeated-test.h"
+
+
+static void
+wait_messages (IrisProcess *process)
+{
+	IrisPort *port;
+
+	port = IRIS_TASK(process)->priv->port;
+
+	while (iris_port_get_queue_count (port) > 0 ||
+	       g_atomic_int_get (&iris_port_get_receiver (port)->priv->active) > 0)
+		g_thread_yield ();
+}
+
+static void
+push_next_func (IrisProcess *process,
+                IrisMessage *work_item,
+                gpointer     user_data)
+{
+	gint delay = GPOINTER_TO_INT (user_data);
+
+	iris_message_ref (work_item);
+	iris_process_forward (process, work_item);
+
+	if (delay)
+		g_usleep (delay);
+}
+
+static void
+wait_func (IrisProcess *process,
+           IrisMessage *work_item,
+           gpointer     user_data)
+{
+	gint *wait_state = user_data;
+
+	if (g_atomic_int_get (wait_state)==0)
+		g_atomic_int_set (wait_state, 1);
+	else
+		while (g_atomic_int_get (wait_state) != 2)
+			g_usleep (100000);
+}
 
 /* Work item to increment a global counter, so we can tell if the whole queue
  * gets executed propertly
@@ -380,6 +422,143 @@ cancelling_4 (void) {
 	g_object_unref (tail_process);
 };
 
+/* Check output estimates are passed down */
+static void
+test_output_estimates_basic (void)
+{
+	IrisProcess *process[3];
+	gint         i, j,
+	             processed_items, total_items;
+
+	for (i=0; i<3; i++) {
+		process[i] = iris_process_new_with_func (time_waster_callback, NULL, NULL);
+		if (i > 0)
+			iris_process_connect (process[i-1], process[i]);
+	}
+
+	for (j=0; j<100; j++)
+		iris_process_enqueue (process[0], iris_message_new (0));
+	iris_process_run (process[0]);
+
+	do
+		iris_process_get_status (process[0], &processed_items, &total_items);
+	while (total_items != 100);
+
+	/* Let the message loop run a couple of times to the CHAIN_ESTIMATE message
+	 * gets received. FIXME: might be better to wait by watching their
+	 * communication channel ??
+	 */
+	g_usleep (10000);
+
+	iris_process_get_status (process[1], &processed_items, &total_items);
+	g_assert_cmpint (total_items, ==, 100);
+
+	iris_process_get_status (process[2], &processed_items, &total_items);
+	g_assert_cmpint (total_items, ==, 100);
+
+	iris_process_cancel (process[0]);
+
+	for (i=0; i<3; i++) {
+		while (!iris_process_is_finished (process[i]))
+			g_thread_yield ();
+		g_object_unref (process[i]);
+	}
+}
+
+static void
+test_output_estimates_low (void)
+{
+	IrisProcess *process_1, *process_2;
+	gint         j, counter,
+	             processed_items, total_items;
+
+	process_1 = iris_process_new_with_func (pre_counter_callback, NULL, NULL);
+	process_2 = iris_process_new_with_func (counter_callback, NULL, NULL);
+	iris_process_connect (process_1, process_2);
+
+	iris_process_set_output_estimation (process_1, 0.01);
+
+	counter = 0;
+	for (j=0; j<100; j++)
+		iris_process_enqueue (process_1,
+		                      iris_message_new_data (0, G_TYPE_POINTER, &counter));
+	iris_process_run (process_1);
+	iris_process_no_more_work (process_1);
+
+	do
+		iris_process_get_status (process_1, &processed_items, &total_items);
+	while (total_items != 100);
+
+	while (!iris_process_is_finished (process_2)) {
+		iris_process_get_status (process_2, &processed_items, &total_items);
+		g_assert_cmpint (processed_items, <=, total_items);
+
+		g_thread_yield ();
+	}
+
+	g_assert_cmpint (counter, ==, 100);
+
+	/* Should realise the estimate is totally wrong by now! */
+	iris_process_get_status (process_2, &processed_items, &total_items);
+	g_assert_cmpint (total_items, ==, 100);
+
+	g_object_unref (process_1);
+	g_object_unref (process_2);
+}
+
+static void
+test_output_estimates_cancel (void)
+{
+	IrisProcess *process_1, *process_2;
+	gint         j, wait_state,
+	             processed_items, total_items;
+
+	process_1 = iris_process_new_with_func (push_next_func, NULL, NULL);
+	process_2 = iris_process_new_with_func (wait_func, &wait_state, NULL);
+	iris_process_connect (process_1, process_2);
+
+	iris_process_set_output_estimation (process_1, 100.0);
+
+	/* Wait for connection to be processed */
+	wait_messages (process_1);
+
+	g_assert (iris_process_get_successor (process_1) == process_2);
+
+	wait_state = 0;
+	for (j=0; j<100; j++)
+		iris_process_enqueue (process_1, iris_message_new (0));
+	iris_process_no_more_work (process_1);
+
+	/* Cancel the progress when it has more than 10 items queued (so it will
+	 * estimate at least 1000 outputs) but before it completes.
+	 */
+	iris_process_run (process_1);
+	do
+		iris_process_get_status (process_1, &processed_items, &total_items);
+	while (total_items <= 10);
+
+	iris_process_cancel (process_1);
+
+	g_assert (! iris_process_has_succeeded (process_1));
+
+	/* Wait for CHAIN_ESTIMATE messages to be processed */
+	wait_messages (process_2);
+
+
+	/* Because the head process was cancelled and not finished, the second
+	 * should still trust its estimate. Therefore it should see at least 1000
+	 * items from process_1's minimum of 10. This is required so that when a
+	 * process chain being watched is cancelled the progress bar doesn't jump
+	 * from the estimated value to the real value, which looks strange if
+	 * they are very different.
+	 */
+	iris_process_get_status (process_2, &processed_items, &total_items);
+	g_assert_cmpint (total_items, >, 1000);
+
+	g_object_unref (process_1);
+	g_object_unref (process_2);
+}
+
 int main(int argc, char *argv[]) {
 	g_type_init ();
 	g_test_init (&argc, &argv, NULL);
@@ -397,6 +576,10 @@ int main(int argc, char *argv[]) {
 	g_test_add_func ("/process/chaining 2", chaining_2);
 	g_test_add_func ("/process/cancelling 3", cancelling_3);
 	g_test_add_func ("/process/cancelling 4", cancelling_4);
+
+	g_test_add_func ("/process/output estimates basic", test_output_estimates_basic);
+	g_test_add_func ("/process/output estimates low", test_output_estimates_low);
+	g_test_add_func_repeated ("/process/output estimates cancel", 50, test_output_estimates_cancel);
 
 	return g_test_run();
 }

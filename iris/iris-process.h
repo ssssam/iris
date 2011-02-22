@@ -73,53 +73,57 @@ struct _IrisProcessClass
 	void     (*reserved4)           (void);
 };
 
-GType         iris_process_get_type             (void) G_GNUC_CONST;
+GType         iris_process_get_type              (void) G_GNUC_CONST;
 
-IrisProcess*  iris_process_new                  (void);
-IrisProcess*  iris_process_new_with_func        (IrisProcessFunc      func,
-                                                 gpointer             user_data,
-                                                 GDestroyNotify       notify);
-IrisProcess*  iris_process_new_with_closure     (GClosure            *closure);
+IrisProcess*  iris_process_new                   (void);
+IrisProcess*  iris_process_new_with_func         (IrisProcessFunc      func,
+                                                  gpointer             user_data,
+                                                  GDestroyNotify       notify);
+IrisProcess*  iris_process_new_with_closure      (GClosure            *closure);
 
-void          iris_process_run                  (IrisProcess            *process);
-void          iris_process_cancel               (IrisProcess            *process);
+void          iris_process_run                   (IrisProcess            *process);
+void          iris_process_cancel                (IrisProcess            *process);
 
-void          iris_process_enqueue              (IrisProcess            *process,
-                                                 IrisMessage            *work_item);
-void          iris_process_no_more_work         (IrisProcess            *process);
+void          iris_process_enqueue               (IrisProcess            *process,
+                                                  IrisMessage            *work_item);
+void          iris_process_no_more_work          (IrisProcess            *process);
 
-void          iris_process_connect              (IrisProcess            *head,
-                                                 IrisProcess            *tail);
-void          iris_process_forward              (IrisProcess            *process,
-                                                 IrisMessage            *work_item);
-void          iris_process_recurse              (IrisProcess            *process,
-                                                 IrisMessage            *work_item);
+void          iris_process_connect               (IrisProcess            *head,
+                                                  IrisProcess            *tail);
+void          iris_process_forward               (IrisProcess            *process,
+                                                  IrisMessage            *work_item);
+void          iris_process_recurse               (IrisProcess            *process,
+                                                  IrisMessage            *work_item);
 
-gboolean      iris_process_is_executing         (IrisProcess            *process);
-gboolean      iris_process_is_finished          (IrisProcess            *process);
-gboolean      iris_process_has_succeeded        (IrisProcess            *process);
-gboolean      iris_process_was_canceled         (IrisProcess            *process);
+gboolean      iris_process_is_executing          (IrisProcess            *process);
+gboolean      iris_process_is_finished           (IrisProcess            *process);
+gboolean      iris_process_has_succeeded         (IrisProcess            *process);
+gboolean      iris_process_was_canceled          (IrisProcess            *process);
 
-gboolean      iris_process_has_predecessor      (IrisProcess            *process);
-gboolean      iris_process_has_successor        (IrisProcess            *process);
+gboolean      iris_process_has_predecessor       (IrisProcess            *process);
+gboolean      iris_process_has_successor         (IrisProcess            *process);
 
-gint          iris_process_get_queue_length     (IrisProcess            *process);
-IrisProcess*  iris_process_get_predecessor      (IrisProcess            *process);
-IrisProcess*  iris_process_get_successor        (IrisProcess            *process);
-const gchar*  iris_process_get_title            (IrisProcess            *process);
+IrisProcess*  iris_process_get_predecessor       (IrisProcess            *process);
+IrisProcess*  iris_process_get_successor         (IrisProcess            *process);
+const gchar*  iris_process_get_title             (IrisProcess            *process);
+void          iris_process_get_status            (IrisProcess            *process,
+                                                  gint                   *p_processed_items,
+                                                  gint                   *p_total_items);
+gint          iris_process_get_queue_length      (IrisProcess            *process);
 
-void          iris_process_set_func             (IrisProcess            *process,
-                                                 IrisProcessFunc         func,
-                                                 gpointer                user_data,
-                                                 GDestroyNotify          notify);
-void          iris_process_set_closure          (IrisProcess            *process,
-                                                 GClosure               *closure);
+void          iris_process_set_func              (IrisProcess            *process,
+                                                  IrisProcessFunc         func,
+                                                  gpointer                user_data,
+                                                  GDestroyNotify          notify);
+void          iris_process_set_closure           (IrisProcess            *process,
+                                                  GClosure               *closure);
+void          iris_process_set_title             (IrisProcess            *process,
+                                                  const gchar            *title);
+void          iris_process_set_output_estimation (IrisProcess            *process,
+                                                  gfloat                  factor);
 
-void          iris_process_set_title            (IrisProcess            *process,
-                                                 const gchar            *title);
-
-void          iris_process_add_watch            (IrisProcess            *process,
-                                                 IrisPort               *watch_port);
+void          iris_process_add_watch             (IrisProcess            *process,
+                                                  IrisPort               *watch_port);
 
 G_END_DECLS
 

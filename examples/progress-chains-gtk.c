@@ -37,10 +37,16 @@ GList *monitor_list = NULL;
 
 const gint chain_size = 3;
 
-const gchar *titles[] =
-  { "Step 1: Aggregating previously unacceptable risks",
-    "Step 2: ??",
-    "Step 3: Profit",
+const gchar *titles[2][3] =
+  {
+    { "Step 1: Aggregating previously unacceptable risks",
+      "Step 2: ??",
+      "Step 3: Profit",
+    },
+    { "Looking for odd socks",
+      "Pairing",
+      "Putting away"
+    }
   };
 
 
@@ -57,19 +63,61 @@ push_forward_func (IrisProcess *process,
 	}
 }
 
+/* Some fairly contrived example code, mainly to test output estimation */
+static void
+find_socks_func (IrisProcess *process,
+                 IrisMessage *work_item,
+                 gpointer     user_data)
+{
+	gint i;
+
+	/* "Find" some socks */
+	for (i=0; i<g_random_int_range (0, 20); i++) {
+		g_usleep (1000);
+		iris_process_forward (process, iris_message_new(i));
+	}
+}
+
+static void
+pair_socks_func (IrisProcess *process,
+                 IrisMessage *work_item,
+                 gpointer     user_data)
+{
+	g_usleep (10000);
+
+	/* Forward every other item, more or less, because we have "paired" them */
+	if (work_item->what & 1) {
+		iris_message_ref (work_item);
+		iris_process_forward (process, work_item);
+	}
+}
+
 static void
 trigger_process (GtkButton *trigger,
                  gpointer   user_data)
 {
 	IrisProcess *process[chain_size];
 	GList       *node;
-	gint         i;
+	gint         n, i;
 
 	g_return_if_fail (chain_size >= 2);
 
+	n = GPOINTER_TO_INT (user_data);
+
+	if (n==1) {
+		/* FIXME: need to be able to set just this process to activity mode ... */
+		process[0] = iris_process_new_with_func (find_socks_func, NULL, NULL);
+		process[1] = iris_process_new_with_func (pair_socks_func, NULL, NULL);
+		process[2] = iris_process_new_with_func (push_forward_func, NULL, NULL);
+
+		iris_process_set_output_estimation (process[1], 0.5);
+	}
+
 	for (i=0; i<chain_size; i++) {
-		process[i] = iris_process_new_with_func (push_forward_func, NULL, NULL);
-		iris_process_set_title (process[i], titles[i]);
+		if (n==0)
+			process[i] = iris_process_new_with_func (push_forward_func, NULL, NULL);
+
+		iris_process_set_title (process[i], titles[n][i]);
 	}
 
 	for (i=1; i<chain_size; i++)
@@ -80,13 +128,16 @@ trigger_process (GtkButton *trigger,
 		IrisProgressGroup   *group;
 		gint                 chain_middle;
 
-		/* This is very important: we add the middle process to make sure the
-		 * progress monitor still puts the widgets in the right order.
+		/* We add the middle process to make sure the progress monitor still
+		 * gets the widgets in the right order.
 		 */
 		chain_middle = floor(chain_size / 2.0);
 		group = g_object_get_data (G_OBJECT (widget), "group");
 		iris_progress_monitor_watch_process_chain_in_group
-		  (widget, process[chain_middle], IRIS_PROGRESS_MONITOR_PERCENTAGE, group);
+		  (widget,
+		  process[chain_middle],
+		  n==0? IRIS_PROGRESS_MONITOR_PERCENTAGE: IRIS_PROGRESS_MONITOR_ITEMS,
+		  group);
 	}
 
 	for (i=0; i<500; i++)
@@ -101,7 +152,7 @@ create_demo_dialog (void)
 {
 	GtkWidget *vbox, *hbox,
 	          *frame, *frame_label,
-	          *button;
+	          *button_1, *button_2;
 
 	demo_window = gtk_dialog_new_with_buttons
 	                ("Iris progress widgets demo", NULL, 0,
@@ -128,10 +179,16 @@ create_demo_dialog (void)
 	hbox = gtk_hbox_new (FALSE, 0);
 	gtk_container_set_border_width (GTK_CONTAINER (hbox), 12);
 
-	button = gtk_button_new_with_label ("Go!");
-	g_signal_connect (button, "clicked", G_CALLBACK (trigger_process), NULL);
+	button_1 = gtk_button_new_with_label ("Plan");
+	g_signal_connect (button_1, "clicked",
+	                  G_CALLBACK (trigger_process), GINT_TO_POINTER (0));
 
-	gtk_box_pack_start (GTK_BOX (hbox), button, TRUE, TRUE, 24);
+	button_2 = gtk_button_new_with_label ("Action");
+	g_signal_connect (button_2, "clicked",
+	                  G_CALLBACK (trigger_process), GINT_TO_POINTER (1));
+
+	gtk_box_pack_start (GTK_BOX (hbox), button_1, TRUE, TRUE, 24);
+	gtk_box_pack_start (GTK_BOX (hbox), button_2, TRUE, TRUE, 24);
 	gtk_container_add (GTK_CONTAINER (frame), hbox);
 
 	gtk_box_pack_start (GTK_BOX (vbox), frame, FALSE, TRUE, 4);

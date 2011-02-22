@@ -429,13 +429,15 @@ iris_process_has_succeeded
 iris_process_was_canceled
 iris_process_has_predecessor
 iris_process_has_successor
-iris_process_get_queue_length
 iris_process_get_predecessor
 iris_process_get_successor
 iris_process_get_title
+iris_process_get_status
+iris_process_get_queue_length
 iris_process_set_func
 iris_process_set_closure
-iris_process_set_title 
+iris_process_set_title
+iris_process_set_output_estimation
 iris_process_add_watch
 <SUBSECTION Standard>
 IRIS_PROCESS
