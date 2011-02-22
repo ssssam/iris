@@ -93,8 +93,7 @@ struct _IrisProgressMonitorInterface
 	IrisProgressWatch *(*get_watch)              (IrisProgressMonitor *progress_monitor,
 	                                              IrisTask            *task);
 	void               (*remove_watch)           (IrisProgressMonitor *progress_monitor,
-	                                              IrisProgressWatch   *watch,
-	                                              gboolean             temporary);
+	                                              IrisProgressWatch   *watch);
 	void               (*reorder_watch_in_group) (IrisProgressMonitor *progress_monitor,
 	                                              IrisProgressWatch   *watch,
 	                                              gboolean             at_end);

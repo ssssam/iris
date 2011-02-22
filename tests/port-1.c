@@ -121,7 +121,7 @@ queue1 (void)
 
 	/* make sure the queue size + waiting in port is the same as
 	 * we delivered. */
-	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT);
+	g_assert_cmpint (iris_port_get_queue_length (port), ==, SHORT_ITER_COUNT);
 }
 
 static void
@@ -147,7 +147,7 @@ queue2 (void)
 	g_assert_cmpint (counter, ==, 1);
 
 	/* receiver is in accept and pause, so total queued should be total-1 */
-	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT - 1);
+	g_assert_cmpint (iris_port_get_queue_length (port), ==, SHORT_ITER_COUNT - 1);
 }
 
 static void
@@ -182,7 +182,7 @@ flush1 (void)
 	}
 
 	/* the first item is delivered, the rest pause. */
-	g_assert_cmpint (iris_port_get_queue_count (port), ==, SHORT_ITER_COUNT);
+	g_assert_cmpint (iris_port_get_queue_length (port), ==, SHORT_ITER_COUNT);
 
 	/* old receiver was removed, lets create a new one and attach it so
 	 * that everything flushes into the new receiver.
@@ -192,7 +192,7 @@ flush1 (void)
 	iris_port_set_receiver (port, receiver);
 
 	/* All items should be flushed to new receiver. */
-	g_assert_cmpint (iris_port_get_queue_count (port), ==, 0);
+	g_assert_cmpint (iris_port_get_queue_length (port), ==, 0);
 }
 
 gint

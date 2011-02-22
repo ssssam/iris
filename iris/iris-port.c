@@ -358,7 +358,7 @@ iris_port_get_receiver (IrisPort *port)
 }
 
 /**
- * iris_port_get_queue_count:
+ * iris_port_get_queue_length:
  * @port: An #IrisPort
  *
  * Retreives the count of queued items still waiting to be delivered to
@@ -367,7 +367,7 @@ iris_port_get_receiver (IrisPort *port)
  * Return value: a #gint of the number of queued messages.
  */
 guint
-iris_port_get_queue_count (IrisPort *port)
+iris_port_get_queue_length (IrisPort *port)
 {
 	IrisPortPrivate *priv;
 	guint            queue_count;

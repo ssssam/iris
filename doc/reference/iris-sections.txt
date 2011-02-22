@@ -233,7 +233,7 @@ iris_port_is_paused
 iris_port_has_receiver
 iris_port_get_receiver
 iris_port_set_receiver
-iris_port_get_queue_count
+iris_port_get_queue_length
 <SUBSECTION Standard>
 IRIS_PORT
 IRIS_PORT_CONST

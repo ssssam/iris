@@ -55,8 +55,7 @@ static void     gtk_iris_progress_dialog_remove_group           (IrisProgressMon
 static void     gtk_iris_progress_dialog_add_watch              (IrisProgressMonitor *progress_monitor,
                                                                  IrisProgressWatch   *watch);
 static void     gtk_iris_progress_dialog_remove_watch           (IrisProgressMonitor *progress_monitor,
-                                                                 IrisProgressWatch   *watch,
-                                                                 gboolean             temporary);
+                                                                 IrisProgressWatch   *watch);
 static void     gtk_iris_progress_dialog_reorder_watch_in_group (IrisProgressMonitor *progress_monitor,
                                                                  IrisProgressWatch   *watch,
                                                                  gboolean             at_end);
@@ -331,7 +330,8 @@ show_group (GtkIrisProgressDialog *progress_dialog,
 	priv = progress_dialog->priv;
 
 	gtk_box_pack_start (GTK_BOX (priv->box), group->toplevel, FALSE, TRUE, 0);
-	gtk_widget_show_all (GTK_WIDGET (group->toplevel));
+	/*gtk_widget_show_all (GTK_WIDGET (group->toplevel));*/
+	gtk_widget_show_all (GTK_WIDGET (priv->box));
 
 	group->visible = TRUE;
 }
@@ -506,17 +506,13 @@ gtk_iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 
 
 /* remove_watch:
- * @temporary: for watches being removed that are going to be readded straight
- *             away, this is essentially a hack to allow watch_chain() to get
- *             the chain of processes in the correct order.
  *
  * Note that this function does not stop the watch pushing status messages. If
  * the watch is not canceled or complete, caller must handle this.
  */
 static void
 gtk_iris_progress_dialog_remove_watch (IrisProgressMonitor *progress_monitor,
-                                       IrisProgressWatch   *watch,
-                                       gboolean             temporary)
+                                       IrisProgressWatch   *watch)
 {
 	GtkIrisProgressDialog        *progress_dialog;
 	GtkIrisProgressDialogPrivate *priv;
@@ -530,23 +526,21 @@ gtk_iris_progress_dialog_remove_watch (IrisProgressMonitor *progress_monitor,
 		gtk_size_group_remove_widget (GTK_SIZE_GROUP (watch->group->user_data1),
 		                              watch->title_label);
 
-		if (!temporary) {
-			/* Group list is updated later by the interface, for now this watch
-			 * is still in it.
-			 */
-			g_warn_if_fail (g_list_length (watch->group->watch_list) > 0);
+		/* Group list is updated later by the interface, for now this watch
+		 * is still in it.
+		 */
+		g_warn_if_fail (g_list_length (watch->group->watch_list) > 0);
 
-			if (g_list_length (watch->group->watch_list) == 1)
-				/* If no watches left in group, hide it group (note this watch gets
-				 * removed from the list by the interface so there must be at least 1)
-				 */
-				hide_group (progress_dialog, watch->group);
-			else if (!watch->canceled && !temporary)
-				/* If watch completed properly, add to count so it is still
-				 * counted towards the total group progress
-				 */
-				watch->group->completed_watches ++;
-		}
+		if (g_list_length (watch->group->watch_list) == 1)
+			/* If no watches left in group, hide it group (note this watch gets
+			 * removed from the list by the interface so there must be at least 1)
+			 */
+			hide_group (progress_dialog, watch->group);
+		else if (!watch->canceled)
+			/* If watch completed properly, add to count so it is still
+			 * counted towards the total group progress
+			 */
+			watch->group->completed_watches ++;
 	}
 
 	gtk_widget_destroy (GTK_WIDGET (watch->toplevel));
@@ -556,13 +550,11 @@ gtk_iris_progress_dialog_remove_watch (IrisProgressMonitor *progress_monitor,
 
 	_iris_progress_watch_free (watch);
 
-	if (!temporary) {
-		update_dialog_title (progress_dialog, NULL);
+	update_dialog_title (progress_dialog, NULL);
 
-		/* If no watches left, hide dialog */
-		if (priv->watch_list == NULL)
-			finish_dialog (progress_dialog);
-	}
+	/* If no watches left, hide dialog */
+	if (priv->watch_list == NULL)
+		finish_dialog (progress_dialog);
 }
 
 static void
@@ -737,7 +729,7 @@ watch_delayed_remove (gpointer data)
 {
 	IrisProgressWatch *watch = data;
 
-	gtk_iris_progress_dialog_remove_watch (watch->monitor, watch, FALSE);
+	gtk_iris_progress_dialog_remove_watch (watch->monitor, watch);
 
 	return FALSE;
 }

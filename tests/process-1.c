@@ -35,7 +35,7 @@ wait_messages (IrisProcess *process)
 
 	port = IRIS_TASK(process)->priv->port;
 
-	while (iris_port_get_queue_count (port) > 0 ||
+	while (iris_port_get_queue_length (port) > 0 ||
 	       g_atomic_int_get (&iris_port_get_receiver (port)->priv->active) > 0)
 		g_thread_yield ();
 }

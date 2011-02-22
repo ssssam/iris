@@ -46,8 +46,10 @@
  * function up into a series of chained processes.
  *
  * The progress of an #IrisProcess can be monitored using some kind of
- * #IrisProgressMonitor, such as an #GtkIrisProgressDialog. If you want to do this
- * you may want to call iris_process_set_title() to give the process a label.
+ * #IrisProgressMonitor, such as an #GtkIrisProgressDialog. If you want to do
+ * this you may want to call iris_process_set_title() to give the process a
+ * label. Note that progress update messages might not be sent until
+ * iris_process_run() is called.
  *
  * <note><para>
  * Because processes run asynchronously in their own threads,

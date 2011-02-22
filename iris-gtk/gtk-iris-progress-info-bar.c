@@ -62,8 +62,7 @@ static void     gtk_iris_progress_info_bar_remove_group           (IrisProgressM
 static void     gtk_iris_progress_info_bar_add_watch              (IrisProgressMonitor *progress_monitor,
                                                                    IrisProgressWatch   *watch);
 static void     gtk_iris_progress_info_bar_remove_watch           (IrisProgressMonitor *progress_monitor,
-                                                                   IrisProgressWatch   *watch,
-                                                                   gboolean             temporary);
+                                                                   IrisProgressWatch   *watch);
 static void     gtk_iris_progress_info_bar_reorder_watch_in_group (IrisProgressMonitor *progress_monitor,
                                                                    IrisProgressWatch   *watch,
                                                                    gboolean             at_end);
@@ -492,8 +491,7 @@ gtk_iris_progress_info_bar_add_watch (IrisProgressMonitor *progress_monitor,
 
 static void
 gtk_iris_progress_info_bar_remove_watch (IrisProgressMonitor *progress_monitor,
-                                         IrisProgressWatch   *watch,
-                                         gboolean             temporary)
+                                         IrisProgressWatch   *watch)
 {
 	GtkIrisProgressInfoBar        *progress_info_bar;
 	GtkIrisProgressInfoBarPrivate *priv;
@@ -507,15 +505,13 @@ gtk_iris_progress_info_bar_remove_watch (IrisProgressMonitor *progress_monitor,
 		gtk_size_group_remove_widget (GTK_SIZE_GROUP (watch->group->user_data1),
 		                              watch->title_label);
 
-		if (!temporary) {
-			g_warn_if_fail (g_list_length (watch->group->watch_list) > 0);
+		g_warn_if_fail (g_list_length (watch->group->watch_list) > 0);
 
-			if (g_list_length (watch->group->watch_list) == 1) {
-				g_warn_if_fail (watch->group->watch_list->data == watch);
-				hide_group (progress_info_bar, watch->group);
-			} else if (!watch->canceled && !temporary)
-				watch->group->completed_watches ++;
-		}
+		if (g_list_length (watch->group->watch_list) == 1) {
+			g_warn_if_fail (watch->group->watch_list->data == watch);
+			hide_group (progress_info_bar, watch->group);
+		} else if (!watch->canceled)
+			watch->group->completed_watches ++;
 	} else {
 		/* Remove cancel button from action area */
 		gtk_container_remove (GTK_CONTAINER (priv->action_box),
@@ -530,10 +526,9 @@ gtk_iris_progress_info_bar_remove_watch (IrisProgressMonitor *progress_monitor,
 
 	_iris_progress_watch_free (watch);
 
-	if (!temporary)
-		/* If no watches left, hide dialog */
-		if (priv->watch_list == NULL)
-			finish_info_bar (progress_info_bar);
+	/* If no watches left, hide dialog */
+	if (priv->watch_list == NULL)
+		finish_info_bar (progress_info_bar);
 }
 
 static void
@@ -625,7 +620,7 @@ watch_delayed_remove (gpointer data)
 {
 	IrisProgressWatch *watch = data;
 
-	gtk_iris_progress_info_bar_remove_watch (watch->monitor, watch, FALSE);
+	gtk_iris_progress_info_bar_remove_watch (watch->monitor, watch);
 
 	return FALSE;
 }
