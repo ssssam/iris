@@ -236,19 +236,23 @@ iris_receiver_dispose (GObject *object)
 
 	priv = IRIS_RECEIVER (object)->priv;
 
-	/* We can't be being disposed if a port still holds a reference */
-	g_warn_if_fail (priv->port != NULL);
+	/* Protect against double emission */
+	if (priv->scheduler != NULL) {
+		/* We can't be being disposed if a port still holds a reference */
+		g_warn_if_fail (priv->port == NULL);
 
-	if (g_atomic_int_get (&priv->active) > 0)
-		g_warning ("receiver %lx was finalized with messages still active. "
-		           "This is likely to cause a crash. Always use "
-		           "iris_receiver_destroy() to free an IrisReceiver.",
-		           (gulong)object);
+		if (g_atomic_int_get (&priv->active) > 0)
+			g_warning ("receiver %lx was finalized with messages still active. "
+					   "This is likely to cause a crash. Always use "
+					   "iris_receiver_destroy() to free an IrisReceiver.",
+					   (gulong)object);
 
-	g_object_unref (priv->scheduler);
+		g_object_unref (priv->scheduler);
+		priv->scheduler = NULL;
 
-	if (priv->notify)
-		priv->notify (priv->data);
+		if (priv->notify)
+			priv->notify (priv->data);
+	}
 
 	G_OBJECT_CLASS (iris_receiver_parent_class)->dispose (object);
 }
@@ -484,6 +488,8 @@ iris_receiver_destroy (IrisReceiver *receiver,
 	 * (and release its reference)
 	 */
 	iris_port_set_receiver (priv->port, NULL);
+	g_object_unref (priv->port);
+	priv->port = NULL;
 
 	/* Unqueue any callbacks still queued. */
 	while (g_atomic_int_get (&priv->active) > 0) {
@@ -507,6 +513,8 @@ iris_receiver_destroy (IrisReceiver *receiver,
 		g_object_unref (priv->arbiter);
 		priv->arbiter = NULL;
 	};
+
+	g_object_run_dispose (G_OBJECT (receiver));
 
 	g_warn_if_fail (G_OBJECT(receiver)->ref_count == 1);
 	g_object_unref (receiver);

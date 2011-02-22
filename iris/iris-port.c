@@ -95,6 +95,8 @@ iris_port_finalize (GObject *object)
 	if (priv->queue != NULL)
 		g_queue_free (priv->queue);
 
+	g_mutex_free (priv->mutex);
+
 	G_OBJECT_CLASS (iris_port_parent_class)->finalize (object);
 }
 
