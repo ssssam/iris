@@ -673,7 +673,7 @@ handle_update (IrisProgressMonitor *progress_monitor,
 
 	progress_bar = GTK_WIDGET (watch->progress_bar);
 
-	if (watch->display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY)
+	if (watch->progress_mode == IRIS_PROGRESS_ACTIVITY_ONLY)
 		gtk_progress_bar_pulse (GTK_PROGRESS_BAR (progress_bar));
 	else {
 		_iris_progress_monitor_format_watch_progress (progress_monitor, watch,
@@ -687,7 +687,7 @@ handle_update (IrisProgressMonitor *progress_monitor,
 	if (watch->group != NULL) {
 		progress_bar = GTK_WIDGET (watch->group->progress_bar);
 
-		if (watch->group->display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY)
+		if (watch->group->progress_mode == IRIS_PROGRESS_ACTIVITY_ONLY)
 			gtk_progress_bar_pulse (GTK_PROGRESS_BAR (progress_bar));
 		else {
 			_iris_progress_monitor_format_group_progress

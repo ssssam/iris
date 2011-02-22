@@ -98,7 +98,6 @@ trigger_task (GtkButton *trigger,
 	               (IRIS_PROGRESS_MONITOR (progress_widget),
 	                task,
 	                "Thinking",
-	                IRIS_PROGRESS_MONITOR_PERCENTAGE,
 	                watch_group);
 	g_object_set_data (G_OBJECT (task), "watch-port", watch_port);
 

@@ -68,6 +68,7 @@ trigger_process (GtkButton *trigger,
 	GList       *node;
 
 	process = iris_process_new_with_func (count_sheep_func, NULL, NULL);
+	iris_task_set_progress_mode (IRIS_TASK (process), IRIS_PROGRESS_CONTINUOUS);
 
 	i = g_random_int_range (0, 10);
 	iris_process_set_title (process, titles[i]);
@@ -76,19 +77,16 @@ trigger_process (GtkButton *trigger,
 	g_return_if_fail (group_n <= 4);
 
 	for (node=monitor_list; node; node=node->next) {
-		IrisProgressMonitor *widget = IRIS_PROGRESS_MONITOR (node->data);
+		IrisProgressMonitor  *widget = IRIS_PROGRESS_MONITOR (node->data);
 		IrisProgressGroup   **groups,
-		                    *group = NULL;
+		                     *group = NULL;
 
 		if (group_n > 0) {
 			groups = g_object_get_data (G_OBJECT (widget), "groups");
 			group = groups[group_n - 1];
 		}
 
-		iris_progress_monitor_watch_process (widget,
-		                                     process,
-		                                     IRIS_PROGRESS_MONITOR_PERCENTAGE,
-		                                     group);
+		iris_progress_monitor_watch_process (widget, process, group);
 	}
 
 	for (i=0; i<500; i++)

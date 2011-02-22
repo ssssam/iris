@@ -25,6 +25,7 @@
 #include <gio/gio.h>
 
 #include "iris-message.h"
+#include "iris-progress.h"
 #include "iris-scheduler.h"
 
 G_BEGIN_DECLS
@@ -189,6 +190,11 @@ void          iris_task_run_async             (IrisTask            *task,
                                                gpointer             user_data);
 void          iris_task_cancel                (IrisTask            *task);
 void          iris_task_work_finished         (IrisTask            *task);
+
+void          iris_task_set_progress_mode     (IrisTask            *task,
+                                               IrisProgressMode     mode);
+
+IrisProgressMode iris_task_get_progress_mode  (IrisTask            *task);
 
 void          iris_task_add_callback          (IrisTask            *task,
                                                IrisTaskFunc         callback,

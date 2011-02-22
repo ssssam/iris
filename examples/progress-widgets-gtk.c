@@ -73,19 +73,16 @@ trigger_process (GtkButton *trigger,
 	                    process,
 	                    NULL);
 
+	if (count == -1)
+		iris_task_set_progress_mode (IRIS_TASK (process),
+		                             IRIS_PROGRESS_ACTIVITY_ONLY);
+
 	process_list = g_list_prepend (process_list, process);
 
 	for (node=monitor_list; node; node=node->next) {
 		IrisProgressMonitor *widget = IRIS_PROGRESS_MONITOR (node->data);
-		IrisProgressMonitorDisplayStyle display_style;
 
-		display_style = count==-1? IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY:
-		                           IRIS_PROGRESS_MONITOR_ITEMS;
-
-		iris_progress_monitor_watch_process (widget,
-		                                     process,
-		                                     display_style,
-		                                     NULL);
+		iris_progress_monitor_watch_process (widget, process, NULL);
 	}
 
 	if (count == -1)

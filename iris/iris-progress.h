@@ -22,34 +22,54 @@
 #define __IRIS_PROGRESS_H__
 
 /**
+ * IrisProgressMode
+ * @IRIS_PROGRESS_ACTIVITY_ONLY: task cannot predict how long it needs to
+ *   execute. The progress monitor will not display progress, just a block
+ *   bouncing back and forth inside the progress bar to imply activity.
+ * @IRIS_PROGRESS_CONTINUOUS: work is best expressed as "x% complete"
+ * @IRIS_PROGRESS_DISCRETE: task can be displayed in terms of items. This is
+ *   the default progress mode for #IrisProcess objects.
+ *
+ * These values instruct progress monitor widgets to display the progress of a
+ * task or process in a specific way.
+ *
+ * The display style of an #IrisProgressGroup is based on its children. While
+ * any watches are @IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY and are not complete,
+ * the group will display in activity mode. Otherwise, it will display as a
+ * percentage.
+ */
+typedef enum
+{
+	IRIS_PROGRESS_ACTIVITY_ONLY,
+	IRIS_PROGRESS_CONTINUOUS,
+	IRIS_PROGRESS_DISCRETE
+} IrisProgressMode;
+
+/**
  * IrisProgressMessageType:
  * @IRIS_PROGRESS_MESSAGE_COMPLETE: the task has completed.
  * @IRIS_PROGRESS_MESSAGE_CANCELED: the task was canceled.
- * @IRIS_PROGRESS_MESSAGE_PULSE: sent when it's not possible to calculate
- *                               actual progress. Watch must have
- *                               @IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY display
- *                               style.
+ * @IRIS_PROGRESS_MESSAGE_PULSE: sent for tasks in
+ *                               %IRIS_PROGRESS_ACTIVITY_ONLY progress mode.
  * @IRIS_PROGRESS_MESSAGE_FRACTION: should contain a float between 0 and 1.
- *                                  Sent when progress isn't best represented
- *                                  as discrite items. Watch must not have
- *                                  @IRIS_PROGRESS_MONITOR_ITEMS display style.
+ *                                  Sent for tasks in
+ *                                  %IRIS_PROGRESS_CONTINUOUS mode.
  * @IRIS_PROGRESS_MESSAGE_PROCESSED_ITEMS: integer; number of items completed.
  * @IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS: integer; sent when new items are enqueued.
- *                                     Note that there is no need to send
- *                                     @IRIS_PROGRESS_MESSAGE_FRACTION if item
- *                                     counts are being sent.
+ *                                     These two are for %IRIS_PROGRESS_DISCRETE
+ *                                     tasks.
  * @IRIS_PROGRESS_MESSAGE_TITLE: string; sent when the title of the process changes
  *
  * An #IrisProgressMonitor listens for these messages to update its UI. It's
  * recommended you don't send status messages more than once every 250ms or so;
  * there's no point.
  *
- * No messages should be sent after IRIS_PROGRESS_MESSAGE_CANCELED or
- * IRIS_PROGRESS_MESSAGE_COMPLETE.
+ * No messages should be sent after %IRIS_PROGRESS_MESSAGE_CANCELED or
+ * %IRIS_PROGRESS_MESSAGE_COMPLETE.
  *
  * FIXME: is this still TRUE?
  * The same message could be sent more than once; any listeners must be able to
- * handle for example @IRIS_PROGRESS_MESSAGE_COMPLETE being received twice.
+ * handle for example %IRIS_PROGRESS_MESSAGE_COMPLETE being received twice.
  **/
 typedef enum
 {

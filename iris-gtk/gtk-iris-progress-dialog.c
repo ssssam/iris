@@ -652,7 +652,7 @@ update_dialog_title (GtkIrisProgressDialog *progress_dialog,
 		if (head_group == NULL) {
 			title = head_watch->title;
 
-			if (head_watch->display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY)
+			if (head_watch->progress_mode == IRIS_PROGRESS_ACTIVITY_ONLY)
 				progress_text = NULL;
 			else if (watch_progress_text_precalculated)
 				progress_text = watch_progress_text_precalculated;
@@ -665,7 +665,7 @@ update_dialog_title (GtkIrisProgressDialog *progress_dialog,
 		} else {
 			title = head_group->title;
 
-			if (head_group->display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY)
+			if (head_group->progress_mode == IRIS_PROGRESS_ACTIVITY_ONLY)
 				progress_text = NULL;
 			else {
 				_iris_progress_monitor_format_group_progress
@@ -779,7 +779,7 @@ handle_update (IrisProgressMonitor *progress_monitor,
 
 	progress_bar = GTK_WIDGET (watch->progress_bar);
 
-	if (watch->display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY)
+	if (watch->progress_mode == IRIS_PROGRESS_ACTIVITY_ONLY)
 		gtk_progress_bar_pulse (GTK_PROGRESS_BAR (progress_bar));
 	else {
 		_iris_progress_monitor_format_watch_progress (progress_monitor, watch,

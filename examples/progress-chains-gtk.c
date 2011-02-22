@@ -110,12 +110,18 @@ trigger_process (GtkButton *trigger,
 		process[1] = iris_process_new_with_func (pair_socks_func, NULL, NULL);
 		process[2] = iris_process_new_with_func (push_forward_func, NULL, NULL);
 
+		iris_task_set_progress_mode (IRIS_TASK (process[0]),
+		                             IRIS_PROGRESS_ACTIVITY_ONLY);
+
 		iris_process_set_output_estimation (process[1], 0.5);
 	}
 
 	for (i=0; i<chain_size; i++) {
-		if (n==0)
+		if (n==0) {
 			process[i] = iris_process_new_with_func (push_forward_func, NULL, NULL);
+			iris_task_set_progress_mode (IRIS_TASK (process[i]),
+			                             IRIS_PROGRESS_CONTINUOUS);
+		}
 
 		iris_process_set_title (process[i], titles[n][i]);
 	}
@@ -133,11 +139,9 @@ trigger_process (GtkButton *trigger,
 		 */
 		chain_middle = floor(chain_size / 2.0);
 		group = g_object_get_data (G_OBJECT (widget), "group");
-		iris_progress_monitor_watch_process_chain_in_group
-		  (widget,
-		  process[chain_middle],
-		  n==0? IRIS_PROGRESS_MONITOR_PERCENTAGE: IRIS_PROGRESS_MONITOR_ITEMS,
-		  group);
+		iris_progress_monitor_watch_process_chain_in_group (widget,
+		                                                    process[chain_middle],
+		                                                    group);
 	}
 
 	for (i=0; i<500; i++)

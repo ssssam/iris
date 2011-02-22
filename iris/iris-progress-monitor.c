@@ -244,7 +244,7 @@ iris_progress_monitor_add_group (IrisProgressMonitor *progress_monitor,
 	group->title = g_strdup (title);
 	group->plural = g_strdup (plural);
 
-	group->display_style = IRIS_PROGRESS_MONITOR_PERCENTAGE;
+	group->progress_mode = IRIS_PROGRESS_CONTINUOUS;
 
 	group->visible = FALSE;
 
@@ -259,7 +259,6 @@ iris_progress_monitor_add_group (IrisProgressMonitor *progress_monitor,
 static IrisProgressWatch *
 iris_progress_monitor_add_watch_internal (IrisProgressMonitor             *progress_monitor,
                                           IrisTask                        *task,
-                                          IrisProgressMonitorDisplayStyle  display_style,
                                           const gchar                     *title,
                                           IrisProgressGroup               *group)
 {
@@ -270,7 +269,7 @@ iris_progress_monitor_add_watch_internal (IrisProgressMonitor             *progr
 	watch->monitor = progress_monitor;
 	watch->port = iris_port_new ();
 
-	watch->display_style = display_style;
+	watch->progress_mode = iris_task_get_progress_mode (task);
 
 	if (group != NULL) {
 		iris_progress_group_ref (group);
@@ -278,8 +277,8 @@ iris_progress_monitor_add_watch_internal (IrisProgressMonitor             *progr
 
 		group->watch_list = g_list_prepend (group->watch_list, watch);
 
-		if (display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY)
-			group->display_style = IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY;
+		if (watch->progress_mode == IRIS_PROGRESS_ACTIVITY_ONLY)
+			group->progress_mode = IRIS_PROGRESS_ACTIVITY_ONLY;
 	}
 
 	watch->title = g_strdup (title);
@@ -332,8 +331,6 @@ _iris_progress_watch_free (IrisProgressWatch *watch)
  * iris_progress_monitor_add_watch:
  * @progress_monitor: an #IrisProgressMonitor
  * @task: the #IrisTask that is being watched.
- * @display_style: format for the textual description, see
- *                 #IrisProgressMonitorDisplayStyle.
  * @title: name of the task being watched, used to label its progress bar, or
  *         %NULL.
  * @group: #IrisProgressGroup to add the watch to, or %NULL for none
@@ -352,22 +349,20 @@ IrisPort *
 iris_progress_monitor_add_watch (IrisProgressMonitor             *progress_monitor,
                                  IrisTask                        *task,
                                  const gchar                     *title,
-                                 IrisProgressMonitorDisplayStyle  display_style,
                                  IrisProgressGroup               *group)
 {
 	IrisProgressWatch            *watch;
 	IrisProgressMonitorInterface *iface;
+
+	g_return_val_if_fail (IRIS_IS_TASK (task), NULL);
 
 	iface = IRIS_PROGRESS_MONITOR_GET_INTERFACE (progress_monitor);
 
 	if (iface->is_watching_task (progress_monitor, task))
 		return NULL;
 
-	watch = iris_progress_monitor_add_watch_internal (progress_monitor,
-	                                                  task,
-	                                                  display_style, 
-	                                                  title,
-	                                                  group);
+	watch = iris_progress_monitor_add_watch_internal
+	          (progress_monitor, task, title, group);
 
 	return watch->port;
 }
@@ -443,7 +438,6 @@ iris_progress_monitor_set_watch_hide_delay (IrisProgressMonitor *progress_monito
 static IrisProgressWatch *
 watch_process_internal (IrisProgressMonitor             *progress_monitor,
                         IrisProcess                     *process,
-                        IrisProgressMonitorDisplayStyle  display_style,
                         IrisProgressGroup               *group,
                         gboolean                         chain)
 {
@@ -462,11 +456,9 @@ watch_process_internal (IrisProgressMonitor             *progress_monitor,
 	watch = iris_progress_monitor_add_watch_internal
 	          (progress_monitor,
 	           IRIS_TASK (process),
-	           display_style,
 	           iris_process_get_title (process),
 	           group);
 
-	watch->display_style = display_style;
 	watch->chain_flag = chain;
 
 	iris_process_add_watch (process, watch->port);
@@ -479,8 +471,6 @@ watch_process_internal (IrisProgressMonitor             *progress_monitor,
  * iris_progress_monitor_watch_process:
  * @progress_monitor: an #IrisProgressMonitor
  * @process: an #IrisProcess
- * @display_style: format to display progress, such as a percentage or
- *                 as items/total. See #IrisProgressMonitorDisplayStyle.
  * @group: group to add the process watch to, or 0 for none
  *
  * Visually display the progress of @process. If @process has source or sink
@@ -491,18 +481,15 @@ watch_process_internal (IrisProgressMonitor             *progress_monitor,
 void
 iris_progress_monitor_watch_process (IrisProgressMonitor             *progress_monitor,
                                      IrisProcess                     *process,
-                                     IrisProgressMonitorDisplayStyle  display_style,
                                      IrisProgressGroup               *group)
 {
-	watch_process_internal (progress_monitor, process, display_style, group, FALSE);
+	watch_process_internal (progress_monitor, process, group, FALSE);
 }
 
 /**
  * iris_progress_monitor_watch_process_chain:
  * @progress_monitor: an #IrisProgressMonitor
  * @process: an #IrisProcess
- * @display_style: format to display progress, such as a percentage or
- *                 as items/total. See #IrisProgressMonitorDisplayStyle.
  * @title: overall title for this group of processes
  * @plural: a more general title
  *
@@ -520,7 +507,6 @@ iris_progress_monitor_watch_process (IrisProgressMonitor             *progress_m
 void
 iris_progress_monitor_watch_process_chain (IrisProgressMonitor             *progress_monitor,
                                            IrisProcess                     *process,
-                                           IrisProgressMonitorDisplayStyle  display_style,
                                            const gchar                     *title,
                                            const gchar                     *plural)
 {
@@ -528,7 +514,7 @@ iris_progress_monitor_watch_process_chain (IrisProgressMonitor             *prog
 
 	group = iris_progress_monitor_add_group (progress_monitor, title, plural);
 
-	watch_process_internal (progress_monitor, process, display_style, group, TRUE);
+	watch_process_internal (progress_monitor, process, group, TRUE);
 
 	/* Drop the caller's reference; this means the object will be freed
 	 * automatically whenever the process chain completes
@@ -540,8 +526,6 @@ iris_progress_monitor_watch_process_chain (IrisProgressMonitor             *prog
  * iris_progress_monitor_watch_process_chain_in_group:
  * @progress_monitor: an #IrisProgressMonitor
  * @process: an #IrisProcess
- * @display_style: format to display progress, such as a percentage or
- *                 as items/total. See #IrisProgressMonitorDisplayStyle.
  * @group: group in which to add @process and its linked processe, or 0.
  *
  * This function is a version of iris_progress_monitor_watch_process_chain()
@@ -552,10 +536,9 @@ iris_progress_monitor_watch_process_chain (IrisProgressMonitor             *prog
 void
 iris_progress_monitor_watch_process_chain_in_group (IrisProgressMonitor             *progress_monitor,
                                                     IrisProcess                     *process,
-                                                    IrisProgressMonitorDisplayStyle  display_style,
                                                     IrisProgressGroup               *group)
 {
-	watch_process_internal (progress_monitor, process, display_style, group, TRUE);
+	watch_process_internal (progress_monitor, process, group, TRUE);
 }
 
 /**************************************************************************
@@ -666,8 +649,7 @@ _iris_progress_monitor_finished (IrisProgressMonitor *progress_monitor)
  * cannot change */
 static void
 watch_chain (IrisProgressMonitor             *progress_monitor,
-             IrisProcess                     *added_process,
-             IrisProgressMonitorDisplayStyle  display_style)
+             IrisProcess                     *added_process)
 {
 	IrisProgressMonitorInterface *iface;
 	IrisProcess                  *head,
@@ -699,7 +681,6 @@ watch_chain (IrisProgressMonitor             *progress_monitor,
 		} else
 			watch_process_internal (progress_monitor, 
 			                        process,
-			                        display_style,
 			                        group,
 			                        FALSE);
 	} while ((process = iris_process_get_successor (process)) != NULL);
@@ -730,7 +711,7 @@ handle_complete (IrisProgressWatch *completed_watch,
 
 		for (node=group->watch_list; node; node=node->next) {
 			watch = node->data;
-			if (watch->display_style == IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY &&
+			if (watch->progress_mode == IRIS_PROGRESS_ACTIVITY_ONLY &&
 			    !watch->complete) {
 				need_activity_only_mode = TRUE;
 				break;
@@ -738,9 +719,9 @@ handle_complete (IrisProgressWatch *completed_watch,
 		}
 
 		if (need_activity_only_mode)
-			group->display_style = IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY;
+			group->progress_mode = IRIS_PROGRESS_ACTIVITY_ONLY;
 		else
-			group->display_style = IRIS_PROGRESS_MONITOR_PERCENTAGE;
+			group->progress_mode = IRIS_PROGRESS_CONTINUOUS;
 	}
 }
 
@@ -818,8 +799,7 @@ _iris_progress_monitor_handle_message (IrisMessage  *message,
 	 */
 	if (watch->chain_flag) {
 		watch->chain_flag = FALSE;
-		watch_chain (progress_monitor, IRIS_PROCESS (watch->task),
-		             watch->display_style);
+		watch_chain (progress_monitor, IRIS_PROCESS (watch->task));
 	}
 
 	switch (message->what) {
@@ -851,23 +831,23 @@ _iris_progress_monitor_handle_message (IrisMessage  *message,
 }
 
 static void
-make_progress_string (IrisProgressMonitorDisplayStyle  display_style,
+make_progress_string (IrisProgressMode  progress_mode,
                       gdouble                          fraction,
                       gint                             processed_items,
                       gint                             total_items,
                       gchar                           *p_progress_text)
 {
-	switch (display_style) {
-		case IRIS_PROGRESS_MONITOR_ITEMS:
+	switch (progress_mode) {
+		case IRIS_PROGRESS_DISCRETE:
 			g_snprintf (p_progress_text, 255, _("%i items of %i"), 
 			            processed_items, total_items);
 			break;
-		case IRIS_PROGRESS_MONITOR_PERCENTAGE:
+		case IRIS_PROGRESS_CONTINUOUS:
 			g_snprintf (p_progress_text, 255, _("%.0f%% complete"), 
 			            (fraction * 100.0));
 			break;
 		default:
-			g_warning ("iris-progress-monitor: Invalid display_style.\n");
+			g_warning ("iris-progress-monitor: Invalid progress_mode.\n");
 			p_progress_text[0] = 0;
 	}
 }
@@ -885,7 +865,7 @@ _iris_progress_monitor_format_watch_progress (IrisProgressMonitor *progress_moni
 		return;
 	}
 
-	make_progress_string (watch->display_style, watch->fraction,
+	make_progress_string (watch->progress_mode, watch->fraction,
 	                      watch->processed_items, watch->total_items,
 	                      p_progress_text);
 }
@@ -934,6 +914,6 @@ _iris_progress_monitor_format_group_progress (IrisProgressMonitor *progress_moni
 		return;
 	}
 
-	make_progress_string (IRIS_PROGRESS_MONITOR_PERCENTAGE, fraction,
+	make_progress_string (IRIS_PROGRESS_CONTINUOUS, fraction,
 	                      0, 0, p_progress_text);
 }

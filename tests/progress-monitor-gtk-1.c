@@ -247,10 +247,7 @@ simple (ProgressFixture *fixture,
 
 	IrisProcess *process = iris_process_new_with_func (counter_callback, NULL,
 	                                                   NULL);
-	iris_progress_monitor_watch_process (fixture->monitor,
-	                                     process,
-	                                     IRIS_PROGRESS_MONITOR_ITEMS,
-	                                     0);
+	iris_progress_monitor_watch_process (fixture->monitor, process, 0);
 	iris_process_run (process);
 
 	counter_enqueue (process, &counter, 50);
@@ -277,10 +274,7 @@ process_titles_1 (ProgressFixture *fixture,
 	/* A process with no title */
 	IrisProcess *process = iris_process_new_with_func (count_sheep_func,
 	                                                   NULL, NULL);
-	iris_progress_monitor_watch_process (fixture->monitor,
-	                                     process,
-	                                     IRIS_PROGRESS_MONITOR_ITEMS,
-	                                     0);
+	iris_progress_monitor_watch_process (fixture->monitor, process, 0);
 	iris_process_run (process);
 
 	counter_enqueue (process, &counter, 50);
@@ -317,10 +311,7 @@ process_titles_2 (ProgressFixture *fixture,
 	process_1 = iris_process_new_with_func (count_sheep_func,
 	                                        NULL, NULL);
 	iris_process_set_title (process_1, "Test");
-	iris_progress_monitor_watch_process (fixture->monitor,
-	                                     process_1,
-	                                     IRIS_PROGRESS_MONITOR_ITEMS,
-	                                     0);
+	iris_progress_monitor_watch_process (fixture->monitor, process_1, 0);
 	counter_enqueue (process_1, &counter, 50);
 	iris_process_run (process_1);
 
@@ -337,10 +328,7 @@ process_titles_2 (ProgressFixture *fixture,
 	process_2 = iris_process_new_with_func (count_sheep_func,
 	                                        NULL, NULL);
 	iris_process_set_title (process_2, "Test");
-	iris_progress_monitor_watch_process (fixture->monitor,
-	                                     process_2,
-	                                     IRIS_PROGRESS_MONITOR_ITEMS,
-	                                     0);
+	iris_progress_monitor_watch_process (fixture->monitor, process_2, 0);
 
 	counter_enqueue (process_2, &counter, 50);
 	iris_process_run (process_2);
@@ -358,9 +346,9 @@ process_titles_2 (ProgressFixture *fixture,
 
 	/* Check that the UI reflects the title */
 	ui_title_1 = ui_get_watch_title (fixture->monitor,
-	                                        IRIS_TASK (process_1));
+	                                 IRIS_TASK (process_1));
 	ui_title_2 = ui_get_watch_title (fixture->monitor,
-	                                        IRIS_TASK (process_2));
+	                                 IRIS_TASK (process_2));
 
 	g_assert_cmpstr (ui_title_1, ==, "New Title");
 	g_assert_cmpstr (ui_title_2, ==, "New Title");
@@ -385,10 +373,7 @@ process_titles_3 (ProgressFixture *fixture,
 	process= iris_process_new_with_func (count_sheep_func,
 	                                        NULL, NULL);
 	iris_process_set_title (process, "tseT");
-	iris_progress_monitor_watch_process (fixture->monitor,
-	                                     process,
-	                                     IRIS_PROGRESS_MONITOR_ITEMS,
-	                                     0);
+	iris_progress_monitor_watch_process (fixture->monitor, process, 0);
 	iris_process_run (process);
 	iris_process_no_more_work (process);
 
@@ -420,9 +405,8 @@ recurse_1 (ProgressFixture *fixture,
 
 	IrisProcess *recursive_process = iris_process_new_with_func
 	                                   (recursive_counter_callback, NULL, NULL);
-	iris_progress_monitor_watch_process (fixture->monitor,
+	iris_progress_monitor_watch_process (fixture->monitor, 
 	                                     recursive_process,
-	                                     IRIS_PROGRESS_MONITOR_ITEMS,
 	                                     0);
 	iris_process_run (recursive_process);
 
@@ -460,7 +444,6 @@ chaining_1 (ProgressFixture *fixture,
 	iris_process_connect (head_process, tail_process);
 	iris_progress_monitor_watch_process_chain (fixture->monitor,
 	                                           head_process,
-	                                           IRIS_PROGRESS_MONITOR_ITEMS,
 	                                           "Test Group",
 	                                           NULL);
 	iris_process_run (head_process);
@@ -514,7 +497,6 @@ finished_1 (ProgressFixture *fixture,
 
 		iris_progress_monitor_watch_process (fixture->monitor,
 		                                     process,
-		                                     IRIS_PROGRESS_MONITOR_ITEMS,
 		                                     0);
 
 		for (j=0; j<10; j++)
@@ -544,10 +526,7 @@ finalize (ProgressFixture *fixture,
 	for (i=0; i<4; i++) {
 		process = iris_process_new_with_func (count_sheep_func, NULL, NULL);
 
-		iris_progress_monitor_watch_process (fixture->monitor,
-		                                     process,
-		                                     IRIS_PROGRESS_MONITOR_ITEMS,
-		                                     0);
+		iris_progress_monitor_watch_process (fixture->monitor, process, 0);
 
 		for (j=0; j<100; j++)
 			iris_process_enqueue (process, iris_message_new (0));
@@ -604,7 +583,6 @@ recurse_2 (ProgressFixture *fixture,
 
 	iris_progress_monitor_watch_process_chain (IRIS_PROGRESS_MONITOR(fixture->monitor),
 	                                           head_process,
-	                                           IRIS_PROGRESS_MONITOR_ITEMS,
 	                                           "Recursion Test",
 	                                           NULL);
 
@@ -628,7 +606,6 @@ tasks (ProgressFixture *fixture,
 	               (IRIS_PROGRESS_MONITOR (fixture->monitor),
 	                task,
 	                "Test",
-	                IRIS_PROGRESS_MONITOR_PERCENTAGE,
 	                0);
 	g_object_set_data (G_OBJECT (task), "watch-port", watch_port);
 

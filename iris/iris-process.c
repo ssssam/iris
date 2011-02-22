@@ -1531,6 +1531,8 @@ iris_process_init (IrisProcess *process)
 
 	priv->watch_port_list = NULL;
 	priv->watch_timer = g_timer_new ();
+
+	iris_task_set_progress_mode (IRIS_TASK (process), IRIS_PROGRESS_DISCRETE);
 }
 
 static void

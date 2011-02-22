@@ -126,10 +126,8 @@ default_title (ProgressFixture *fixture,
 
 	IrisProcess *process = iris_process_new_with_func (wait_func,
 	                                                   &wait_state, NULL);
-	iris_progress_monitor_watch_process (fixture->monitor,
-	                                     process,
-	                                     IRIS_PROGRESS_MONITOR_PERCENTAGE,
-	                                     0);
+	iris_task_set_progress_mode (IRIS_TASK (process), IRIS_PROGRESS_CONTINUOUS);
+	iris_progress_monitor_watch_process (fixture->monitor, process, 0);
 	iris_progress_monitor_set_watch_hide_delay (fixture->monitor, 0);
 	iris_process_run (process);
 
@@ -185,10 +183,7 @@ custom_static_title (ProgressFixture *fixture,
 
 	IrisProcess *process = iris_process_new_with_func (wait_func,
 	                                                   &wait_state, NULL);
-	iris_progress_monitor_watch_process (fixture->monitor,
-	                                     process,
-	                                     IRIS_PROGRESS_MONITOR_PERCENTAGE,
-	                                     0);
+	iris_progress_monitor_watch_process (fixture->monitor, process, 0);
 	iris_progress_monitor_set_watch_hide_delay (fixture->monitor, 0);
 	iris_process_run (process);
 
@@ -229,10 +224,8 @@ custom_dynamic_title (ProgressFixture *fixture,
 
 	IrisProcess *process = iris_process_new_with_func (wait_func,
 	                                                   &wait_state, NULL);
-	iris_progress_monitor_watch_process (fixture->monitor,
-	                                     process,
-	                                     IRIS_PROGRESS_MONITOR_PERCENTAGE,
-	                                     0);
+	iris_task_set_progress_mode (IRIS_TASK (process), IRIS_PROGRESS_CONTINUOUS);
+	iris_progress_monitor_watch_process (fixture->monitor, process, 0);
 	iris_progress_monitor_set_watch_hide_delay (fixture->monitor, 0);
 
 	work_item = iris_message_new (0);
@@ -290,7 +283,6 @@ test_groups (ProgressFixture *fixture,
 
 	iris_progress_monitor_watch_process_chain (fixture->monitor,
 	                                           process_head,
-	                                           IRIS_PROGRESS_MONITOR_ITEMS,
 	                                           "Test Group",
 	                                           NULL);
 	iris_progress_monitor_set_watch_hide_delay (fixture->monitor, 0);

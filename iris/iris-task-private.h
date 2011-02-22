@@ -80,6 +80,8 @@ struct _IrisTaskPrivate
 	volatile IrisScheduler
 	              *work_scheduler;
 
+	IrisProgressMode progress_mode;
+
 	GMutex        *mutex;         /* Mutex for result/error */
 	GValue         result;        /* Current task result */
 	GError        *error;         /* Current task error */

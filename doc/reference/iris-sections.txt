@@ -55,6 +55,7 @@ iris_task_run
 iris_task_run_async
 iris_task_cancel
 iris_task_work_finished
+iris_task_set_progress_mode
 iris_task_add_callback
 iris_task_add_errback
 iris_task_add_callback_closure
@@ -455,6 +456,7 @@ IrisProcessPrivate
 <SECTION>
 <FILE>iris-progress</FILE>
 <TITLE>Progress messages</TITLE>
+IrisProgressMode
 IrisProgressMessageType
 </SECTION>
 
@@ -464,7 +466,6 @@ IrisProgressMessageType
 IrisProgressWatch
 IrisProgressGroup
 IrisProgressMonitor
-IrisProgressMonitorDisplayStyle
 iris_progress_monitor_watch_process
 iris_progress_monitor_watch_process_chain
 iris_progress_monitor_set_permanent_mode

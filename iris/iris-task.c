@@ -316,6 +316,47 @@ iris_task_work_finished (IrisTask *task)
 }
 
 /**
+ * iris_task_set_progress_mode:
+ * @task: An #IrisTask
+ * @mode: An #IrisProgressMode value
+ *
+ * Sets the display mode for progress monitors that will watch @task. See
+ * #IrisProgressMode for more information. This value is immutable once
+ * iris_task_run() is called.
+ */
+void
+iris_task_set_progress_mode (IrisTask         *task,
+                             IrisProgressMode  mode)
+{
+	IrisTaskPrivate *priv;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+
+	priv = task->priv;
+
+	/* FIXME: this should be immutable once ACTIVE */
+	priv->progress_mode = mode;
+}
+
+/**
+ * iris_task_get_progress_mode:
+ * @task: An #IrisTask
+ *
+ * Returns the #IrisProgressMode that should be used to display @task.
+ */
+IrisProgressMode
+iris_task_get_progress_mode (IrisTask *task)
+{
+	IrisTaskPrivate *priv;
+
+	g_return_val_if_fail (IRIS_IS_TASK (task), 0);
+
+	priv = task->priv;
+
+	return priv->progress_mode;
+}
+
+/**
  * iris_task_add_callback:
  * @task: An #IrisTask
  * @callback: An #IrisTaskFunc
@@ -1576,6 +1617,8 @@ iris_task_init (IrisTask *task)
 	                                       (GDestroyNotify)g_object_unref);
 
 	priv->work_scheduler = g_object_ref (iris_get_default_work_scheduler ());
+
+	priv->progress_mode = IRIS_PROGRESS_ACTIVITY_ONLY;
 
 	priv->mutex = g_mutex_new ();
 

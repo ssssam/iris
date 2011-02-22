@@ -41,29 +41,6 @@ typedef struct _IrisProgressMonitorInterface   IrisProgressMonitorInterface;
 typedef struct _IrisProgressWatch              IrisProgressWatch;
 typedef struct _IrisProgressGroup              IrisProgressGroup;
 
-/**
- * IrisProgressMonitorDisplayStyle:
- * @IRIS_PROGRESS_MONITOR_ITEMS: display "x items of y"
- * @IRIS_PROGRESS_MONITOR_PERCENTAGE: display "x% complete"
- * @IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY: do not display progress, just show
- *    a block bouncing back and forth inside the progress bar to imply
- *    activity. This is useful for tasks such as searching for some files,
- *    where the amount of work left i
- *
- * These values instruct progress monitor widgets to display the progress of a
- * watch in a specific way.
- *
- * The display style of an #IrisProgressGroup is based on its children. While
- * any watches are @IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY and are not complete,
- * the group will display in activity mode. Otherwise, it will display a
- * percentage.
- **/
-typedef enum {
-	IRIS_PROGRESS_MONITOR_ACTIVITY_ONLY,
-	IRIS_PROGRESS_MONITOR_ITEMS,
-	IRIS_PROGRESS_MONITOR_PERCENTAGE
-} IrisProgressMonitorDisplayStyle;
-
 
 struct _IrisProgressMonitorInterface
 {
@@ -113,7 +90,6 @@ IrisProgressGroup *iris_progress_monitor_add_group       (IrisProgressMonitor *p
 IrisPort          *iris_progress_monitor_add_watch       (IrisProgressMonitor             *progress_monitor,
                                                           IrisTask                        *task,
                                                           const gchar                     *title,
-                                                          IrisProgressMonitorDisplayStyle  display_style,
                                                           IrisProgressGroup               *group);
 
 void          iris_progress_monitor_set_permanent_mode   (IrisProgressMonitor             *progress_monitor,
@@ -125,16 +101,13 @@ void          iris_progress_monitor_set_watch_hide_delay (IrisProgressMonitor   
 /* IrisProcess-specific API */
 void          iris_progress_monitor_watch_process                (IrisProgressMonitor             *progress_monitor,
                                                                   IrisProcess                     *process,
-                                                                  IrisProgressMonitorDisplayStyle  display_style,
                                                                   IrisProgressGroup               *group);
 void          iris_progress_monitor_watch_process_chain          (IrisProgressMonitor             *progress_monitor,
                                                                   IrisProcess                     *process,
-                                                                  IrisProgressMonitorDisplayStyle  display_style,
                                                                   const gchar                     *title,
                                                                   const gchar                     *plural);
 void          iris_progress_monitor_watch_process_chain_in_group (IrisProgressMonitor             *progress_monitor,
                                                                   IrisProcess                     *process,
-                                                                  IrisProgressMonitorDisplayStyle  display_style,
                                                                   IrisProgressGroup               *group);
 
 void          iris_progress_group_ref   (IrisProgressGroup *progress_group);

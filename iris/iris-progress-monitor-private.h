@@ -34,8 +34,8 @@ struct _IrisProgressGroup
 	gchar *title,
 	      *plural;
 
-	/* Can't be ITEMS, that doesn't make sense for overall progress */
-	IrisProgressMonitorDisplayStyle display_style;
+	/* Cannot be DISCRETE, that mode doesn't make sense for overall progress */
+	IrisProgressMode progress_mode;
 
 	/* Used to calculate total progress */
 	gint   completed_watches;
@@ -70,7 +70,7 @@ struct _IrisProgressWatch
 	 */
 	guint chain_flag: 1;
 
-	IrisProgressMonitorDisplayStyle display_style;
+	IrisProgressMode progress_mode;
 
 	/* These three are set by the interface in
 	 * iris_progress_monitor_update_watch() and
