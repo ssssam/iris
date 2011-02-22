@@ -1,3 +1,23 @@
+Overview of changes in Iris 0.3.0
+=================================
+
+ * Add IrisProcess, for tasks that map over many inputs.
+
+ * New IrisProgressMonitor interface, which provides a generic way to
+   control UI objects displaying the progress of IrisProcess or IrisTask
+   objects.
+
+ * IrisGtk library added, which adds two progress monitors. One is based
+   on GtkDialog and one on GtkInfoBar.
+
+ * By default, Iris now separates control messages and task/process work
+   into two different schedulers to prevent message delays.
+
+ * Many improvements in object finalization, memory leakage reduced.
+
+ * Many bugs and races fixed.
+
+
 Overview of changes for 0.2.0
 =============================
 

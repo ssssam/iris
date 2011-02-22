@@ -2,16 +2,6 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-* Start msgs at 1 to give better debugging :)
-
-/*g_warn_if_fail (priv->watch_port_list == NULL);*/ (will fix leaks)
-
-Enqueue lots of stuff in progress-chains, think activity mode gets a pulse
-set tooo low so it doesn't move at all !
-
-* Fix progress-tasks, current bugs include:
-   - the type of progress monitor should change as soon as the toggle box changes :)
-
 * Fix progress-chains disappearing dialog bug ... :(
 
 * Do process work items need a destroy notify? The question is what happens if the
@@ -63,7 +53,6 @@ when it's final unref happens (after execution), it gets cleaned up
 appropriately. If other tasks have references to it, the task will live
 long enough for them to do their work and then get unref'ed.
 ..
-
 
 * What to do about gtk2/gtk3?
   -> seems like the approach is to require gtk3; other projects eg. clutter-gtk I guess you have
@@ -262,6 +251,13 @@ Progress widgets
 	more sense ... allow somehow setting 'inaccurate' flag in
 	iris_progress_set_output_estimation(), which would add "about" and maybe
 	round the figure off to the nearest ten/hundred.
+
+	The group progress bar in activity mode gets a bit weird. Best demonstrated
+	in examples/progress-chains if you start loads of chains up; the progress
+	bar might get a pulse step too low to actually go anywhere, or it's
+	accounting for getting updates from 10 processes at once but actually only
+	3 are running and sending updates. It all needs a bit more work, but this
+	is not exactly vital code :)
 
 Alex added warnings for GSimpleAsyncResult when not used from main thread.
 We need to implement our own now since this isn't reusable.
