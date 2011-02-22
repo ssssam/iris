@@ -237,7 +237,6 @@ iris_service_stop (IrisService *service)
 
 	message = iris_message_new (0);
 	iris_port_post (priv->teardown_port, message);
-	iris_message_unref (message);
 }
 
 /**

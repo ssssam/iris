@@ -151,7 +151,7 @@ store_message_at_head_ul (IrisPort    *port,
 		g_queue_push_head (priv->queue, priv->current);
 	}
 
-	priv->current = iris_message_ref (message);
+	priv->current = iris_message_ref_sink (message);
 }
 
 static void
@@ -162,7 +162,7 @@ store_message_at_tail_ul (IrisPort    *port,
 	if (!priv->current) {
 		g_warn_if_fail (!priv->queue || g_queue_get_length (priv->queue)==0);
 
-		priv->current = iris_message_ref (message);
+		priv->current = iris_message_ref_sink (message);
 	} else {
 		if (!priv->queue)
 			priv->queue = g_queue_new();
@@ -220,15 +220,36 @@ post_with_lock_ul (IrisPort     *port,
  * Posts @message to the port.  Any receivers listening to the port will
  * receive the message.
  *
+ * Once an #IrisMessage is posted, the port will either sink its floating
+ * reference (if it is still floating) or add a new reference. The message will
+ * then be kept alive until the message is delivered. This means the following
+ * is all you need to do post a message:
+ * |[
+ *   iris_port_post (iris_message_new (MY_MESSAGE));
+ * ]|
+ *
+ * Be aware that to post one message to multiple ports, things get slightly less
+ * easy. It's possible that you might post the new message to the first port,
+ * which then delivers and frees the message before you have had the chance to
+ * deliver it to the second. To avoid this race condition, add an extra
+ * reference before you post:
+ * <example>
+ * <title>Posting a message to multiple ports</title>
+ * <programlisting>
+ *   message = iris_message_new (56);
+ *
+ *   iris_message_ref (message);
+ *
+ *   for (node=port_list; node; node=node->next)
+ *       iris_port_post (IRIS_PORT (node->data), message);
+ *
+ *   /&ast; Now each port has a reference and we can remove ours &ast;/
+ *   iris_message_unref (message);
+ * </programlisting></example>
  * The order that the messages are posted in will be preserved, but the
  * scheduler may call the #IrisReceiver<!-- -->'s message handler from multiple
  * threads. To avoid this, use iris_arbiter_coordinate() to make the receiver
  * <firstterm>exclusive</firstterm>.
- *
- * Once an #IrisMessage is posted, it will be kept alive until the receiver's
- * message handler function has returned. Therefore the caller can drop their
- * reference on @message after calling this function, unless they still need to
- * use the message.
  */
 void
 iris_port_post (IrisPort    *port,
@@ -317,7 +338,7 @@ iris_port_post (IrisPort    *port,
  *
  * Determines if the port is currently connected to a receiver.
  *
- * Return value: TRUE if there is a receiver hooked up.
+ * Return value: %TRUE if there is a receiver hooked up.
  */
 gboolean
 iris_port_has_receiver (IrisPort *port)

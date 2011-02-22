@@ -228,7 +228,6 @@ iris_task_run (IrisTask *task)
 
 	msg = iris_message_new (IRIS_TASK_MESSAGE_START_WORK);
 	iris_port_post (priv->port, msg);
-	iris_message_unref (msg);
 }
 
 /**
@@ -259,7 +258,6 @@ iris_task_run_async (IrisTask            *task,
 	msg = iris_message_new_data (IRIS_TASK_MESSAGE_START_WORK,
 	                             G_TYPE_OBJECT, res);
 	iris_port_post (priv->port, msg);
-	iris_message_unref (msg);
 }
 
 /**
@@ -282,7 +280,6 @@ iris_task_cancel (IrisTask *task)
 
 	msg = iris_message_new (IRIS_TASK_MESSAGE_CANCEL);
 	iris_port_post (priv->port, msg);
-	iris_message_unref (msg);
 }
 
 /**
@@ -312,7 +309,6 @@ iris_task_work_finished (IrisTask *task)
 
 	msg = iris_message_new (IRIS_TASK_MESSAGE_WORK_FINISHED);
 	iris_port_post (priv->port, msg);
-	iris_message_unref (msg);
 }
 
 /**
@@ -480,7 +476,6 @@ iris_task_add_callback_closure (IrisTask *task,
 	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_HANDLER,
 	                             G_TYPE_POINTER, handler);
 	iris_port_post (priv->port, msg);
-	iris_message_unref (msg);
 }
 
 /**
@@ -511,7 +506,6 @@ iris_task_add_errback_closure  (IrisTask *task,
 	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_HANDLER,
 	                             G_TYPE_POINTER, handler);
 	iris_port_post (priv->port, msg);
-	iris_message_unref (msg);
 }
 
 /**
@@ -546,7 +540,6 @@ iris_task_add_both_closure (IrisTask *task,
 	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_HANDLER,
 	                             G_TYPE_POINTER, handler);
 	iris_port_post (priv->port, msg);
-	iris_message_unref (msg);
 }
 
 /**
@@ -570,9 +563,8 @@ iris_task_add_dependency (IrisTask *task,
 	priv = task->priv;
 
 	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_DEPENDENCY,
- 	                             IRIS_TYPE_TASK, dependency);
+	                             IRIS_TYPE_TASK, dependency);
 	iris_port_post (priv->port, msg);
-	iris_message_unref (msg);
 }
 
 /**
@@ -596,9 +588,8 @@ iris_task_remove_dependency    (IrisTask *task,
 	priv = task->priv;
 
 	msg = iris_message_new_data (IRIS_TASK_MESSAGE_REMOVE_DEPENDENCY,
- 	                             IRIS_TYPE_TASK, dependency);
+	                             IRIS_TYPE_TASK, dependency);
 	iris_port_post (priv->port, msg);
-	iris_message_unref (msg);
 }
 
 /**
@@ -927,7 +918,6 @@ iris_task_set_main_context (IrisTask     *task,
 	msg = iris_message_new_data (IRIS_TASK_MESSAGE_SET_MAIN_CONTEXT,
 	                             G_TYPE_POINTER, context);
 	iris_port_post (priv->port, msg);
-	iris_message_unref (msg);
 }
 
 /**
@@ -1033,7 +1023,6 @@ iris_task_progress_callbacks_tick (IrisTask *task)
 
 	msg = iris_message_new (IRIS_TASK_MESSAGE_PROGRESS_CALLBACKS);
 	iris_port_post (task->priv->port, msg);
-	iris_message_unref (msg);
 }
 
 static void
@@ -1073,19 +1062,24 @@ iris_task_notify_observers (IrisTask *task,
 
 	priv = task->priv;
 
+	if (priv->observers == NULL)
+		return;
+
 	msg = iris_message_new_data (
 			canceled ? IRIS_TASK_MESSAGE_DEP_CANCELED :
 			           IRIS_TASK_MESSAGE_DEP_FINISHED,
 			IRIS_TYPE_TASK, task);
 
+	iris_message_ref (msg);
+
 	for (iter = priv->observers; iter; iter = iter->next)
 		iris_port_post (IRIS_TASK (iter->data)->priv->port, msg);
+
+	iris_message_unref (msg);
 
 	g_list_foreach (priv->observers, (GFunc)g_object_unref, NULL);
 	g_list_free (priv->observers);
 	priv->observers = NULL;
-
-	iris_message_unref (msg);
 }
 
 static void
@@ -1145,7 +1139,6 @@ iris_task_progress_callbacks_or_finish (IrisTask *task)
 	if (CAN_FINISH_NOW (task)) {
 		message = iris_message_new (IRIS_TASK_MESSAGE_CALLBACKS_FINISHED);
 		iris_port_post (priv->port, message);
-		iris_message_unref (message);
 	}
 	else {
 		iris_task_progress_callbacks (task);
@@ -1404,7 +1397,6 @@ handle_add_dependency (IrisTask    *task,
 	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_OBSERVER,
 	                             IRIS_TYPE_TASK, task);
 	iris_port_post (dep->priv->port, msg);
-	iris_message_unref (msg);
 }
 
 static void

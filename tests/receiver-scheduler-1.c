@@ -124,7 +124,6 @@ post_test_message (IrisPort *port,
 	iris_message_set_boolean (message, "check-order", check_order);
 
 	iris_port_post (port, message);
-	iris_message_unref (message);
 }
 
 

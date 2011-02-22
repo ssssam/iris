@@ -33,8 +33,8 @@ basic (void)
 	IrisMessage   *msg;
 	gint           i;
 
-	//scheduler = iris_scheduler_new ();
-	scheduler = iris_wsscheduler_new ();
+	scheduler = iris_scheduler_new ();
+	//scheduler = iris_wsscheduler_new ();
 
 	/* Create a port to deliver messages to */
 	port = iris_port_new ();
@@ -50,19 +50,21 @@ basic (void)
 
 	/* Add a bunch of work items */
 	for (i = 0; i < ITER_MAX; i++) {
-		/* new message to pass something blah */
+		/* new message to pass something */
 		msg = iris_message_new (MSG_DO_SMTHNG);
 
-		/* post the message to the port for delivery */
+		/* post the message to the port for delivery; port takes the floating
+		 * ref so message will be freed automatically when delivered */
 		iris_port_post (port, msg);
-
-		/* we are done with the message, we can unfref it */
-		iris_message_unref (msg);
 	}
 
 	g_mutex_lock (mutex);
 	g_cond_wait (cond, mutex);
 	g_mutex_unlock (mutex);
+
+	iris_receiver_destroy (receiver, NULL, FALSE);
+	g_object_unref (port);
+	g_object_unref (scheduler);
 }
 
 gint

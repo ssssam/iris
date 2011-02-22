@@ -36,7 +36,6 @@ msg_handler_cb (IrisMessage *message,
 	for (i = 0; i < ITER_MAX; i++) {
 		IrisMessage *msg = iris_message_new (MSG_ID);
 		iris_port_post (port, msg);
-		iris_message_unref (msg);
 	}
 
 	g_object_unref (port);
@@ -69,7 +68,6 @@ recursive (void)
 	for (i = 0; i < ITER_MAX; i++) {
 		msg = iris_message_new (MSG_ID);
 		iris_port_post (port, msg);
-		iris_message_unref (msg);
 	}
 
 	iris_debug_message (IRIS_DEBUG_THREAD, "Done pushing items");

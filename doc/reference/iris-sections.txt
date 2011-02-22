@@ -324,6 +324,7 @@ iris_message_new
 iris_message_new_data
 iris_message_new_full
 iris_message_ref
+iris_message_ref_sink
 iris_message_unref
 iris_message_copy
 iris_message_get_data

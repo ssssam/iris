@@ -215,8 +215,8 @@ iris_process_cancel (IrisProcess *process)
 /**
  * iris_process_enqueue:
  * @process: An #IrisProcess
- * @work_item: An #IrisMessage. The process will take ownership of one
- *             reference.
+ * @work_item: An #IrisMessage. The process will sink the floating reference or
+ *             add a new reference.
  *
  * Posts a work item to the queue. The task function will be passed @work_item
  * when the work item is executed. The type and contents of the message are
@@ -226,9 +226,10 @@ iris_process_cancel (IrisProcess *process)
  * is a problem, you should create individual #IrisTask objects which allow you
  * to specify dependencies.
  *
- * The caller does not need to unref @work_item once it has been enqueued, the
- * process will take ownership. If the message is still needed the caller
- * should add another reference before calling iris_process_enqueue().
+ * The caller does not need to unref @work_item once it has been enqueued (if
+ * they have not already called iris_message_ref_sink()). The work will be
+ * kept alive until the process' work function has handled it and then
+ * unreffed.
  */
 void
 iris_process_enqueue (IrisProcess *process,
@@ -285,7 +286,6 @@ iris_process_no_more_work (IrisProcess *process)
 
 	IrisMessage *message = iris_message_new (IRIS_PROCESS_MESSAGE_NO_MORE_WORK);
 	iris_port_post (task_priv->port, message);
-	iris_message_unref (message);
 };
 
 /**
@@ -398,12 +398,10 @@ iris_process_connect (IrisProcess *head,
 	head_message = iris_message_new_data (IRIS_PROCESS_MESSAGE_ADD_SINK,
 	                                      IRIS_TYPE_PROCESS, tail);
 	iris_port_post (head_task_priv->port, head_message);
-	iris_message_unref (head_message);
 
 	tail_message = iris_message_new_data (IRIS_PROCESS_MESSAGE_ADD_SOURCE,
 	                                      IRIS_TYPE_PROCESS, head);
 	iris_port_post (tail_task_priv->port, tail_message);
-	iris_message_unref (tail_message);
 }
 
 /**
@@ -415,8 +413,12 @@ iris_process_connect (IrisProcess *head,
  * forwards @work_item to the successor of @process. @process and its successor
  * must have been connected using iris_process_connect().
  *
- * @work_item should be a newly-created #IrisMessage, and not the same one
- * passed to the current work function.
+ * @work_item must be a newly-created #IrisMessage and not the one passed to
+ * the current work function.
+ */
+/* FIXME: can't reuse the message because if we add work item destroy notifys
+ * it will destroyed ... won't it? unless we link that to the message ref
+ * count. or you could just put the destroy notify on the message.
  */
 void
 iris_process_forward (IrisProcess *process,
@@ -452,6 +454,7 @@ iris_process_forward (IrisProcess *process,
  * @work_item should be a newly-created #IrisMessage, and not the same one
  * passed to the current work function.
  */
+/* FIXME: same applies as iris_process_forward() */
 void
 iris_process_recurse (IrisProcess *process,
                       IrisMessage *work_item)
@@ -786,7 +789,6 @@ iris_process_set_title (IrisProcess *process,
 		                                 G_TYPE_STRING,
 		                                 title);
 		post_progress_message (process, message);
-		iris_message_unref (message);
 	}
 }
 
@@ -921,7 +923,6 @@ post_output_estimate (IrisProcess *process)
 	message = iris_message_new_data (IRIS_PROCESS_MESSAGE_CHAIN_ESTIMATE,
 	                                 G_TYPE_INT, estimate);
 	iris_port_post (IRIS_TASK (sink)->priv->port, message);
-	iris_message_unref (message);
 }
 
 static void
@@ -934,10 +935,16 @@ post_progress_message (IrisProcess *process,
 
 	priv = process->priv;
 
+	/*g_warn_if_fail (priv->watch_port_list == NULL);*/
+
+	iris_message_ref (progress_message);
+
 	for (node=priv->watch_port_list; node; node=node->next) {
 		watch_port = IRIS_PORT (node->data);
 		iris_port_post (watch_port, progress_message);
 	}
+
+	iris_message_unref (progress_message);
 };
 
 static void
@@ -971,7 +978,6 @@ update_status (IrisProcess *process, gboolean force)
 			message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_TOTAL_ITEMS,
 			                                 G_TYPE_INT, total);
 			post_progress_message (process, message);
-			iris_message_unref (message);
 		}
 
 		/* Now send processed items */
@@ -982,7 +988,6 @@ update_status (IrisProcess *process, gboolean force)
 	}
 
 	post_progress_message (process, message);
-	iris_message_unref (message);
 }
 
 /**************************************************************************
@@ -1021,7 +1026,7 @@ handle_cancel (IrisProcess *process,
 
 static void
 handle_start_work (IrisProcess *process,
-                IrisMessage *message)
+                   IrisMessage *message)
 {
 	IrisProcessPrivate *priv;
 
@@ -1059,7 +1064,6 @@ handle_callbacks_finished (IrisProcess *process,
 	if (priv->watch_port_list != NULL) {
 		progress_message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
 		post_progress_message (process, progress_message);
-		iris_message_unref (progress_message);
 	}
 
 	/* Chain up */
@@ -1155,7 +1159,6 @@ handle_add_watch (IrisProcess *process,
 	                                          G_TYPE_STRING,
 	                                          priv->title);
 	post_progress_message (process, progress_message);
-	iris_message_unref (progress_message);
 
 	/* Send a status message now, it's possible that the process has actually
 	 * already completed and so this may be only status message that the watcher
@@ -1167,7 +1170,6 @@ handle_add_watch (IrisProcess *process,
 	if (iris_process_is_finished (process)) {
 		progress_message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
 		post_progress_message (process, progress_message);
-		iris_message_unref (progress_message);
 	}
 }
 

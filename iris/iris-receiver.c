@@ -207,7 +207,7 @@ _post_decision:
 	if (execute) {
 		worker = g_slice_new0 (IrisWorkerData);
 		worker->receiver = receiver;
-		worker->message = iris_message_ref (message);
+		worker->message = iris_message_ref_sink (message);
 
 		iris_scheduler_queue (priv->scheduler,
 		                      iris_receiver_worker,

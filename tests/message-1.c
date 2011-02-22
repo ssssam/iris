@@ -9,9 +9,12 @@ ref_count1 (void)
 	msg = iris_message_new (1);
 	g_assert (msg != NULL);
 	g_assert_cmpint (msg->ref_count, ==, 1);
+	g_assert_cmpint (msg->floating, ==, TRUE);
 
+	iris_message_ref_sink (msg);
+
+	g_assert_cmpint (msg->ref_count, ==, 1);
 	iris_message_unref (msg);
-	g_assert_cmpint (msg->ref_count, ==, 0);
 }
 
 static void
@@ -22,6 +25,10 @@ ref_count2 (void)
 	msg = iris_message_new (1);
 	g_assert (msg != NULL);
 	g_assert_cmpint (msg->ref_count, ==, 1);
+	g_assert_cmpint (msg->floating, ==, TRUE);
+
+	iris_message_ref_sink (msg);
+	g_assert_cmpint (msg->ref_count, ==, 1);
 
 	iris_message_ref (msg);
 	g_assert_cmpint (msg->ref_count, ==, 2);
@@ -30,7 +37,6 @@ ref_count2 (void)
 	g_assert_cmpint (msg->ref_count, ==, 1);
 
 	iris_message_unref (msg);
-	g_assert_cmpint (msg->ref_count, ==, 0);
 }
 
 static void
@@ -43,6 +49,9 @@ set_string1 (void)
 
 	iris_message_set_string (msg, "id", "1234567890");
 	g_assert_cmpstr (iris_message_get_string (msg, "id"), ==, "1234567890");
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
@@ -55,6 +64,9 @@ set_int1 (void)
 
 	iris_message_set_int (msg, "id", 1234567890);
 	g_assert_cmpint (iris_message_get_int (msg, "id"), ==, 1234567890);
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
@@ -72,6 +84,12 @@ copy1 (void)
 	msg2 = iris_message_copy (msg);
 	g_assert (msg2 != NULL);
 	g_assert_cmpint (iris_message_get_int (msg2, "id"), ==, 1234567890);
+
+	iris_message_ref_sink (msg2);
+	iris_message_unref (msg2);
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
@@ -85,6 +103,9 @@ count_names1 (void)
 
 	iris_message_set_int (msg, "id", 1234567890);
 	g_assert_cmpint (iris_message_count_names (msg), ==, 1);
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
@@ -130,6 +151,9 @@ contains1 (void)
 	g_assert (msg != NULL);
 	g_assert (iris_message_contains (msg, "id"));
 	g_assert (!iris_message_contains (msg, "name"));
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
@@ -140,6 +164,9 @@ set_int641 (void)
 	msg = iris_message_new_full (1, "id", G_TYPE_INT64, G_MAXINT64, NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_int64 (msg, "id") == G_MAXINT64);
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
@@ -150,6 +177,9 @@ set_float1 (void)
 	msg = iris_message_new_full (1, "id", G_TYPE_FLOAT, 1.2345f, NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_float (msg, "id") == 1.2345f);
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
@@ -160,6 +190,9 @@ set_double1 (void)
 	msg = iris_message_new_full (1, "id", G_TYPE_DOUBLE, 21.123456, NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_double (msg, "id") == 21.123456);
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
@@ -170,6 +203,9 @@ set_long1 (void)
 	msg = iris_message_new_full (1, "id", G_TYPE_LONG, 123123l, NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_long (msg, "id") == 123123l);
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
@@ -180,6 +216,9 @@ set_ulong1 (void)
 	msg = iris_message_new_full (1, "id", G_TYPE_ULONG, 123123ul, NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_ulong (msg, "id") == 123123ul);
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
@@ -190,6 +229,9 @@ set_char1 (void)
 	msg = iris_message_new_full (1, "id", G_TYPE_CHAR, 'A', NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_char (msg, "id") == 'A');
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
@@ -200,6 +242,9 @@ set_uchar1 (void)
 	msg = iris_message_new_full (1, "id", G_TYPE_UCHAR, 'A', NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_uchar (msg, "id") == 'A');
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
@@ -210,27 +255,39 @@ set_boolean1 (void)
 	msg = iris_message_new_full (1, "id", G_TYPE_BOOLEAN, TRUE, NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_boolean (msg, "id") == TRUE);
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
 million_create (void)
 {
-	IrisMessage *msg;
+	IrisMessage **msg;
 	int i;
 
 	GTimer *timer = g_timer_new ();
 
+	msg = g_new(IrisMessage *, 1000000);
 	g_timer_start (timer);
 
 	for (i = 0; i < 1000000; i++) {
 		//msg = iris_message_new_full (1, "id", G_TYPE_INT, 1, NULL);
-		msg = iris_message_new (1);
+		msg[i] = iris_message_new (1);
 		//iris_message_unref (msg);
 	}
 
 	g_timer_stop (timer);
 
 	//g_debug ("Ellapsed %lf", g_timer_elapsed (timer, NULL));
+	g_timer_destroy (timer);
+
+	for (i = 0; i < 1000000; i++) {
+		iris_message_ref_sink (msg[i]);
+		g_assert_cmpint (msg[i]->ref_count, ==, 1);
+		iris_message_unref (msg[i]);
+	}
+	g_free (msg);
 }
 
 static void
@@ -243,9 +300,13 @@ set_data1 (void)
 	g_value_init (&value, G_TYPE_STRING);
 	g_value_set_string (&value, "This is my string");
 	iris_message_set_data (msg, &value);
+	g_value_unset (&value);
 
 	str = g_value_get_string (iris_message_get_data (msg));
 	g_assert_cmpstr (str, ==, "This is my string");
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
 }
 
 static void
@@ -257,6 +318,7 @@ new_data1 (void)
 	g_assert (msg->what == 1);
 	g_assert (g_value_get_int (&msg->data) == 10);
 
+	iris_message_ref_sink (msg);
 	iris_message_unref (msg);
 }
 

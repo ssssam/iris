@@ -435,6 +435,7 @@ iris_thread_manage (IrisThread    *thread,
 	                                 "queue", G_TYPE_POINTER, queue,
 	                                 "leader", G_TYPE_BOOLEAN, leader,
 	                                 NULL);
+	iris_message_ref_sink (message);
 	g_async_queue_push (thread->queue, message);
 }
 
@@ -454,6 +455,7 @@ iris_thread_shutdown (IrisThread *thread)
 	g_return_if_fail (thread != NULL);
 
 	message = iris_message_new (MSG_SHUTDOWN);
+	iris_message_ref_sink (message);
 	g_async_queue_push (thread->queue, message);
 }
 

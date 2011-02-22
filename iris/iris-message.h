@@ -46,6 +46,7 @@ struct _IrisMessage
 	/*< private >*/
 	GValue          data;
 	volatile gint   ref_count;
+	volatile gint   floating;
 	GHashTable     *items;
 };
 
@@ -56,6 +57,7 @@ IrisMessage*           iris_message_new_data       (gint what, GType type, ...);
 IrisMessage*           iris_message_new_full       (gint what, const gchar *first_name, ...);
  
 IrisMessage*           iris_message_ref            (IrisMessage *message);
+IrisMessage*           iris_message_ref_sink       (IrisMessage *message);
 void                   iris_message_unref          (IrisMessage *message);
 IrisMessage*           iris_message_copy           (IrisMessage *message);
 

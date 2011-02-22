@@ -35,9 +35,19 @@
  * also has a type, which is defined by the public "what" member of the
  * #IrisMessage struct.
  *
- * Since messages can be expensive, they are reference counted. You can
- * control the lifetime of an #IrisMessage using iris_message_ref() and
- * iris_message_unref().
+ * Since messages can be expensive, they are reference counted. This uses the
+ * 'floating reference' model of #GInitiallyUnowned. You can control the
+ * lifetime of an #IrisMessage using iris_message_ref() and
+ * iris_message_unref(). Additionally, when an #IrisMessage is created, it is
+ * given a <firstterm>floating</firstterm> reference, which must be removed
+ * before the object is finalized using iris_message_ref_sink(). Functions which
+ * "swallow" a message, such as iris_port_post() and iris_process_enqueue(),
+ * will do this automatically, and the advantage of the floating reference is
+ * that you can simply call:
+ * [| iris_port_post (iris_message_new (MY_MESSAGE_ID)); |]
+ * The floating reference of the new message will be removed automatically once
+ * it has been delivered and, because there were no other references added with
+ * iris_message_ref(), the message will be freed.
  *
  * You can add key/values to the message using methods such as
  * iris_message_set_string() and iris_message_set_value().  There are helpers
@@ -116,6 +126,11 @@ iris_message_destroy (IrisMessage *message)
 {
 	g_return_if_fail (message != NULL);
 
+	if (g_atomic_int_get (&message->floating))
+		g_warning ("A message was finalized with the floating reference still "
+		           "present. iris_message_ref_sink() must be called before the "
+		           "final reference is removed.");
+
 	if (message->items) {
 		g_hash_table_unref (message->items);
 		message->items = NULL;
@@ -162,6 +177,7 @@ iris_message_new (gint what)
 	message = g_slice_new0 (IrisMessage);
 	message->what = what;
 	message->ref_count = 1;
+	message->floating = TRUE;
 
 	return message;
 }
@@ -261,7 +277,7 @@ iris_message_new_full (gint         what,
  * iris_message_ref:
  * @message: a #IrisMessage
  *
- * Atomically Increases the reference count of @message by one.
+ * Atomically increases the reference count of @message by one.
  *
  * Return value: the passed #IrisMessage, with the reference count
  *   increased by one.
@@ -273,6 +289,30 @@ iris_message_ref (IrisMessage *message)
 	g_return_val_if_fail (message->ref_count > 0, NULL);
 
 	g_atomic_int_inc (&message->ref_count);
+
+	return message;
+}
+
+/**
+ * iris_message_ref_sink:
+ * @message: a #IrisMessage
+ *
+ * Increases the reference count of @message by one <emphasis>or</emphasis>
+ * "takes ownership" of the floating reference, leaving the actual reference
+ * count unchanged.
+ *
+ * Return value: the passed #IrisMessage.
+ */
+IrisMessage*
+iris_message_ref_sink (IrisMessage *message)
+{
+	g_return_val_if_fail (message != NULL, NULL);
+	g_return_val_if_fail (message->ref_count > 0, NULL);
+
+	if (g_atomic_int_compare_and_exchange (&message->floating, TRUE, FALSE));
+		/* We sunk the floating reference */
+	else
+		g_atomic_int_inc (&message->ref_count);
 
 	return message;
 }

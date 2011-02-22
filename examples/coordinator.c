@@ -49,7 +49,6 @@ coordinator (void)
 	for (i = 0; i < ITER_MAX; i++) {
 		message = iris_message_new (1);
 		iris_port_post ((i % EXCLUSIVE_MOD == 0) ? exclusive : concurrent, message);
-		iris_message_unref (message);
 	}
 
 	iris_port_post (teardown, iris_message_new (1));

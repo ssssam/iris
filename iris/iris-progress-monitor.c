@@ -302,6 +302,7 @@ _iris_progress_watch_disconnect (IrisProgressWatch *watch)
 	 * FIXME: perhaps we could give ports a 'closed' status which would
 	 * imply the watch has disconnected/whatever.
 	 */
+
 	iris_receiver_destroy (watch->receiver, NULL, FALSE);
 }
 

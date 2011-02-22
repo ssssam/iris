@@ -29,6 +29,8 @@
 #include "iris-gtk/gtk-iris-progress-dialog-private.h"
 #include "iris-gtk/gtk-iris-progress-info-bar-private.h"
 
+/* FIXME: surely you could write a mock progress monitor for some of these things */
+
 /* Work item to increment a global counter, so we can tell if the hole queue
  * gets executed propertly
  */
