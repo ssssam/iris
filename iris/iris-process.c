@@ -935,7 +935,7 @@ post_progress_message (IrisProcess *process,
 
 	priv = process->priv;
 
-	/*g_warn_if_fail (priv->watch_port_list == NULL);*/
+	g_return_if_fail (priv->watch_port_list != NULL);
 
 	iris_message_ref (progress_message);
 
