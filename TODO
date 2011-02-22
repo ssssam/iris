@@ -2,34 +2,30 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-* Activity mode processes are a bit sluggish, maybe send message more often for those?
+* Start msgs at 1 to give better debugging :)
+
+/*g_warn_if_fail (priv->watch_port_list == NULL);*/ (will fix leaks)
+
+Enqueue lots of stuff in progress-chains, think activity mode gets a pulse
+set tooo low so it doesn't move at all !
 
 * Fix progress-tasks, current bugs include:
    - the type of progress monitor should change as soon as the toggle box changes :)
 
--- mail chergert about releasing ....
-- irisgtk, process and progress-monitor
-- running 1 control and 1 work scheduler
-- things finalize okay
-- fixed a bunch of bugs and races and general incompleteness and add a bunch more tests
-- add wscript (experimental only)
+* Fix progress-chains disappearing dialog bug ... :(
 
---- Tidyups
+* Do process work items need a destroy notify? The question is what happens if the
+  process is cancelled? Yeah I guess they do need one :(
+  -> or, do we need a destroy notification for *MESSAGES* ?????? Then iris_process_forward
+   would work, for one thing ...
+  -> yeah lots of messages are leaked on cancels ... :(
+  -> related: in process work functions, do you need to ref a message to forward it?
+     you do that in examples/progress-chains-gtk. Is it documented that you need to?
 
 * Prevent arbiters from being connected to receivers that have already processed
   messages.
 
 * Same for ports.
-
-* Give messages a floating ref?
-IrisMessage
-
-	We should make the ref-counting for messages use the sink concept
-	so that you don't need to unref your messages if you hit the usual
-	use-case of create->post.
-
-* in process work functions, do you need to ref a message to forward it?
-  you do that in examples/progress-chains-gtk. Is it documented that you need to?
 
 * Fix immutability in general (see chergert mail)
 
@@ -57,6 +53,16 @@ Finalisation: a few issues here.
     is cancelled or it completes.
 
   * All this needs thorough testing of course!
+  
+
+I think the right
+thing to do here is to make tasks/process a GInitiallyUnowned. This
+means it cannot be free'd until it has had g_object_ref_sink() called on
+it. I think the execution of the task should imply a ref_sink() and then
+when it's final unref happens (after execution), it gets cleaned up
+appropriately. If other tasks have references to it, the task will live
+long enough for them to do their work and then get unref'ed.
+..
 
 
 * What to do about gtk2/gtk3?
@@ -69,6 +75,8 @@ Finalisation: a few issues here.
 * Finish docs - README and gtk-doc tutorials :(
 
 * Bump version to 0.3, and maybe give Iris a blog post :)
+
+* Do some reading on concurrency ..
 
 ---------------------------------------------------------------------------
 Known bugs
@@ -305,6 +313,7 @@ Other superfluous stuff:
 Niceties
 ---------------------------------------------------------------------------
 
+IrisMessage could actually become a thin wrapper around a GVariant "(d*)"
 
 Would it be a good idea to prevent progress bars from going backwards? ie.
 if the fraction drops, just wait until it gets back to where it was rather
