@@ -2,29 +2,10 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-Title changes after 'cancelled' are still sent, but this causes an error!
-- probably best to not send them since sometimes the progress monitor has been unset ...
-
-Processes should 'feed forward' the totals when hooked up - makes no
-sense for B to have its total as A's processed count. It's normally the
-case that when A and B are connected, B has A->total_items left to process
-as well ... but this is not necessarily true. The solution must be to add an
-item_enqueued() class member, which by default calls
-iris_process_notify_future_work_item (B) .. but can be overridden by
-subclassing. Or maybe it should be a signal so the user does not need to
-subclass.
-
-* why do the recursion tests take so long?
-
-* info-bar: size-group for titles? this would make progress-groups prettier
-
-* remove @temporary from remove_watch in dialog & infobar
+* Activity mode processes are a bit sluggish, maybe send message more often for those?
 
 * Fix progress-tasks, current bugs include:
    - the type of progress monitor should change as soon as the toggle box changes :)
-
-* Since STATUS_COMPLETE is sent when the task receives 'finish', why not rename it to 'finish'
-  also???
 
 -- mail chergert about releasing ....
 - irisgtk, process and progress-monitor
@@ -35,44 +16,57 @@ subclass.
 
 --- Tidyups
 
-* How much of tests/progress-monitor-gtk-1 could use wait-func instead of count-sheep-func???
-
-* Note in docs that irisprocess will not send any progress messages until it is running,
-  and that probably won't change (too difficult). Really only affects waiting for titles etc ..
-
-* Tests should always use a fresh scheduler, no?
-
 * Prevent arbiters from being connected to receivers that have already processed
   messages.
 
 * Same for ports.
 
-* Fix immutability in general (see chergert maiL)
+* Give messages a floating ref?
+IrisMessage
+
+	We should make the ref-counting for messages use the sink concept
+	so that you don't need to unref your messages if you hit the usual
+	use-case of create->post.
+
+* in process work functions, do you need to ref a message to forward it?
+  you do that in examples/progress-chains-gtk. Is it documented that you need to?
+
+* Fix immutability in general (see chergert mail)
 
 * Fix freeing of process/tasks (see chergert mail)
 
-* Valgrind it a bit. Some things you need:
-  - test where you enqueue messages in a process and test they all get freed
+Should anything be allowed to happen after execution begins? Currently on tasks
+you can add callbacks/errbacks and dependencies, add watches, and it even seems
+you can execute tasks again once they are finished :/ This is a reciple for
+nasty race conditions down the line. It should be handled but not allowed, using
+an assertion or two. For processes you should be allowed to do stuff until BOTH
+iris_process_no_more_work() or iris_process_run() are called, for tasks just
+until iris_tasks_run() is called. Need to update:
+  -> the docs
+  -> put in the tests and the assertions
+
+What about chaining together processes that are being cancelled, is this possible?
+The tests could be cancelled before they run; add a testcase for this.
+
+Finalisation: a few issues here.
+  * make sure nothing can be finalized while it still has messages to process.
+
+  * The best way forward for destruction is to make IrisTask hold a reference to
+    itself, released when execution is complete. The user can keep it alive as
+    long as they hold a reference, but it will never be destroyed until it
+    is cancelled or it completes.
+
+  * All this needs thorough testing of course!
+
 
 * What to do about gtk2/gtk3?
   -> seems like the approach is to require gtk3; other projects eg. clutter-gtk I guess you have
      to use an appropriately old version to run with gtk2, or peas-gtk which allows an "experimental"
      gtk2 version only.
 
-* Put IrisProgressMonitorDisplayStyle into IrisProgressDisplayStyle? Or ...
-  How about removing DisplayStyle altogether, and adding
-    iris_task_set_progress_mode (IRIS_PROGRESS_ACTIVITY_ONLY /
-                                 IRIS_PROGRESS_CONTINUOUS /
-                                 IRIS_PROGRESS_DISCRETE)
-    ... so we can tell automatically. It could include a string too to describe
-    or format the text !!!!!
-    iris_task_set_progress_display_mode()? 
-  (Remember I might add other API iris_task_set_status() .. )
-  Also you should add some tests for these 3 styles.
-  Not sure if the terminology is great ... 
-
-
 * Grep FIXME
+
+* Finish docs - README and gtk-doc tutorials :(
 
 * Bump version to 0.3, and maybe give Iris a blog post :)
 
@@ -80,13 +74,51 @@ subclass.
 Known bugs
 ---------------------------------------------------------------------------
 
+* In IrisProgressDialog, the dialog is sometimes blank. I found it in
+  examples/progress-chains-gtk. This is very hard to reproduce, but here's
+  what I have found:
+    - group->visible flag is set to correct values
+    - group->toplevel has a parent  
+  so far I have tried changing gtk_widget_show (group->toplevel) to
+  gtk_widget_show (priv->box) in show_group() in gtk-iris-progress-dialog.c ...
+  I doubt that will fix it.
+
 * The scheduling is very dumb.
 
 ---------------------------------------------------------------------------
 Missing or Incompleteness
 ---------------------------------------------------------------------------
 
+Why do the recursion tests take so long?
+
+info-bar: size-group for titles? This would make examples/progress-groups prettier
+
+Valgrind it a bit. Some things you need:
+  - test where you enqueue messages in a process and test they all get freed
+
+General test improvements needed:
+  * Tests should always use a fresh scheduler, no?
+  * How much of tests/progress-monitor-gtk-1 could use wait-func instead of count-sheep-func???
+  * Add libtestutils and factor out some of the tests' shared code
+  * Disallow g_sleep to allow messages to be delivered; we should use mocks
+    where possible and spy on the message channel for what we want when not .. even
+    wait_messages in process-1.c is way better than g_usleep()
+
+Should we remove message->data? Seems like a bit of a confusing api ...
+
 waf should build the gtk-docs
+
+What about errors in processes? There are two possibilites -
+  1. a fatal error prevents further work and can be handled as an iristask error
+  2. a per-item error means one work item can't be processed. What would you do
+     about this ? an example is eg. file not found in a list of files to process.
+     Can you store all of the errors and pass them back as GErrors? Or you could
+     use some custom mechanism ...
+
+You should add progress monitor support for tasks and processes that have thrown
+fatal errors as well ...
+
+Atomic access to variables in iristask is poor at best.
 
 The IrisProgressMonitor examples could perhaps be described using a couple of
 screenshots.
@@ -106,22 +138,8 @@ periodically walk the free-list to shutdown old threads.
 
 IrisScheduler
 
-	Either add use of execution notify, or remove it from the
-	signatures.
-
 	iris_scheduler_foreach () is a big bunch of code that should be a lot
 	neater.
-
-	Scheduler finalization: doesn't really work at the moment. We need:
-	  - it not to destroy itself until all of its work queues are done,
-	    *or* it to give up its work queues ..
-
-
-IrisMessage
-
-	We should make the ref-counting for messages use the sink concept
-	so that you don't need to unref your messages if you hit the usual
-	use-case of create->post.
 
 IrisProcess
 
@@ -232,31 +250,13 @@ Progress widgets
 	We could also add custom display text, eg. "%i sheep of %i". Could that be
 	done through status text? Maybe not the best way ..
 
+	When totals are totally estimated, maybe "1 item of about 500" would make
+	more sense ... allow somehow setting 'inaccurate' flag in
+	iris_progress_set_output_estimation(), which would add "about" and maybe
+	round the figure off to the nearest ten/hundred.
+
 Alex added warnings for GSimpleAsyncResult when not used from main thread.
 We need to implement our own now since this isn't reusable.
-
-Should anything be allowed to happen after execution begins? Currently on tasks
-you can add callbacks/errbacks and dependencies, add watches, and it even seems
-you can execute tasks again once they are finished :/ This is a reciple for
-nasty race conditions down the line. It should be handled but not allowed, using
-an assertion or two. For processes you should be allowed to do stuff until BOTH
-iris_process_no_more_work() or iris_process_run() are called, for tasks just
-until iris_tasks_run() is called. Need to update:
-  -> the docs
-  -> put in the tests and the assertions
-
-What about chaining together processes that are being cancelled, is this possible?
-The tests could be cancelled before they run; add a testcase for this.
-
-Finalisation: a few issues here.
-  * make sure nothing can be finalized while it still has messages to process.
-
-  * The best way forward for destruction is to make IrisTask hold a reference to
-    itself, released when execution is complete. The user can keep it alive as
-    long as they hold a reference, but it will never be destroyed until it
-    is cancelled or it completes.
-
-  * All this needs thorough testing of course!
 
 How does Iris relate to GThreadPool? Have we reinvented things we could
 actually pull in from GLib?
@@ -288,9 +288,7 @@ iris_receiver_deliver_real()
 
 	These related methods have significant wait time. This could be
 	both from the atomic operations as well as the locks incurred.
-	How can we redce the potential for lock in these situations?
-
-Valgrind everything to check for leaks
+	How can we reduce the potential for lock in these situations?
 
 In iris-progress-monitor.c I recommend keeping an IrisProgressMonitor object
 around but hidden throughout the running of the program rather than creating
@@ -299,9 +297,18 @@ it is, that was why I recommended it.
 
 Remove tests that aren't any use any more
 
+Other superfluous stuff:
+  * IrisProgressMonitor->remove_watch() doesn't need to be part of the
+    interface
+
 ---------------------------------------------------------------------------
 Niceties
 ---------------------------------------------------------------------------
+
+
+Would it be a good idea to prevent progress bars from going backwards? ie.
+if the fraction drops, just wait until it gets back to where it was rather
+than showing a regression.
 
 Stress the point that all of libiris is MT-safe and all of libiris-gtk is not
 
