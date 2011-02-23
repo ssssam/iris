@@ -2,8 +2,6 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-* Fix progress-chains disappearing dialog bug ... :(
-
 * Do process work items need a destroy notify? The question is what happens if the
   process is cancelled? Yeah I guess they do need one :(
   -> or, do we need a destroy notification for *MESSAGES* ?????? Then iris_process_forward
@@ -11,6 +9,19 @@ Iris 0.3.0
   -> yeah lots of messages are leaked on cancels ... :(
   -> related: in process work functions, do you need to ref a message to forward it?
      you do that in examples/progress-chains-gtk. Is it documented that you need to?
+  Message destroy notifications: use cases
+    -> process work items - may have data that needs freeing when message has processed
+    -> scheduler work items - currently have a destroy notify but again
+       this could go on message ..
+  Two ways to do it though:
+    1. per-message destroy callback, probably need to be custom-written for each message
+    2. per-item destroy notify; requires lots of extra functions but would allow
+       shorter code for users because their destroy stuff could be handled fairly
+       easily by existing GDestroyNotify callbacks for each item.
+
+I think 2 will be better for users; let's give it a try [on destroy-notify branch]
+
+* Fix progress-chains disappearing dialog bug ... :(
 
 * Prevent arbiters from being connected to receivers that have already processed
   messages.
