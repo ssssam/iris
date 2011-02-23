@@ -151,9 +151,6 @@ gtk_iris_progress_dialog_finalize (GObject *object)
 	GtkIrisProgressDialog        *dialog = GTK_IRIS_PROGRESS_DIALOG (object);
 	GtkIrisProgressDialogPrivate *priv   = dialog->priv;
 
-	/* Closing a progress monitor with active watches is not recommended but it
-	 * should still work.
-	 */
 	for (node=priv->watch_list; node; node=node->next) {
 		IrisProgressWatch *watch = node->data;
 
@@ -618,7 +615,9 @@ format_watch_title (GtkWidget   *label,
  *                        Message processing                              *
  *************************************************************************/
 
-/* No need to worry about locking here, remember these messages are processed in the main loop */
+/* No need to worry about locking here, remember these messages are processed in
+ * the main loop.
+ */
 
 static void
 update_dialog_title (GtkIrisProgressDialog *progress_dialog,
