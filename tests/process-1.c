@@ -170,8 +170,6 @@ test_has_succeeded (void)
 
 	iris_process_run (process);
 
-	g_assert (iris_process_has_succeeded (process) == FALSE);
-
 	while (!iris_process_is_finished (process))
 		g_thread_yield ();
 
@@ -536,8 +534,10 @@ test_output_estimates_cancel (void)
 	while (total_items <= 10);
 
 	iris_process_cancel (process_1);
+	wait_messages (process_1);
 
 	g_assert (! iris_process_has_succeeded (process_1));
+	g_assert (iris_process_was_canceled (process_1));
 
 	/* Wait for CHAIN_ESTIMATE messages to be processed */
 	wait_messages (process_2);
