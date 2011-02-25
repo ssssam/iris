@@ -6,6 +6,7 @@ noinst_PROGRAMS =		\
 	arbiter-1		\
 	coordination-arbiter-1	\
 	free-list-1		\
+	gdestructiblepointer-1 \
 	gmainscheduler-1	\
 	gstamppointer-1		\
 	lf-queue-1		\
@@ -30,6 +31,7 @@ TEST_PROGS +=			\
 	arbiter-1		\
 	coordination-arbiter-1	\
 	free-list-1		\
+	gdestructiblepointer-1 \
 	gmainscheduler-1	\
 	gstamppointer-1		\
 	lf-queue-1		\
@@ -78,6 +80,7 @@ AM_LDFLAGS += $(GTK_LIBS)
 endif
 
 arbiter_1_sources = arbiter-1.c
+gdestructiblepointer_1_sources = gdestructiblepointer-1.c
 message_1_sources = message-1.c
 port_1_sources = port-1.c mocks/mock-callback-receiver.c
 process_1_sources = process-1.c

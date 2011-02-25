@@ -1,6 +1,7 @@
 BUILT_SOURCES = iris-version.h
 
 sources_public_h =						\
+	$(top_srcdir)/iris/gdestructiblepointer.h   \
 	$(top_srcdir)/iris/iris.h				\
 	$(top_srcdir)/iris/iris-arbiter.h			\
 	$(top_srcdir)/iris/iris-gmainscheduler.h		\
@@ -24,6 +25,7 @@ sources_public_h =						\
 	$(NULL)
 
 sources_private_h =						\
+	$(top_srcdir)/iris/gdestructiblepointer.h               \
 	$(top_srcdir)/iris/iris-atomics.h			\
 	$(top_srcdir)/iris/iris-arbiter-private.h		\
 	$(top_srcdir)/iris/iris-coordination-arbiter.h		\
@@ -50,6 +52,7 @@ sources_private_h =						\
 	$(NULL)
 
 sources_c = 							\
+	gdestructiblepointer.c              \
 	iris.c							\
 	iris-all-task.c						\
 	iris-any-task.c						\

@@ -21,6 +21,8 @@
 #ifndef __IRIS_H__
 #define __IRIS_H__
 
+#include "gdestructiblepointer.h"
+
 /* basic data structures */
 #include "iris-queue.h"
 #include "iris-lfqueue.h"

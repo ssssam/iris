@@ -22,8 +22,9 @@ gtk_req_version = '2.18.0'
 
 
 test_execution_order = \
-  ["queue-1", "lf-queue-1", "ws-queue-1",
-   "free-list-1", "gstamppointer-1", "stack-1", "rrobin-1",
+  ["gdestructiblepointer-1", "gstamppointer-1",
+   "free-list-1", "stack-1", "rrobin-1",
+   "queue-1", "lf-queue-1", "ws-queue-1",
    "message-1", 
    "port-1", "arbiter-1", "receiver-1",
    "coordination-arbiter-1",
