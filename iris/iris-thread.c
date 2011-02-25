@@ -430,11 +430,11 @@ iris_thread_manage (IrisThread    *thread,
 
 	iris_debug (IRIS_DEBUG_THREAD);
 
-	message = iris_message_new_full (MSG_MANAGE,
-	                                 "exclusive", G_TYPE_BOOLEAN, exclusive,
-	                                 "queue", G_TYPE_POINTER, queue,
-	                                 "leader", G_TYPE_BOOLEAN, leader,
-	                                 NULL);
+	message = iris_message_new_items (MSG_MANAGE,
+	                                  "exclusive", G_TYPE_BOOLEAN, exclusive,
+	                                  "queue", G_TYPE_POINTER, queue,
+	                                  "leader", G_TYPE_BOOLEAN, leader,
+	                                  NULL);
 	iris_message_ref_sink (message);
 	g_async_queue_push (thread->queue, message);
 }

@@ -128,11 +128,11 @@ is_empty1 (void)
 }
 
 static void
-new_full1 (void)
+new_items1 (void)
 {
 	IrisMessage *msg;
 
-	msg = iris_message_new_full (1,
+	msg = iris_message_new_items (1,
 	                             "id", G_TYPE_INT, 1234567890,
 	                             "name", G_TYPE_STRING, "Christian",
 	                             NULL);
@@ -147,7 +147,7 @@ contains1 (void)
 {
 	IrisMessage *msg;
 
-	msg = iris_message_new_full (1, "id", G_TYPE_INT, 0, NULL);
+	msg = iris_message_new_items (1, "id", G_TYPE_INT, 0, NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_contains (msg, "id"));
 	g_assert (!iris_message_contains (msg, "name"));
@@ -161,7 +161,7 @@ set_int641 (void)
 {
 	IrisMessage *msg;
 
-	msg = iris_message_new_full (1, "id", G_TYPE_INT64, G_MAXINT64, NULL);
+	msg = iris_message_new_items (1, "id", G_TYPE_INT64, G_MAXINT64, NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_int64 (msg, "id") == G_MAXINT64);
 
@@ -174,7 +174,7 @@ set_float1 (void)
 {
 	IrisMessage *msg;
 
-	msg = iris_message_new_full (1, "id", G_TYPE_FLOAT, 1.2345f, NULL);
+	msg = iris_message_new_items (1, "id", G_TYPE_FLOAT, 1.2345f, NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_float (msg, "id") == 1.2345f);
 
@@ -187,7 +187,7 @@ set_double1 (void)
 {
 	IrisMessage *msg;
 
-	msg = iris_message_new_full (1, "id", G_TYPE_DOUBLE, 21.123456, NULL);
+	msg = iris_message_new_items (1, "id", G_TYPE_DOUBLE, 21.123456, NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_double (msg, "id") == 21.123456);
 
@@ -200,7 +200,7 @@ set_long1 (void)
 {
 	IrisMessage *msg;
 
-	msg = iris_message_new_full (1, "id", G_TYPE_LONG, 123123l, NULL);
+	msg = iris_message_new_items (1, "id", G_TYPE_LONG, 123123l, NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_long (msg, "id") == 123123l);
 
@@ -213,7 +213,7 @@ set_ulong1 (void)
 {
 	IrisMessage *msg;
 
-	msg = iris_message_new_full (1, "id", G_TYPE_ULONG, 123123ul, NULL);
+	msg = iris_message_new_items (1, "id", G_TYPE_ULONG, 123123ul, NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_ulong (msg, "id") == 123123ul);
 
@@ -226,7 +226,7 @@ set_char1 (void)
 {
 	IrisMessage *msg;
 
-	msg = iris_message_new_full (1, "id", G_TYPE_CHAR, 'A', NULL);
+	msg = iris_message_new_items (1, "id", G_TYPE_CHAR, 'A', NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_char (msg, "id") == 'A');
 
@@ -239,7 +239,7 @@ set_uchar1 (void)
 {
 	IrisMessage *msg;
 
-	msg = iris_message_new_full (1, "id", G_TYPE_UCHAR, 'A', NULL);
+	msg = iris_message_new_items (1, "id", G_TYPE_UCHAR, 'A', NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_uchar (msg, "id") == 'A');
 
@@ -252,7 +252,7 @@ set_boolean1 (void)
 {
 	IrisMessage *msg;
 
-	msg = iris_message_new_full (1, "id", G_TYPE_BOOLEAN, TRUE, NULL);
+	msg = iris_message_new_items (1, "id", G_TYPE_BOOLEAN, TRUE, NULL);
 	g_assert (msg != NULL);
 	g_assert (iris_message_get_boolean (msg, "id") == TRUE);
 
@@ -272,7 +272,7 @@ million_create (void)
 	g_timer_start (timer);
 
 	for (i = 0; i < 1000000; i++) {
-		//msg = iris_message_new_full (1, "id", G_TYPE_INT, 1, NULL);
+		//msg = iris_message_new_items (1, "id", G_TYPE_INT, 1, NULL);
 		msg[i] = iris_message_new (1);
 		//iris_message_unref (msg);
 	}
@@ -337,7 +337,7 @@ main (int   argc,
 	g_test_add_func ("/message/copy1", copy1);
 	g_test_add_func ("/message/count_names1", count_names1);
 	g_test_add_func ("/message/is_empty1", count_names1);
-	g_test_add_func ("/message/new_full1", count_names1);
+	g_test_add_func ("/message/new_items1", count_names1);
 	g_test_add_func ("/message/contains1", contains1);
 	g_test_add_func ("/message/set_int641", set_int641);
 	g_test_add_func ("/message/set_float1", set_float1);

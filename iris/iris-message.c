@@ -220,7 +220,7 @@ iris_message_new_data (gint  what,
 }
 
 /**
- * iris_message_new_full:
+ * iris_message_new_items:
  * @what: the message type
  * @first_name: the name of the first field in the message
  * @...: the GType and value for the first property, followed optionally
@@ -231,7 +231,7 @@ iris_message_new_data (gint  what,
  * Return value: a new instance of #IrisMessage.
  */
 IrisMessage*
-iris_message_new_full (gint         what,
+iris_message_new_items (gint         what,
                        const gchar *first_name,
                        ...)
 {

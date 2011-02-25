@@ -129,7 +129,7 @@ iris_service_handle_stat_real (IrisService *service)
 
 	priv = service->priv;
 
-	message = iris_message_new_full (0,
+	message = iris_message_new_items (0,
 			"Service::Started", G_TYPE_BOOLEAN, priv->started,
 			NULL);
 
