@@ -106,6 +106,7 @@ void                   iris_message_set_object       (IrisMessage *message, cons
 
 gpointer               iris_message_get_pointer      (IrisMessage *message, const gchar *name);
 void                   iris_message_set_pointer      (IrisMessage *message, const gchar *name, gpointer value);
+void                   iris_message_set_pointer_full (IrisMessage *message, const gchar *name, gpointer pointer, GDestroyNotify destroy_notify);
 
 
 G_END_DECLS

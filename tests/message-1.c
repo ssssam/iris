@@ -261,36 +261,6 @@ set_boolean1 (void)
 }
 
 static void
-million_create (void)
-{
-	IrisMessage **msg;
-	int i;
-
-	GTimer *timer = g_timer_new ();
-
-	msg = g_new(IrisMessage *, 1000000);
-	g_timer_start (timer);
-
-	for (i = 0; i < 1000000; i++) {
-		//msg = iris_message_new_items (1, "id", G_TYPE_INT, 1, NULL);
-		msg[i] = iris_message_new (1);
-		//iris_message_unref (msg);
-	}
-
-	g_timer_stop (timer);
-
-	//g_debug ("Ellapsed %lf", g_timer_elapsed (timer, NULL));
-	g_timer_destroy (timer);
-
-	for (i = 0; i < 1000000; i++) {
-		iris_message_ref_sink (msg[i]);
-		g_assert_cmpint (msg[i]->ref_count, ==, 1);
-		iris_message_unref (msg[i]);
-	}
-	g_free (msg);
-}
-
-static void
 set_data1 (void)
 {
 	GValue value = {0,};
@@ -322,6 +292,102 @@ new_data1 (void)
 	iris_message_unref (msg);
 }
 
+static void
+test_object_unref ()
+{
+	IrisMessage *msg;
+	GObject   *object = G_OBJECT (iris_queue_new ());
+
+	msg = iris_message_new (1);
+	iris_message_set_object (msg, "test", object);
+	g_assert_cmpint (object->ref_count, ==, 2);
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
+	g_assert_cmpint (object->ref_count, ==, 1);
+
+	g_object_unref (object);
+}
+
+static void
+destroy_notify_test_cb (gpointer data)
+{
+	/* In the real world we would free 'data' here */
+	gboolean *flag = data;
+	*flag = TRUE;
+}
+
+static void
+test_pointer_destruction ()
+{
+	IrisMessage *msg;
+	gboolean     destroy_notify_called = FALSE;
+
+	msg = iris_message_new (1);
+	iris_message_set_pointer_full (msg,
+	                               "pointer",
+	                               &destroy_notify_called,
+	                               destroy_notify_test_cb);
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
+
+	g_assert (destroy_notify_called == TRUE);
+}
+
+static void
+test_value_destruction ()
+{
+	IrisMessage *msg;
+	GValue       value = { 0 };
+	gboolean     destroy_notify_called = FALSE;
+
+	g_value_init (&value, G_TYPE_DESTRUCTIBLE_POINTER);
+	g_value_set_destructible_pointer (&value,
+	                                  &destroy_notify_called,
+	                                  destroy_notify_test_cb);
+
+	msg = iris_message_new (1);
+	iris_message_set_data (msg, &value);
+
+	g_assert (destroy_notify_called == FALSE);
+
+	iris_message_ref_sink (msg);
+	iris_message_unref (msg);
+
+	g_assert (destroy_notify_called == TRUE);
+}
+
+static void
+million_create (void)
+{
+	IrisMessage **msg;
+	int i;
+
+	GTimer *timer = g_timer_new ();
+
+	msg = g_new(IrisMessage *, 1000000);
+	g_timer_start (timer);
+
+	for (i = 0; i < 1000000; i++) {
+		//msg = iris_message_new_items (1, "id", G_TYPE_INT, 1, NULL);
+		msg[i] = iris_message_new (1);
+		//iris_message_unref (msg);
+	}
+
+	g_timer_stop (timer);
+
+	//g_debug ("Ellapsed %lf", g_timer_elapsed (timer, NULL));
+	g_timer_destroy (timer);
+
+	for (i = 0; i < 1000000; i++) {
+		iris_message_ref_sink (msg[i]);
+		g_assert_cmpint (msg[i]->ref_count, ==, 1);
+		iris_message_unref (msg[i]);
+	}
+	g_free (msg);
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -347,9 +413,12 @@ main (int   argc,
 	g_test_add_func ("/message/set_char1", set_char1);
 	g_test_add_func ("/message/set_uchar1", set_uchar1);
 	g_test_add_func ("/message/set_boolean1", set_boolean1);
-	g_test_add_func ("/message/million_create", million_create);
 	g_test_add_func ("/message/set_data1", set_data1);
 	g_test_add_func ("/message/new_data1", new_data1);
+	g_test_add_func ("/message/object unref", test_object_unref);
+	g_test_add_func ("/message/pointer destruction", test_pointer_destruction);
+	g_test_add_func ("/message/value destruction", test_value_destruction);
+	g_test_add_func ("/message/million_create", million_create);
 
 	return g_test_run ();
 }

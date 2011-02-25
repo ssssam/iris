@@ -21,6 +21,7 @@
 #include <string.h>
 #include <gobject/gvaluecollector.h>
 
+#include "gdestructiblepointer.h"
 #include "iris-message.h"
 
 /**
@@ -966,24 +967,52 @@ iris_message_get_pointer (IrisMessage *message,
  * iris_message_set_pointer:
  * @message: An #IrisMessage
  * @name: the key
- * @value: the value
+ * @pointer: the value
  *
- * Updates @message to use @value as the value for @key.
+ * Updates @message to use value @pointer as the value for @key.
  */
 void
 iris_message_set_pointer (IrisMessage *message,
                           const gchar *name,
-                          gpointer     value)
+                          gpointer     pointer)
 {
-	GValue *real_value;
+	GValue *value;
 
 	g_return_if_fail (message != NULL);
 
-	real_value = iris_message_value_new (NULL);
-	g_value_init (real_value, G_TYPE_POINTER);
-	g_value_set_pointer (real_value, value);
+	value = iris_message_value_new (NULL);
+	g_value_init (value, G_TYPE_POINTER);
+	g_value_set_pointer (value, pointer);
 
-	iris_message_set_value_internal (message, name, real_value);
+	iris_message_set_value_internal (message, name, value);
+}
+
+/**
+ * iris_message_set_pointer_full:
+ * @message: An #IrisMessage
+ * @name: the key
+ * @pointer: the value
+ * @destroy_notify: function to call when @message is finalized, that will free
+ *                  the data pointed to by @value.
+ *
+ * Updates @message to use @value as the value for @key, specifying how to free
+ * @value when the message is no longer needed.
+ */
+void
+iris_message_set_pointer_full (IrisMessage   *message,
+                              const gchar    *name,
+                              gpointer        pointer,
+                              GDestroyNotify  destroy_notify)
+{
+	GValue *value;
+
+	g_return_if_fail (message != NULL);
+
+	value = iris_message_value_new (NULL);
+	g_value_init (value, G_TYPE_DESTRUCTIBLE_POINTER);
+	g_value_set_destructible_pointer (value, pointer, destroy_notify);
+
+	iris_message_set_value_internal (message, name, value);
 }
 
 /**
