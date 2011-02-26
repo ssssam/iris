@@ -31,12 +31,16 @@
 static void
 wait_messages (IrisProcess *process)
 {
-	IrisPort *port;
+	IrisPort *control_port,
+	         *work_port;
 
-	port = IRIS_TASK(process)->priv->port;
+	control_port = IRIS_TASK(process)->priv->port;
+	work_port = process->priv->work_port;
 
-	while (iris_port_get_queue_length (port) > 0 ||
-	       g_atomic_int_get (&iris_port_get_receiver (port)->priv->active) > 0)
+	while (iris_port_get_queue_length (control_port) > 0 ||
+	       g_atomic_int_get (&iris_port_get_receiver (control_port)->priv->active) > 0 ||
+	       iris_port_get_queue_length (work_port) > 0 ||
+	       g_atomic_int_get (&iris_port_get_receiver (work_port)->priv->active) > 0)
 		g_thread_yield ();
 }
 
