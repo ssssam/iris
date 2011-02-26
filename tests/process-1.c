@@ -335,8 +335,9 @@ chaining_1 (void)
 static void
 chaining_2 (void)
 {
-	int counter = 0,
-	    i;
+	IrisMessage *message[50];
+	int          counter = 0,
+	             i;
 	
 	IrisProcess *head_process = iris_process_new_with_func
 	                              (pre_counter_callback, NULL, NULL);
@@ -350,8 +351,9 @@ chaining_2 (void)
 	for (i=0; i < 50; i++) {
 		/* Set pointer as data instead of "counter" property, to ensure
 		 * pre_counter_callback () is called to change it. */
-		IrisMessage *work_item = iris_message_new_data (0, G_TYPE_POINTER, &counter);
-		iris_process_enqueue (head_process, work_item);
+		message[i] = iris_message_new_data (0, G_TYPE_POINTER, &counter);
+		iris_message_ref (message[i]);
+		iris_process_enqueue (head_process, message[i]);
 	}
 	iris_process_no_more_work (head_process);
 
@@ -359,6 +361,11 @@ chaining_2 (void)
 		g_thread_yield ();
 
 	g_assert_cmpint (counter, ==, 50);
+
+	for (i=0; i < 50; i++) {
+		g_assert_cmpint (message[i]->ref_count, ==, 1);
+		iris_message_unref (message[i]);
+	}
 
 	g_object_unref (head_process);
 	g_object_unref (tail_process);

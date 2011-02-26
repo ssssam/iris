@@ -226,10 +226,12 @@ iris_process_cancel (IrisProcess *process)
  * is a problem, you should create individual #IrisTask objects which allow you
  * to specify dependencies.
  *
- * The caller does not need to unref @work_item once it has been enqueued (if
- * they have not already called iris_message_ref_sink()). The work will be
- * kept alive until the process' work function has handled it and then
- * unreffed.
+ * The caller does not need to unref @work_item once it has been enqueued, in
+ * normal cases. The message and its data will be freed after the work item is
+ * processed or cancelled. Note that you should not free data associated with
+ * the work items in the process work function because of the possibility of
+ * cancelling; you can use iris_message_set_pointer_full() to ensure all data
+ * is properly freed.
  */
 void
 iris_process_enqueue (IrisProcess *process,
@@ -413,12 +415,8 @@ iris_process_connect (IrisProcess *head,
  * forwards @work_item to the successor of @process. @process and its successor
  * must have been connected using iris_process_connect().
  *
- * @work_item must be a newly-created #IrisMessage and not the one passed to
- * the current work function.
- */
-/* FIXME: can't reuse the message because if we add work item destroy notifys
- * it will destroyed ... won't it? unless we link that to the message ref
- * count. or you could just put the destroy notify on the message.
+ * @work_item can be the same message that was passed to the calling work
+ * function, and references will be correctly managed.
  */
 void
 iris_process_forward (IrisProcess *process,
