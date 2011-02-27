@@ -436,6 +436,11 @@ iris_port_flush (IrisPort    *port)
 	if (receiver == NULL)
 		return;
 
+	/* We hold our own reference in case the message leads to our owner being
+	 * destroyed (and taking us with it) before the function is done. This is
+	 * of course most likely with synchronous schedulers.
+	 */
+	g_object_ref (port);
 	g_mutex_lock (priv->mutex);
 
 	if (g_atomic_int_get (&priv->flushing)) {
@@ -506,6 +511,7 @@ iris_port_flush (IrisPort    *port)
 	/* Don't free the queue even if it's empty. We will probably need it again. */
 
 	g_mutex_unlock (priv->mutex);
+	g_object_unref (port);
 }
 
 /**

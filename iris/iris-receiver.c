@@ -72,11 +72,7 @@ iris_delivery_status_get_type (void)
 static void
 iris_receiver_worker_destroy_cb (gpointer data)
 {
-	IrisReceiverPrivate *priv;
-	IrisWorkerData      *worker;
-
-	worker = data;
-	priv = worker->receiver->priv;
+	IrisWorkerData *worker = data;
 
 	iris_message_unref (worker->message);
 	g_slice_free (IrisWorkerData, worker);
@@ -93,6 +89,11 @@ iris_receiver_worker (gpointer data)
 	worker = data;
 	priv = worker->receiver->priv;
 
+	/* It's possible that the message could cause the destruction of the
+	 * owner of this receiver and thus a call to iris_receiver_destroy().
+	 */
+	g_object_ref (worker->receiver);
+
 	/* Execute the callback */
 	priv->callback (worker->message, priv->data);
 
@@ -106,6 +107,8 @@ iris_receiver_worker (gpointer data)
 	/* notify the arbiter we are complete */
 	if (priv->arbiter)
 		iris_arbiter_receive_completed (priv->arbiter, worker->receiver);
+
+	g_object_unref (worker->receiver);
 }
 
 static IrisDeliveryStatus
@@ -205,6 +208,9 @@ iris_receiver_deliver_real (IrisReceiver *receiver,
 _post_decision:
 
 	if (execute) {
+		if (!priv->persistent)
+			status = IRIS_DELIVERY_ACCEPTED_REMOVE;
+
 		worker = g_slice_new0 (IrisWorkerData);
 		worker->receiver = receiver;
 		worker->message = iris_message_ref_sink (message);
@@ -213,9 +219,6 @@ _post_decision:
 		                      iris_receiver_worker,
 		                      worker,
 		                      iris_receiver_worker_destroy_cb);
-
-		if (!priv->persistent)
-			status = IRIS_DELIVERY_ACCEPTED_REMOVE;
 	}
 
 	return status;
@@ -516,6 +519,10 @@ iris_receiver_destroy (IrisReceiver *receiver,
 
 	g_object_run_dispose (G_OBJECT (receiver));
 
-	g_warn_if_fail (G_OBJECT(receiver)->ref_count == 1);
+	/* Object may be freed now, or there could be a reference still held while
+	 * iris_receiver_worker() completes if a message triggered our own
+	 * destruction
+	 */
 	g_object_unref (receiver);
+
 }
