@@ -40,6 +40,7 @@
 
     <chapter>
       <title>Data Structures</title>
+      <xi:include href="xml/iris-destructible-pointer-values.xml"/>
       <xi:include href="xml/iris-queue.xml"/>
       <xi:include href="xml/iris-lfqueue.xml"/>
       <xi:include href="xml/iris-wsqueue.xml"/>

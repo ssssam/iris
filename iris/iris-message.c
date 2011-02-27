@@ -969,7 +969,7 @@ iris_message_get_pointer (IrisMessage *message,
  * @name: the key
  * @pointer: the value
  *
- * Updates @message to use value @pointer as the value for @key.
+ * Updates @message to use value @pointer as the value for @name.
  */
 void
 iris_message_set_pointer (IrisMessage *message,
@@ -993,10 +993,10 @@ iris_message_set_pointer (IrisMessage *message,
  * @name: the key
  * @pointer: the value
  * @destroy_notify: function to call when @message is finalized, that will free
- *                  the data pointed to by @value.
+ *                  the data pointed to by @pointer.
  *
- * Updates @message to use @value as the value for @key, specifying how to free
- * @value when the message is no longer needed.
+ * Updates @message to use @pointer as the value for @name, specifying how to
+ * free @pointer when the message is no longer needed.
  */
 void
 iris_message_set_pointer_full (IrisMessage   *message,

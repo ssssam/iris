@@ -24,8 +24,8 @@
 #include "gdestructiblepointer.h"
 
 /**
- * SECTION:destructible-pointer-type
- * @title: Destructible Pointers
+ * SECTION:iris-destructible-pointer-values
+ * @title: Destructible Pointer Values
  * @short_description: Store a pointer and a destroy notify in a GValue
  *
  * This mechanism is used internally in #IrisMessage to store a pointer and its
@@ -113,10 +113,10 @@ g_destructible_pointer_get_type ()
  * g_value_set_destructible_pointer:
  * @value: a valid #GValue of type %G_TYPE_DESTRUCTIBLE_POINTER
  * @pointer: a pointer
- * @destroy_notify: a GDestroyNotify function, called when the value is freed
+ * @destroy_notify: a #GDestroyNotify function, called when the value is freed
  *
  * Set the contents of a #GValue to hold @pointer, which will be freed by
- * calling @destroy_notify when the value is freed.
+ * calling @destroy_notify when the value is no longer referenced.
  */
 void
 g_value_set_destructible_pointer (GValue         *value,
