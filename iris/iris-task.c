@@ -231,7 +231,7 @@ iris_task_run (IrisTask *task)
 }
 
 /**
- * iris_task_run_async:
+ * iris_task_run_with_async_result:
  * @task: An #IrisTask
  * @callback: A #GAsyncReadyCallback
  * @user_data: data for @callback
@@ -240,9 +240,9 @@ iris_task_run (IrisTask *task)
  * execution and callbacks/errbacks phase, @callback will be executed.
  */
 void
-iris_task_run_async (IrisTask            *task,
-                     GAsyncReadyCallback  callback,
-                     gpointer             user_data)
+iris_task_run_with_async_result (IrisTask            *task,
+                                 GAsyncReadyCallback  callback,
+                                 gpointer             user_data)
 {
 	IrisTaskPrivate    *priv;
 	IrisMessage        *msg;

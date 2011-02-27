@@ -52,7 +52,7 @@ iris_task_new_with_func
 iris_task_new_with_closure
 iris_task_new_full
 iris_task_run
-iris_task_run_async
+iris_task_run_with_async_result
 iris_task_cancel
 iris_task_work_finished
 iris_task_set_progress_mode

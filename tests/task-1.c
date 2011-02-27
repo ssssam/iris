@@ -271,7 +271,7 @@ test17 (void)
 	iris_task_set_control_scheduler (task, mock_scheduler_new ());
 	iris_task_set_work_scheduler (task, mock_scheduler_new ());
 	/* run should complete synchronously because of our scheduler */
-	iris_task_run_async (task, test17_notify, &count);
+	iris_task_run_with_async_result (task, test17_notify, &count);
 	g_assert_cmpint (count, ==, 2);
 }
 
@@ -580,7 +580,7 @@ main (int   argc,
 	g_test_add_func ("/task/new_full-context", test14);
 	g_test_add_func ("/task/new_full-scheduler", test15);
 	g_test_add_func ("/task/run", test16);
-	g_test_add_func ("/task/run_async", test17);
+	g_test_add_func ("/task/run_with_async_result()", test17);
 	g_test_add_func ("/task/add_callback1", test18);
 	g_test_add_func ("/task/callback-errback1", test19);
 	g_test_add_func ("/task/callback-errback2", test20);
