@@ -15,8 +15,8 @@ queue_sync (IrisScheduler  *scheduler,
 
 	func (data);
 
-	/*if (notify)
-		notify (data);*/
+	if (notify)
+		notify (data);
 }
 
 IrisScheduler*
