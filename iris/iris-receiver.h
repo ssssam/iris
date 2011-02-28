@@ -50,6 +50,7 @@ void           iris_receiver_set_scheduler (IrisReceiver  *receiver,
                                             IrisScheduler *scheduler);
 
 void           iris_receiver_destroy       (IrisReceiver  *receiver,
+                                            gboolean       in_message,
                                             GMainContext  *main_context,
                                             gboolean       iterate_main_context);
 

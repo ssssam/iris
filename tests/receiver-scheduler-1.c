@@ -161,7 +161,7 @@ test_integrity (SchedulerFixture *fixture,
 	while (g_atomic_int_get (&message_counter) < 51)
 		yield (fixture, 50);
 
-	iris_receiver_destroy (receiver, NULL, IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
+	iris_receiver_destroy (receiver, FALSE, NULL, IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
 	g_object_unref (port);
 }
 
@@ -193,7 +193,7 @@ test_order (SchedulerFixture *fixture,
 		yield (fixture, 50);
 
 	g_object_unref (port);
-	iris_receiver_destroy (receiver, NULL, IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
+	iris_receiver_destroy (receiver, FALSE, NULL, IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
 }
 
 static void
@@ -219,7 +219,7 @@ test_destruction (SchedulerFixture *fixture,
 		iris_port_post (p, msg);
 	}
 
-	iris_receiver_destroy (r, NULL, IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
+	iris_receiver_destroy (r, FALSE, NULL, IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
 
 	yield (fixture, 50);
 

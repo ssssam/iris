@@ -62,7 +62,7 @@ basic (void)
 	g_cond_wait (cond, mutex);
 	g_mutex_unlock (mutex);
 
-	iris_receiver_destroy (receiver, NULL, FALSE);
+	iris_receiver_destroy (receiver, FALSE, NULL, FALSE);
 	g_object_unref (port);
 	g_object_unref (scheduler);
 }

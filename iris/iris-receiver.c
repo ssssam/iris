@@ -227,6 +227,16 @@ _post_decision:
 static void
 iris_receiver_finalize (GObject *object)
 {
+	IrisReceiverPrivate *priv;
+
+	priv = IRIS_RECEIVER (object)->priv;
+
+	if (g_atomic_int_get (&priv->active) > 0)
+		g_warning ("receiver %lx was finalized with messages still active. "
+		           "This is likely to cause a crash. Always use "
+		           "iris_receiver_destroy() to free an IrisReceiver.",
+		           (gulong)object);
+
 	G_OBJECT_CLASS (iris_receiver_parent_class)->finalize (object);
 }
 
@@ -243,12 +253,6 @@ iris_receiver_dispose (GObject *object)
 	if (priv->scheduler != NULL) {
 		/* We can't be being disposed if a port still holds a reference */
 		g_warn_if_fail (priv->port == NULL);
-
-		if (g_atomic_int_get (&priv->active) > 0)
-			g_warning ("receiver %lx was finalized with messages still active. "
-					   "This is likely to cause a crash. Always use "
-					   "iris_receiver_destroy() to free an IrisReceiver.",
-					   (gulong)object);
 
 		g_object_unref (priv->scheduler);
 		priv->scheduler = NULL;
@@ -447,6 +451,8 @@ iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
 /**
  * iris_receiver_destroy:
  * @receiver: An #IrisReceiver
+ * @in_message: Pass %TRUE if this function was called from the message handler
+ *              of @receiver itself.
  * @main_context: A #GMainContext (if %NULL, the default context will be used)
  * @iterate_main_context: Whether to run @main_context while waiting for the
  *                        messages to process (default: %FALSE).
@@ -455,6 +461,11 @@ iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
  * still pending and frees @receiver. Note that any or all of the messages may
  * still execute before the function returns, so you should only begin
  * destruction of shared data once this function completes.
+ *
+ * iris_receiver_destroy() involves flushing queued events from the scheduler
+ * and making sure all messages have completed. If you call the function from
+ * the receiver's own message handler you must pass %TRUE to @in_message so
+ * @receiver knows not to wait for this message to complete.
  *
  * Because iris_receiver_destroy() involves flushing queued events from the
  * scheduler, users of the GLib main loop may need to pass their application's
@@ -478,6 +489,7 @@ iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
  */
 void
 iris_receiver_destroy (IrisReceiver *receiver,
+                       gboolean      in_message,
                        GMainContext *main_context,
                        gboolean      iterate_main_context)
 {
@@ -495,7 +507,7 @@ iris_receiver_destroy (IrisReceiver *receiver,
 	priv->port = NULL;
 
 	/* Unqueue any callbacks still queued. */
-	while (g_atomic_int_get (&priv->active) > 0) {
+	while (g_atomic_int_get (&priv->active) > in_message) {
 		iris_scheduler_foreach (priv->scheduler,
 		                        iris_receiver_worker_unqueue_cb,
 		                        receiver);
@@ -524,5 +536,4 @@ iris_receiver_destroy (IrisReceiver *receiver,
 	 * destruction
 	 */
 	g_object_unref (receiver);
-
 }

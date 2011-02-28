@@ -7,6 +7,8 @@
 
 #include "mocks/mock-scheduler.h"
 
+#define TEST_MESSAGE_DESTROY  11
+
 static void
 get_type1 (void)
 {
@@ -17,6 +19,12 @@ static void
 message_handler (IrisMessage *message,
                  gpointer     data)
 {
+	if (message->what == TEST_MESSAGE_DESTROY) {
+		IrisReceiver *receiver;
+
+		receiver = IRIS_RECEIVER (iris_message_get_object (message, "receiver"));
+		iris_receiver_destroy (receiver, TRUE, NULL, FALSE);
+	}
 }
 
 static void
@@ -131,15 +139,47 @@ test_destroy (void)
 	IrisPort      *port;
 
 	port = iris_port_new ();
-	receiver = iris_arbiter_receive (NULL, iris_port_new (),
+	receiver = iris_arbiter_receive (NULL, port,
 	                                 message_handler, NULL, NULL);
 	iris_arbiter_coordinate (receiver, NULL, NULL);
+	g_object_ref (receiver);
 
-	iris_receiver_destroy (receiver, NULL, FALSE);
+	iris_receiver_destroy (receiver, FALSE, NULL, FALSE);
 
-	/* If the receiver has finalized it will have released its ref on 'port' */
+	g_assert_cmpint (G_OBJECT(receiver)->ref_count, ==, 1);
 	g_assert_cmpint (G_OBJECT(port)->ref_count, ==, 1);
+
+	g_object_unref (receiver);
 	g_object_unref (port);
+}
+
+static void
+test_destroy_from_message (void)
+{
+	IrisScheduler *scheduler = mock_scheduler_new ();
+	IrisReceiver  *receiver;
+	IrisPort      *port;
+	IrisMessage   *message;
+
+	port = iris_port_new ();
+	receiver = iris_arbiter_receive (scheduler, port,
+	                                 message_handler, NULL, NULL);
+	iris_arbiter_coordinate (receiver, NULL, NULL);
+	g_object_ref (receiver);
+
+	/* If the message doesn't get freed properly it will hold a ref on the
+	 * receiver still
+	 */
+	message = iris_message_new (TEST_MESSAGE_DESTROY);
+	iris_message_set_object (message, "receiver", G_OBJECT (receiver));
+
+	iris_port_post (port, message);
+
+	g_assert_cmpint (G_OBJECT(receiver)->ref_count, ==, 1);
+	g_assert_cmpint (G_OBJECT(port)->ref_count, ==, 1);
+	g_object_unref (receiver);
+	g_object_unref (port);
+	g_object_unref (scheduler);
 }
 
 gint
@@ -156,6 +196,7 @@ main (int   argc,
 	g_test_add_func ("/receiver/many_message_delivered1", many_message_delivered1);
 	g_test_add_func ("/receiver/set_scheduler1", set_scheduler1);
 	g_test_add_func ("/receiver/destroy()", test_destroy);
+	g_test_add_func ("/receiver/destroy() from message", test_destroy_from_message);
 
 	return g_test_run ();
 }
