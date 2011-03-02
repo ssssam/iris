@@ -2,14 +2,29 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-* Make iris_process_forward() consistent:
-  - new message - like enqueue, floating ref is sunk and managed by port & receiver
-  - existing message - port will add another ref so actually this handles itself
-    as well!
-  -> doc & test this
+* Fix cancellation of tasks and process & tests for it
+  => process/chaining 1: when a source task finalizes it needs to remove itself
+     from its sink .. really I think this is time to use the task observer's
+     mechanism to sort out chaining
+  => tests/scheduler-process-1 fails
 
-* Then, free process work item queue when process is cancelled ...
-  and check process-1 for leaks ..
+* Valgrind tasks-1 and process-1 a  bit
+
+* I think rename was_canceled back to is_canceled ...
+
+* iris_receiver_destroy() shouldn't take those parameters. Message processing
+  should be quick; maybe put a note to that effect in the docs. A scheduler
+  can provide an 'iterate' function which would iterate the gmain context, or
+  do nothing in other cases.
+
+* Grep FIXME
+
+* Finish docs - README and gtk-doc tutorials :(
+
+* Doc hosting; chergerts is out of date ..
+
+* Stress the point that all of libiris is MT-safe and all of libiris-gtk is not
+  We need a constistent story on thread safety ..
 
 * I think shared library build with make is broken .
 
@@ -21,8 +36,9 @@ Iris 0.3.0
 * Same for ports.
 
 * Fix immutability in general (see chergert mail)
-
-* Fix freeing of process/tasks (see chergert mail)
+  -> in task & process, add to both function and message handler, for easier
+  debugging (better if we catch it right when the function was called, but the
+  vagaries of message passing means it won't always work)
 
 Should anything be allowed to happen after execution begins? Currently on tasks
 you can add callbacks/errbacks and dependencies, add watches, and it even seems
@@ -37,42 +53,24 @@ until iris_tasks_run() is called. Need to update:
 What about chaining together processes that are being cancelled, is this possible?
 The tests could be cancelled before they run; add a testcase for this.
 
-Finalisation: a few issues here.
-  * make sure nothing can be finalized while it still has messages to process.
-
-  * The best way forward for destruction is to make IrisTask hold a reference to
-    itself, released when execution is complete. The user can keep it alive as
-    long as they hold a reference, but it will never be destroyed until it
-    is cancelled or it completes.
-
-  * All this needs thorough testing of course!
-  
-
-I think the right
-thing to do here is to make tasks/process a GInitiallyUnowned. This
-means it cannot be free'd until it has had g_object_ref_sink() called on
-it. I think the execution of the task should imply a ref_sink() and then
-when it's final unref happens (after execution), it gets cleaned up
-appropriately. If other tasks have references to it, the task will live
-long enough for them to do their work and then get unref'ed.
-..
-
 * What to do about gtk2/gtk3?
   -> seems like the approach is to require gtk3; other projects eg. clutter-gtk I guess you have
      to use an appropriately old version to run with gtk2, or peas-gtk which allows an "experimental"
      gtk2 version only.
 
-* Grep FIXME
-
-* Finish docs - README and gtk-doc tutorials :(
+* Check all examples and tests!
 
 * Bump version to 0.3, and maybe give Iris a blog post :)
-
-* Do some reading on concurrency ..
 
 ---------------------------------------------------------------------------
 Known bugs
 ---------------------------------------------------------------------------
+
+* tests/task-1 leaks mock schedulers like it's going out of fashion. Better
+  maybe to provide iris_set_default_*_scheduler(NULL) which returns to the
+  real default. Or not use set_default, which might be better still !
+  It's a shame we don't have floating refs on schedulers but it doesn't
+  really make sense .. just have to use fixtures.
 
 * In IrisProgressDialog, the dialog is sometimes blank. I found it in
   examples/progress-chains-gtk. This is very hard to reproduce, but here's
@@ -86,8 +84,23 @@ Known bugs
 * The scheduling is very dumb.
 
 ---------------------------------------------------------------------------
+Things for next version
+---------------------------------------------------------------------------
+
+* I think tasks & processes should gain a state system. The flags are really
+  doing this anyway, it would make atomic changes a lot easier and remove
+  some flags, and make the internals easier to understand. I see tasks having
+  4 phases: creation, work execution, callbacks, finished. Processes have the
+  preparation stage where work is enqueued, but this must be separate because
+  it can be going on while the process is actually executing.
+
+---------------------------------------------------------------------------
 Missing or Incompleteness
 ---------------------------------------------------------------------------
+
+?* Doc some internal task/process stuff, I'm thinking:
+  - how cancel works
+  mainly :)
 
 Why do the recursion tests take so long?
 
@@ -135,6 +148,15 @@ could make a shared test.
 We are not currently destroying threads ever. After they are created they
 stay created until the end of the process. We need to find a way to
 periodically walk the free-list to shutdown old threads.
+
+GIO has some async primitives of its own. Other than in
+iris_task_run_with_async_result() we don't really take advantage of them. Could
+we replace bits of Iris with the glib code?
+
+Also, what's this? http://repnop.org/ck/  - a possible source of existing
+concurrency primitives to save having to manage our own in Iris. However
+some of the stuff is duplicated in GLib.
+
 
 IrisScheduler
 
@@ -262,6 +284,11 @@ Progress widgets
 	3 are running and sending updates. It all needs a bit more work, but this
 	is not exactly vital code :)
 
+Tests
+
+	Would it make sense to run task and process tests with every scheduler,
+	including the mock? Or at least mock, standard and gmain.
+
 Alex added warnings for GSimpleAsyncResult when not used from main thread.
 We need to implement our own now since this isn't reusable.
 
@@ -311,6 +338,18 @@ Other superfluous stuff:
 ---------------------------------------------------------------------------
 Niceties
 ---------------------------------------------------------------------------
+
+I'm not sure about the name iris_process_no_more_work(). How about something
+like iris_process_preparation_complete()? You can then explain the
+cancel-doesn't-take-effect-until-no-more-work thing in terms of a "preparation
+phase" which keeps the task alive. Although don't confuse it with preparation
+in terms of connecting processes, adding task deps etc. Maybe that stuff can
+just be called the creation phase.
+
+IrisProcess source/sink notifications could use the IrisTask observer mechanism,
+without treating the processes as actual dependencies. I guess you need to
+distinguish the two; blocking dependencies (for tasks) and chaining dependencies
+(for process).
 
 IrisMessage could actually become a thin wrapper around a GVariant "(d*)"
 
