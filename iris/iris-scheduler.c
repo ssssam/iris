@@ -233,7 +233,7 @@ iris_scheduler_foreach_rrobin_cb (IrisRRobin *rrobin,
 {
 	IrisQueue                    *queue   = data;
 	IrisSchedulerForeachClosure  *closure = user_data;
-	gboolean continue_flag = FALSE;
+	gboolean continue_flag = TRUE;
 	gint i;
 
 	/* Foreach the queue in a really hacky way. FIXME: be neater!
