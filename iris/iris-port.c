@@ -452,8 +452,10 @@ iris_port_flush (IrisPort    *port)
 		 * the receiver's last message.
 		 */
 		g_mutex_unlock (priv->mutex);
+		g_object_unref (port);
 		return;
 	}
+
 	g_atomic_int_set (&priv->paused, TRUE);
 	g_atomic_int_set (&priv->flushing, TRUE);
 
