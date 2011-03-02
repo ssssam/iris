@@ -160,7 +160,7 @@ struct _IrisTaskClass
 	void     (*handle_message)      (IrisTask *task, IrisMessage *message);
 
 	void     (*execute)             (IrisTask *task);
-	gboolean (*cancel)              (IrisTask *task);
+	gboolean (*can_cancel)          (IrisTask *task);
 
 	void     (*dependency_canceled) (IrisTask *task, IrisTask *dep);
 	void     (*dependency_finished) (IrisTask *task, IrisTask *dep);

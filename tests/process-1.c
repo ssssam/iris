@@ -1,6 +1,6 @@
 /* process-1.c
  *
- * Copyright (C) 2009 Sam Thursfield <ssssam@gmail.com>
+ * Copyright (C) 2009-11 Sam Thursfield <ssssam@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,21 +26,17 @@
 #include "iris/iris-receiver-private.h"
 
 #include "g-repeated-test.h"
-
+#include "mocks/mock-scheduler.h"
 
 static void
-wait_messages (IrisProcess *process)
+wait_control_messages (IrisProcess *process)
 {
-	IrisPort *control_port,
-	         *work_port;
+	IrisPort *control_port;
 
 	control_port = IRIS_TASK(process)->priv->port;
-	work_port = process->priv->work_port;
 
 	while (iris_port_get_queue_length (control_port) > 0 ||
-	       g_atomic_int_get (&iris_port_get_receiver (control_port)->priv->active) > 0 ||
-	       iris_port_get_queue_length (work_port) > 0 ||
-	       g_atomic_int_get (&iris_port_get_receiver (work_port)->priv->active) > 0)
+	       g_atomic_int_get (&iris_port_get_receiver (control_port)->priv->active) > 0)
 		g_thread_yield ();
 }
 
@@ -123,76 +119,229 @@ time_waster_callback (IrisProcess *process,
                       IrisMessage *work_item,
                       gpointer     user_data)
 {
-	g_usleep (1 * G_USEC_PER_SEC);
+	g_usleep (100000);
 }
 
 static void
-enqueue_counter_work (IrisProcess *process,
-                      gint        *p_counter,
-                      gint         times)
+enqueue_counter_work (IrisProcess   *process,
+                      volatile gint *p_counter,
+                      gint           times)
 {
 	gint i;
 
 	for (i=0; i < times; i++) {
 		IrisMessage *work_item = iris_message_new (0);
-		iris_message_set_pointer (work_item, "counter", p_counter);
+		iris_message_set_pointer (work_item, "counter", (gpointer)p_counter);
 		iris_process_enqueue (process, work_item);
 	}
 	iris_process_no_more_work (process);
 }
 
+
 static void
-simple (void)
+test_lifecycle (void)
+{
+	IrisProcess *process;
+
+	process = iris_process_new_with_func (NULL, NULL, NULL);
+	g_object_add_weak_pointer (G_OBJECT (process), (gpointer *)&process);
+
+	g_assert_cmpint (G_OBJECT (process)->ref_count, ==, 1);
+
+	iris_process_no_more_work (process);
+	iris_process_run (process);
+
+	while (process != NULL)
+		g_thread_yield ();
+}
+
+static void
+test_simple (void)
 {
 	gint counter = 0;
+	IrisProcess *process;
 
-	IrisProcess *process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	/*iris_task_set_control_scheduler (IRIS_TASK (process), mock_scheduler_new ());
+	iris_task_set_work_scheduler (IRIS_TASK (process), mock_scheduler_new ());*/
+
+	g_assert_cmpint (G_OBJECT (process)->ref_count, ==, 1);
+	g_object_ref (process);
 
 	iris_process_run (process);
 	enqueue_counter_work (process, &counter, 50);
 
-	while (!iris_process_is_finished (process))
+	while (! iris_process_is_finished (process))
 		g_thread_yield ();
 
 	g_assert_cmpint (counter, ==, 50);
+
+	g_assert (iris_process_is_finished (process) == TRUE);
+	g_assert (iris_process_was_canceled (process) == FALSE);
+	g_assert (iris_process_has_succeeded (process) == TRUE);
+}
+
+static void
+test_cancel_creation (void)
+{
+	IrisProcess *process;
+
+	process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	g_object_ref (process);
+
+	iris_process_no_more_work (process);
+	iris_process_cancel (process);
+
+	while (! iris_process_is_finished (process)) {
+		wait_control_messages (process);
+		g_thread_yield ();
+	}
+
+	/* Should be only one ref, but we have no real way of testing if
+	 * iris_task_finish() has fully executed so we must allow for the
+	 * execution ref still being present ...
+	 */
+	g_assert_cmpint (G_OBJECT (process)->ref_count, <=, 2);
+
+	g_assert (iris_process_was_canceled (process) == TRUE);
+	g_assert (iris_process_has_succeeded (process) == FALSE);
 
 	g_object_unref (process);
 }
 
 static void
-test_has_succeeded (void)
+test_cancel_preparation (void)
 {
-	IrisProcess *process;
 	gint         counter;
-
-	/* Test TRUE on success */
-	process = iris_process_new_with_func (counter_callback, NULL, NULL);
-	counter = 0;
-	enqueue_counter_work (process, &counter, 50);
-
-	g_assert (iris_process_has_succeeded (process) == FALSE);
-
-	iris_process_run (process);
-
-	while (!iris_process_is_finished (process))
-		g_thread_yield ();
-
-	g_assert (iris_process_has_succeeded (process) == TRUE);
-
-	g_object_unref (process);
-
-	/* Test FALSE on cancel */
+	IrisProcess *process;
 
 	process = iris_process_new_with_func (counter_callback, NULL, NULL);
-	counter = 0;
-	enqueue_counter_work (process, &counter, 50);
-	iris_process_run (process);
+	g_object_ref (process);
 
 	iris_process_cancel (process);
-	while (!iris_process_was_canceled (process))
-		g_thread_yield ();
+	wait_control_messages (process);
 
+	g_assert (iris_process_was_canceled (process) == TRUE);
+	g_assert (iris_process_is_finished (process) == FALSE);
+
+	/* Enqueuing work is still allowed, process will not be freed until
+	 * iris_process_no_more_work() is called
+	 */
+	counter = 0;
+	enqueue_counter_work (process, &counter, 50);
+
+	while (! iris_process_is_finished (process)) {
+		wait_control_messages (process);
+		g_thread_yield ();
+	}
+
+	g_assert_cmpint (G_OBJECT (process)->ref_count, <=, 2);
+	g_assert (iris_process_was_canceled (process) == TRUE);
 	g_assert (iris_process_has_succeeded (process) == FALSE);
+
+	/* You can even still run the process, if it's not been destroyed,
+	 * which should do nothing
+	 */
+	iris_process_run (process);
+	wait_control_messages (process);
+
+	g_assert_cmpint (G_OBJECT (process)->ref_count, ==, 1);
+	g_assert (iris_process_was_canceled (process) == TRUE);
+	g_assert (iris_process_is_finished (process) == TRUE);
+	g_assert (iris_process_has_succeeded (process) == FALSE);
+
+	g_object_unref (process);
+}
+
+static void
+cancel_execution_cb (IrisProcess *progress,
+                     IrisMessage *work_item,
+                     gpointer     user_data) {
+	volatile gint *p_wait_state = user_data;
+
+	if (g_atomic_int_get (p_wait_state) == 0)
+		*p_wait_state = 1;
+	else
+		while (g_atomic_int_get (p_wait_state) != 2)
+			g_thread_yield ();
+}
+
+/* cancel in execution 1: Test for cancel on a normal run where
+ * iris_process_no_more_work() was called before iris_process_run()
+ */
+static void
+test_cancel_execution_1 (void)
+{
+	volatile gint  counter,
+	               wait_state = 0;
+	IrisProcess   *process;
+
+	process = iris_process_new_with_func (cancel_execution_cb, (gpointer)&wait_state, NULL);
+	g_object_ref (process);
+
+	counter = 0;
+	enqueue_counter_work (process, &counter, 50);
+
+	iris_process_run (process);
+	while (g_atomic_int_get (&wait_state) != 1)
+		g_thread_yield();
+
+	iris_process_cancel (process);
+	while (! iris_process_was_canceled (process))
+		wait_control_messages (process);
+
+	/* Still in process work function at this point */
+	g_assert (iris_process_is_executing (process) == TRUE);
+	g_assert (iris_process_is_finished (process) == FALSE);
+
+	g_atomic_int_set (&wait_state, 2);
+
+	while (! iris_process_is_finished (process))
+		wait_control_messages (process);
+
+	g_assert_cmpint (G_OBJECT (process)->ref_count, <=, 2);
+	g_assert (iris_process_is_executing (process) == FALSE);
+	g_assert (iris_process_was_canceled (process) == TRUE);
+	g_assert (iris_process_has_succeeded (process) == FALSE);
+
+	g_object_unref (process);
+}
+
+/* cancel in execution 2: call iris_cancel() on a running process before
+ * iris_process_no_more_work() has been called
+ */
+static void
+test_cancel_execution_2 (void)
+{
+	volatile gint  counter;
+	IrisProcess   *process;
+
+	process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	g_object_ref (process);
+
+	iris_process_run (process);
+	while (! iris_process_is_executing (process))
+		wait_control_messages (process);
+
+	iris_process_cancel (process);
+	while (! iris_process_was_canceled (process))
+		wait_control_messages (process);
+
+	/* The result of 'is_executing' is undefined in practice, because the
+	 * cancel could have prevented the task from ever running. So we don't
+	 * test for it.
+	 */
+	g_assert (iris_process_is_finished (process) == FALSE);
+
+	counter = 0;
+	enqueue_counter_work (process, &counter, 50);
+	while (! iris_process_is_finished (process))
+		wait_control_messages (process);
+
+	g_assert (iris_process_was_canceled (process) == TRUE);
+	g_assert (iris_process_has_succeeded (process) == FALSE);
+
+	g_assert_cmpint (G_OBJECT (process)->ref_count, <=, 2);
 
 	g_object_unref (process);
 }
@@ -201,11 +350,13 @@ test_has_succeeded (void)
 static void
 titles (void)
 {
+	IrisProcess *process;;
 	gint  counter = 0,
 	      i;
 	char *title;
 
-	IrisProcess *process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	g_object_add_weak_pointer (G_OBJECT (process), (gpointer *)&process);
 	iris_process_set_title (process, "Title 1");
 	iris_process_run (process);
 
@@ -226,114 +377,68 @@ titles (void)
 
 	iris_process_no_more_work (process);
 
-	while (!iris_process_is_finished (process))
+	while (process != NULL)
 		g_thread_yield ();
 
 	g_assert_cmpint (counter, ==, 50);
-
-	g_object_unref (process);
 }
 
 
 static void
 recurse_1 (void)
 {
+	IrisProcess *recursive_process;
 	int counter = 0;
 
-	IrisProcess *recursive_process = iris_process_new_with_func
-	                                   (recursive_counter_callback, NULL, NULL);
+	recursive_process = iris_process_new_with_func
+	                      (recursive_counter_callback, NULL, NULL);
+	g_object_add_weak_pointer (G_OBJECT (recursive_process),
+	                           (gpointer *)&recursive_process);
 
 	iris_process_run (recursive_process);
 
 	IrisMessage *work_item = iris_message_new (0);
 	iris_message_set_pointer (work_item, "counter", &counter);
 	iris_process_enqueue (recursive_process, work_item);
-
 	iris_process_no_more_work (recursive_process);
 
-	while (!iris_process_is_finished (recursive_process))
+	while (recursive_process != NULL)
 		g_thread_yield ();
 
 	g_assert_cmpint (counter, ==, 101);
-
-	g_object_unref (recursive_process);
 }
 
-/* Cancel a process and spin waiting for it to be freed. Test fails if this
- * takes over 1 second.
- */
-static void
-cancelling_1 (void)
-{
-	int i;
 
-	IrisProcess *process;
-
-	process = iris_process_new_with_func (time_waster_callback, NULL, NULL);
-
-	iris_process_run (process);
-
-	for (i=0; i < 50; i++)
-		iris_process_enqueue (process, iris_message_new (0));
-	iris_process_no_more_work (process);
-
-	iris_process_cancel (process);
-	while (!iris_process_is_finished (process))
-		g_thread_yield ();
-
-	g_object_unref (process);
-};
-
-/* Cancel a process before running it. Should finish straight away. */
-static void
-cancelling_2 (void)
-{
-	IrisProcess *process;
-	int          i;
-
-	process = iris_process_new_with_func (time_waster_callback, NULL, NULL);
-	iris_process_cancel (process);
-	iris_process_run (process);
-
-	for (i=0; i < 50; i++)
-		iris_process_enqueue (process, iris_message_new (0));
-	iris_process_no_more_work (process);
-
-	while (!iris_process_is_finished (process))
-		g_thread_yield ();
-
-	g_object_unref (process);
-};
-
-/* Test that connect always executes before run. This behaviour is documented
- * in the manual for iris-process.c. More generally a test that messages are
- * received in the order they are sent. */
 static void
 chaining_1 (void)
 {
-	int i;
+	IrisProcess *head_process = iris_process_new_with_func
+	                              (pre_counter_callback, NULL, NULL);
+	IrisProcess *tail_process = iris_process_new_with_func
+	                              (counter_callback, NULL, NULL);
+	//g_object_ref (head_process);
 
-	for (i=0; i < 100; i++) {
-		IrisProcess *head_process = iris_process_new_with_func
-		                              (pre_counter_callback, NULL, NULL);
-		IrisProcess *tail_process = iris_process_new_with_func
-		                              (counter_callback, NULL, NULL);
+	iris_process_connect (head_process, tail_process);
 
-		iris_process_connect (head_process, tail_process);
+	iris_process_run (head_process);
 
-		iris_process_run (head_process);
+	while (! iris_process_is_executing (head_process))
+		wait_control_messages (head_process);
 
-		while (1) {
-			g_usleep (10);
-			if (iris_process_is_executing (head_process)) {
-				g_assert (iris_process_has_successor (head_process));
-				break;
-			}
-		}
+	g_assert (iris_process_has_successor (head_process) == TRUE);
+	g_assert (iris_process_has_predecessor (head_process) == FALSE);
 
-		g_object_unref (head_process);
-		g_object_unref (tail_process);
-	}
+	wait_control_messages (tail_process);
+
+	g_assert (iris_process_has_successor (tail_process) == FALSE);
+	g_assert (iris_process_has_predecessor (tail_process) == TRUE);
+
+	iris_process_no_more_work (head_process);
+	wait_control_messages (head_process);
+
+//	g_assert_cmpint (G_OBJECT (head_process)->ref_count, ==, 1);
+
+	//g_object_unref (head_process);
 }
 
 static void
@@ -377,7 +482,7 @@ chaining_2 (void)
 
 /* Cancel a chain and make sure they all exit */
 static void
-cancelling_3 (void) {
+test_cancelling_chained_1 (void) {
 	int i;
 
 	IrisProcess *head_process, *mid_process, *tail_process;
@@ -411,7 +516,7 @@ cancelling_3 (void) {
  * could happen in real life. See also: cancelling 2.
  */
 static void
-cancelling_4 (void) {
+test_cancelling_chained_2 (void) {
 	IrisProcess *head_process, *tail_process;
 
 	head_process = iris_process_new_with_func (time_waster_callback, NULL,
@@ -455,7 +560,7 @@ test_output_estimates_basic (void)
 
 	/* Empty message loop to ensure CHAIN_ESTIMATE messages get through */
 	for (i=0; i<3; i++)
-		wait_messages (process[i]);
+		wait_control_messages (process[i]);
 
 	iris_process_get_status (process[1], &processed_items, &total_items);
 	g_assert_cmpint (total_items, ==, 100);
@@ -527,7 +632,7 @@ test_output_estimates_cancel (void)
 	iris_process_set_output_estimation (process_1, 100.0);
 
 	/* Wait for connection to be processed */
-	wait_messages (process_1);
+	wait_control_messages (process_1);
 
 	g_assert (iris_process_get_successor (process_1) == process_2);
 
@@ -545,14 +650,13 @@ test_output_estimates_cancel (void)
 	while (total_items <= 10);
 
 	iris_process_cancel (process_1);
-	wait_messages (process_1);
+	wait_control_messages (process_1);
 
 	g_assert (! iris_process_has_succeeded (process_1));
 	g_assert (iris_process_was_canceled (process_1));
 
 	/* Wait for CHAIN_ESTIMATE messages to be processed */
-	wait_messages (process_2);
-
+	wait_control_messages (process_2);
 
 	/* Because the head process was cancelled and not finished, the second
 	 * should still trust its estimate. Therefore it should see at least 1000
@@ -573,22 +677,26 @@ int main(int argc, char *argv[]) {
 	g_test_init (&argc, &argv, NULL);
 	g_thread_init (NULL);
 
-	g_test_add_func ("/process/simple", simple);
-	g_test_add_func_repeated ("/process/has_succeeded()", 50, test_has_succeeded);
+	g_test_add_func ("/process/lifecycle", test_lifecycle);
+	g_test_add_func ("/process/simple", test_simple);
+	g_test_add_func_repeated ("/process/cancel - creation", 50, test_cancel_creation);
+	g_test_add_func_repeated ("/process/cancel - preparation", 50, test_cancel_preparation);
+	g_test_add_func_repeated ("/process/cancel - execution 1", 50, test_cancel_execution_1);
+	g_test_add_func_repeated ("/process/cancel - execution 2", 50, test_cancel_execution_2);
 
 	g_test_add_func ("/process/titles", titles);
 
-	g_test_add_func ("/process/cancelling 1", cancelling_1);
-	g_test_add_func ("/process/cancelling 2", cancelling_2);
+	if (0) {
 	g_test_add_func ("/process/recurse 1", recurse_1);
-	g_test_add_func ("/process/chaining 1", chaining_1);
+	g_test_add_func_repeated ("/process/chaining 1", 50, chaining_1);
 	g_test_add_func ("/process/chaining 2", chaining_2);
-	g_test_add_func ("/process/cancelling 3", cancelling_3);
-	g_test_add_func ("/process/cancelling 4", cancelling_4);
+	g_test_add_func ("/process/cancelling chained 1", test_cancelling_chained_1);
+	g_test_add_func ("/process/cancelling chained 2", test_cancelling_chained_2);
 
 	g_test_add_func ("/process/output estimates basic", test_output_estimates_basic);
 	g_test_add_func ("/process/output estimates low", test_output_estimates_low);
 	g_test_add_func_repeated ("/process/output estimates cancel", 50, test_output_estimates_cancel);
+	}
 
 	return g_test_run();
 }

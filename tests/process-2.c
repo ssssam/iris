@@ -138,8 +138,6 @@ blocking_1 ()
 			g_thread_yield ();
 		}
 
-		g_object_unref (process);
-
 		g_object_unref (hospital);
 		g_object_unref (port);
 	}

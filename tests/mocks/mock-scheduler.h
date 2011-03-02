@@ -2,6 +2,18 @@
 #include <iris/iris.h>
 #include <iris/iris-scheduler-private.h>
 
+#define MOCK_SCHEDULER_TYPE   (mock_scheduler_get_type())
+
+typedef struct {
+	IrisScheduler parent;
+} MockScheduler;
+
+typedef struct {
+	IrisSchedulerClass parent;
+} MockSchedulerClass;
+
+G_DEFINE_TYPE (MockScheduler, mock_scheduler, IRIS_TYPE_SCHEDULER);
+
 IrisScheduler* mock_scheduler_new (void);
 
 static void
@@ -19,13 +31,30 @@ queue_sync (IrisScheduler  *scheduler,
 		notify (data);
 }
 
+static void
+foreach (IrisScheduler            *scheduler,
+         IrisSchedulerForeachFunc  func,
+         gpointer                  user_data) {
+	return;
+}
+
+static void
+mock_scheduler_class_init (MockSchedulerClass *klass)
+{
+	IRIS_SCHEDULER_CLASS (klass)->queue = queue_sync;
+	IRIS_SCHEDULER_CLASS (klass)->foreach = foreach;
+}
+
+static void
+mock_scheduler_init (MockScheduler *mock_scheduler)
+{
+	/* Avoid being given threads by the scheduler manager */
+	IRIS_SCHEDULER (mock_scheduler)->priv->initialized = TRUE;
+}
+
+
 IrisScheduler*
 mock_scheduler_new (void)
 {
-	IrisScheduler *sched;
-
-	sched = iris_scheduler_new ();
-	IRIS_SCHEDULER_GET_CLASS (sched)->queue = queue_sync;
-
-	return sched;
+	return g_object_new (MOCK_SCHEDULER_TYPE, NULL);
 }

@@ -84,16 +84,16 @@ IrisProcess*  iris_process_new_with_closure      (GClosure            *closure);
 void          iris_process_run                   (IrisProcess            *process);
 void          iris_process_cancel                (IrisProcess            *process);
 
-void          iris_process_enqueue               (IrisProcess            *process,
-                                                  IrisMessage            *work_item);
-void          iris_process_no_more_work          (IrisProcess            *process);
-
 void          iris_process_connect               (IrisProcess            *head,
                                                   IrisProcess            *tail);
+
+void          iris_process_enqueue               (IrisProcess            *process,
+                                                  IrisMessage            *work_item);
 void          iris_process_forward               (IrisProcess            *process,
                                                   IrisMessage            *work_item);
 void          iris_process_recurse               (IrisProcess            *process,
                                                   IrisMessage            *work_item);
+void          iris_process_no_more_work          (IrisProcess            *process);
 
 gboolean      iris_process_is_executing          (IrisProcess            *process);
 gboolean      iris_process_is_finished           (IrisProcess            *process);

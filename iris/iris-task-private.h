@@ -35,18 +35,23 @@
 typedef enum
 {
 	/* Basic state */
-	IRIS_TASK_FLAG_FINISHED = 1 << 0,  /* corresponds to
+	IRIS_TASK_FLAG_STARTED  = 1 << 0,  /* set when work function starts, task
+	                                      is immutable once set */
+	IRIS_TASK_FLAG_FINISHED = 1 << 1,  /* corresponds to
 	                                      iris_task_has_executed() */
 
 	/* More detailed state */
-	IRIS_TASK_FLAG_NEED_EXECUTE       = 1 << 1,
-	IRIS_TASK_FLAG_WORK_ACTIVE        = 1 << 2,
-	IRIS_TASK_FLAG_CALLBACKS_ACTIVE   = 1 << 3,
-	IRIS_TASK_FLAG_WORK_FINISHED      = 1 << 4,
+	IRIS_TASK_FLAG_NEED_EXECUTE       = 1 << 2,
+	IRIS_TASK_FLAG_WORK_ACTIVE        = 1 << 3,
+	IRIS_TASK_FLAG_CALLBACKS_ACTIVE   = 1 << 4,
+	/*IRIS_TASK_FLAG_WORK_FINISHED      = 1 << 4,*/  /* not actually used */
 	IRIS_TASK_FLAG_CALLBACKS_FINISHED = 1 << 5,
 	IRIS_TASK_FLAG_CANCELED           = 1 << 6,
 
-	IRIS_TASK_FLAG_ASYNC              = 1 << 7,
+	/* A couple of other flags are currently volatile gint, but they can be
+	 * moved here once we make all flag access atomic ... */
+
+	IRIS_TASK_FLAG_ASYNC              = 1 << 7
 } IrisTaskFlags;
 
 typedef enum
@@ -55,14 +60,16 @@ typedef enum
 	IRIS_TASK_MESSAGE_PROGRESS_CALLBACKS,
 	IRIS_TASK_MESSAGE_WORK_FINISHED,
 	IRIS_TASK_MESSAGE_CALLBACKS_FINISHED,
-	IRIS_TASK_MESSAGE_CANCEL,
+	IRIS_TASK_MESSAGE_START_CANCEL,
+	IRIS_TASK_MESSAGE_FINISH_CANCEL,
 	IRIS_TASK_MESSAGE_ADD_HANDLER,
 	IRIS_TASK_MESSAGE_ADD_DEPENDENCY,
 	IRIS_TASK_MESSAGE_REMOVE_DEPENDENCY,
-	IRIS_TASK_MESSAGE_SET_MAIN_CONTEXT,
+	IRIS_TASK_MESSAGE_SET_MAIN_CONTEXT = 10,
 	IRIS_TASK_MESSAGE_DEP_FINISHED,
 	IRIS_TASK_MESSAGE_DEP_CANCELED,
 	IRIS_TASK_MESSAGE_ADD_OBSERVER,
+	IRIS_TASK_MESSAGE_REMOVE_OBSERVER
 } IrisTaskMessageType;
 
 typedef struct
@@ -89,7 +96,13 @@ struct _IrisTaskPrivate
 	                               */
 	GList         *dependencies;  /* Tasks we are depending on. */
 	GList         *observers;     /* Tasks observing our state changes */
+
 	volatile gint  flags;
+	volatile gint  cancel_finished;  /* This can become a normal flag when
+	                                    we get atomic flag setting */
+	gint        in_message_handler;  /* Used to pass iris_receiver_destroy()
+	                                    correct params and avoid a hang */
+
 	GMainContext  *context;       /* A main-context to execute our
 	                               * callbacks and async_result within.
 	                               */
@@ -103,5 +116,8 @@ struct _IrisTaskPrivate
 };
 
 void iris_task_remove_dependency_sync (IrisTask *task, IrisTask *dep);
+
+/* Exposed so process can override task's cancel handler completely */
+void iris_task_finish (IrisTask *task);
 
 #endif /* __IRIS_TASK_PRIVATE_H__ */
