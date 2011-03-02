@@ -29,6 +29,8 @@ iris-1.0.pc
 .libs/
 *.la
 *.lo
+tests/gdestructiblepointer-1
+tests/gdestructiblepointer-1.o
 tests/message-1
 tests/message-1.o
 tests/port-1
