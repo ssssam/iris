@@ -66,10 +66,10 @@ struct _IrisReceiverPrivate
 
 	IrisPort      *port;       /* Pointer to port for flushing */
 
-	GStaticRecMutex
-	               mutex;      /* Used to synchronize our requests to the
-	                            * the arbiter.
-	                            */
+	GStaticRecMutex mutex,         /* Used to synchronize our requests to the
+	                                * the arbiter. */
+	                destroy_mutex; /* Used to prevent destruction in worker
+	                                  function */
 
 	IrisMessageHandler
 	               callback;   /* The callback we should invoke inside of

@@ -47,6 +47,7 @@ G_DEFINE_TYPE (IrisReceiver, iris_receiver, G_TYPE_OBJECT)
 
 typedef struct
 {
+	gboolean      executed;
 	IrisReceiver *receiver;
 	IrisMessage  *message;
 } IrisWorkerData;
@@ -74,6 +75,9 @@ iris_receiver_worker_destroy_cb (gpointer data)
 {
 	IrisWorkerData *worker = data;
 
+	if (!worker->executed)
+		if (g_atomic_int_dec_and_test (&worker->receiver->priv->active)) { };
+
 	iris_message_unref (worker->message);
 	g_slice_free (IrisWorkerData, worker);
 }
@@ -94,6 +98,8 @@ iris_receiver_worker (gpointer data)
 	 */
 	g_object_ref (worker->receiver);
 
+	worker->executed = TRUE;
+
 	/* Execute the callback */
 	priv->callback (worker->message, priv->data);
 
@@ -104,9 +110,20 @@ iris_receiver_worker (gpointer data)
 	 */
 	if (g_atomic_int_dec_and_test (&priv->active)) { }
 
-	/* notify the arbiter we are complete */
-	if (priv->arbiter)
-		iris_arbiter_receive_completed (priv->arbiter, worker->receiver);
+	/* Protect against destruction in this phase: since we have already
+	 * decremented priv->active, iris_receiver_destroy() doesn't know we
+	 * are still executing. Feel free to implement this in a faster way.
+	 */
+	g_static_rec_mutex_lock (&priv->destroy_mutex);
+
+	if (priv->port == NULL);
+		/* iris_receiver_destroy() has been called */
+	else
+		/* Notify the arbiter we are complete. */
+		if (priv->arbiter)
+			iris_arbiter_receive_completed (priv->arbiter, worker->receiver);
+
+	g_static_rec_mutex_unlock (&priv->destroy_mutex);
 
 	g_object_unref (worker->receiver);
 }
@@ -213,6 +230,7 @@ _post_decision:
 
 		worker = g_slice_new0 (IrisWorkerData);
 		worker->receiver = receiver;
+		worker->executed = FALSE;
 		worker->message = iris_message_ref_sink (message);
 
 		iris_scheduler_queue (priv->scheduler,
@@ -284,6 +302,7 @@ iris_receiver_init (IrisReceiver *receiver)
 	                                              IrisReceiverPrivate);
 
 	g_static_rec_mutex_init (&receiver->priv->mutex);
+	g_static_rec_mutex_init (&receiver->priv->destroy_mutex);
 	receiver->priv->persistent = TRUE;
 }
 
@@ -413,6 +432,9 @@ iris_receiver_resume (IrisReceiver *receiver)
 
 	priv = receiver->priv;
 
+	/* We have been destroyed, shouldn't have got here! */
+	g_return_if_fail (priv->port != NULL);
+
 	iris_port_flush (priv->port);
 }
 
@@ -441,9 +463,7 @@ iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
 	if (worker_data->receiver != receiver)
 		return TRUE;
 
-	if (iris_scheduler_unqueue (scheduler, work_item))
-		/* 'unqueue' returns TRUE if the item did not execute */
-		if (g_atomic_int_dec_and_test (&priv->active)) { }
+	iris_scheduler_unqueue (scheduler, work_item);
 
 	return (g_atomic_int_get (&priv->active) > 0);
 }
@@ -494,10 +514,16 @@ iris_receiver_destroy (IrisReceiver *receiver,
                        gboolean      iterate_main_context)
 {
 	IrisReceiverPrivate *priv;
+	gint                 max_messages;
 
 	g_return_if_fail (IRIS_IS_RECEIVER (receiver));
 
 	priv = receiver->priv;
+
+	if (in_message)
+		g_warn_if_fail (g_atomic_int_get (&priv->active) >= 1);
+
+	g_static_rec_mutex_lock (&priv->destroy_mutex);
 
 	/* Close off the port to avoid getting more messages
 	 * (and release its reference)
@@ -507,7 +533,8 @@ iris_receiver_destroy (IrisReceiver *receiver,
 	priv->port = NULL;
 
 	/* Unqueue any callbacks still queued. */
-	while (g_atomic_int_get (&priv->active) > in_message) {
+	max_messages = in_message? 1: 0;
+	while (g_atomic_int_get (&priv->active) > max_messages) {
 		iris_scheduler_foreach (priv->scheduler,
 		                        iris_receiver_worker_unqueue_cb,
 		                        receiver);
@@ -520,6 +547,16 @@ iris_receiver_destroy (IrisReceiver *receiver,
 
 		if (iterate_main_context)
 			g_main_context_iteration (main_context, FALSE);
+	}
+
+	g_static_rec_mutex_unlock (&priv->destroy_mutex);
+
+	if (in_message) {
+		/* If we were in our own message the worker must still be executing
+		 * this message, and must still hold a reference
+		 */
+		g_warn_if_fail (g_atomic_int_get (&priv->active) == 1);
+		g_warn_if_fail (G_OBJECT (receiver)->ref_count >= 2);
 	}
 
 	/* Remove arbiter */
