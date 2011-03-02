@@ -197,8 +197,8 @@ test_order (SchedulerFixture *fixture,
 }
 
 static void
-test_destruction (SchedulerFixture *fixture,
-                  gconstpointer     user_data)
+test_destruction_1 (SchedulerFixture *fixture,
+                    gconstpointer     user_data)
 {
 	IrisMessage  *msg;
 	IrisReceiver *r;
@@ -214,7 +214,7 @@ test_destruction (SchedulerFixture *fixture,
 	                          NULL, NULL);
 	global_receiver = r;
 
-	for (j = 0; j < 10; j++) {
+	for (j = 0; j < 50; j++) {
 		msg = iris_message_new (1);
 		iris_port_post (p, msg);
 	}
@@ -226,6 +226,64 @@ test_destruction (SchedulerFixture *fixture,
 	g_object_unref (p);
 }
 
+/* destruction 2: free receiver from handler while in exclusive mode */
+
+static void
+destroy_message_handler (IrisMessage *message,
+                         gpointer     data)
+{
+	volatile gboolean *p_destroyed = data;
+
+	if (message->what == 2) {
+		IrisReceiver *receiver = IRIS_RECEIVER (iris_message_get_object (message, "receiver"));
+		iris_receiver_destroy (receiver,
+		                       TRUE,
+		                       NULL,
+		                       iris_message_get_boolean (message, "is-gmain"));
+		*p_destroyed = TRUE;
+
+		/* Message still holds a ref at this point of course */
+	}
+}
+
+static void
+test_destruction_2 (SchedulerFixture *fixture,
+                    gconstpointer     user_data)
+{
+	IrisMessage  *message;
+	IrisReceiver *receiver;
+	IrisPort     *port;
+	gint              j;
+	volatile gboolean destroyed = FALSE;
+
+	port = iris_port_new ();
+	receiver = iris_arbiter_receive (fixture->scheduler,
+	                                 port,
+	                                 destroy_message_handler,
+	                                 (gpointer)&destroyed,
+	                                 NULL);
+	iris_arbiter_coordinate (receiver, NULL, NULL);
+
+	for (j = 0; j < 20; j++) {
+		message = iris_message_new (1);
+		iris_port_post (port, message);
+	}
+
+	message = iris_message_new (2);
+	iris_message_set_object (message, "receiver", G_OBJECT (receiver));
+	iris_message_set_boolean (message, "is-gmain", IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
+	iris_port_post (port, message);
+
+	for (j = 0; j < 20; j++) {
+		message = iris_message_new (1);
+		iris_port_post (port, message);
+	}
+
+	g_object_unref (port);
+
+	while (destroyed == FALSE)
+		yield (fixture, 10);
+}
 
 static void
 add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
@@ -234,6 +292,7 @@ add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
 {
 	char buf[256];
 
+	if (0) {
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/integrity 1", name);
 	g_test_add (buf, SchedulerFixture, GINT_TO_POINTER (FALSE), setup,
 	            test_integrity, teardown);
@@ -246,8 +305,12 @@ add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
 	g_test_add_repeated (buf, 250, SchedulerFixture, NULL, setup, test_order,
 	                     teardown);
 
-	g_snprintf (buf, 255, "/receiver-scheduler/%s/destruction", name);
-	g_test_add (buf, SchedulerFixture, NULL, setup, test_destruction, teardown);
+
+	g_snprintf (buf, 255, "/receiver-scheduler/%s/destruction 1", name);
+	g_test_add_repeated (buf, 250, SchedulerFixture, NULL, setup, test_destruction_1, teardown);}
+
+	g_snprintf (buf, 255, "/receiver-scheduler/%s/destruction 2", name);
+	g_test_add_repeated (buf, 2500, SchedulerFixture, NULL, setup, test_destruction_2, teardown);
 }
 
 gint
