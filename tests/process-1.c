@@ -346,6 +346,46 @@ test_cancel_execution_2 (void)
 	g_object_unref (process);
 }
 
+/* cancel in execution 3: Test work items are freed on cancel */
+#if 0
+static void
+test_cancel_execution_3 (void) {
+	IrisProcess *process;
+	IrisMessage *message[100];
+	int          i;
+
+	process = iris_process_new_with_func (time_waster_callback, NULL, NULL);
+	g_object_ref (process);
+
+	for (i=0; i<100; i++) {
+		message[i] = iris_message_new (1);
+		iris_message_ref (message[i]);
+		iris_process_enqueue (process, message[i]);
+	}
+	iris_process_no_more_work (process);
+
+	iris_process_run (process);
+	while (! iris_process_is_executing (process))
+		wait_control_messages (process);
+
+	iris_process_cancel (process);
+	while (! iris_process_is_finished (process))
+		wait_control_messages (process);
+
+	g_assert (iris_process_is_finished (process));
+
+	g_assert_cmpint (G_OBJECT (process)->ref_count, ==, 1);
+	g_object_unref (process);
+
+	/* Queued work items should all have been freed */
+	for (i=0; i<100; i++) {
+		g_print ("%i ", i);
+		g_assert_cmpint (message[i]->ref_count, ==, 1);
+		iris_message_unref (message[i]);
+	}
+};
+#endif
+
 /* titles: Check the title property does not break */
 static void
 titles (void)
@@ -683,6 +723,7 @@ int main(int argc, char *argv[]) {
 	g_test_add_func_repeated ("/process/cancel - preparation", 50, test_cancel_preparation);
 	g_test_add_func_repeated ("/process/cancel - execution 1", 50, test_cancel_execution_1);
 	g_test_add_func_repeated ("/process/cancel - execution 2", 50, test_cancel_execution_2);
+	/* g_test_add_func ("/process/cancel - execution 3", test_cancel_execution_3); */
 
 	g_test_add_func ("/process/titles", titles);
 

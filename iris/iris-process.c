@@ -1556,9 +1556,9 @@ _yield:
 static void
 iris_process_finalize (GObject *object)
 {
-	IrisProcess *process = IRIS_PROCESS (object);
-	IrisProcessPrivate *priv = process->priv;
-	GList *node;
+	IrisProcess        *process = IRIS_PROCESS (object);
+	IrisProcessPrivate *priv    = process->priv;
+	GList              *node;
 
 	if (priv->work_port != NULL) {
 		iris_receiver_destroy (priv->work_receiver, FALSE, NULL, FALSE);
