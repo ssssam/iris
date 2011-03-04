@@ -534,6 +534,34 @@ chaining_2 (void)
 	g_object_unref (tail_process);
 }
 
+/* chaining 3: a lot of processes. */
+static void
+test_chaining_3 (void) {
+	IrisProcess *process[5];
+	IrisMessage *message;
+	int          i;
+	volatile int counter = 0;
+
+	for (i=0; i<5; i++) {
+		process[i] = iris_process_new_with_func (push_next_func, NULL, NULL);
+		if (i > 0)
+			iris_process_connect (process[i-1], process[i]);
+	}
+	iris_process_set_func (process[4], counter_callback, NULL, NULL);
+
+	iris_process_run (process[0]);
+
+	for (i=0; i < 50; i++) {
+		message = iris_message_new_items
+		            (1, "counter", G_TYPE_POINTER, &counter, NULL);
+		iris_process_enqueue (process[0], message);
+	}
+	iris_process_no_more_work (process[0]);
+
+	while (g_atomic_int_get (&counter) < 50)
+		g_thread_yield ();
+};
+
 /* Cancel a chain and make sure they all exit */
 static void
 test_cancelling_chained (gconstpointer user_data) {
@@ -767,8 +795,15 @@ int main(int argc, char *argv[]) {
 	g_test_add_func ("/process/recurse 1", recurse_1);
 	g_test_add_func_repeated ("/process/chaining 1", 50, chaining_1);
 	g_test_add_func ("/process/chaining 2", chaining_2);
-	g_test_add_data_func_repeated ("/process/cancel chain - head", 10, GINT_TO_POINTER (FALSE), test_cancelling_chained);
-	g_test_add_data_func_repeated ("/process/cancel chain - tail", 10, GINT_TO_POINTER (TRUE), test_cancelling_chained);
+	g_test_add_func ("/process/chaining 3", test_chaining_3);
+	g_test_add_data_func_repeated ("/process/cancel chain - head",
+	                               10,
+	                               GINT_TO_POINTER (FALSE),
+	                               test_cancelling_chained);
+	g_test_add_data_func_repeated ("/process/cancel chain - tail",
+	                               10,
+	                               GINT_TO_POINTER (TRUE),
+	                               test_cancelling_chained);
 	g_test_add_func ("/process/cancelling chained 2", test_cancel_before_chained);
 
 	g_test_add_func ("/process/output estimates basic", test_output_estimates_basic);
