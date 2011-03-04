@@ -23,6 +23,9 @@
 
 #include <glib.h>
 
+/* Define to print out task & process messages */
+//#define IRIS_TRACE_TASK
+
 typedef enum
 {
 	IRIS_DEBUG_SECTION_NONE        = 0,

@@ -226,7 +226,8 @@ test_destruction_1 (SchedulerFixture *fixture,
 	g_object_unref (p);
 }
 
-/* destruction 2: free receiver from handler while in exclusive mode */
+/* destruction 2: free receiver from its own message handler while in exclusive
+ * mode */
 
 static void
 destroy_message_handler (IrisMessage *message,
@@ -292,7 +293,6 @@ add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
 {
 	char buf[256];
 
-	if (0) {
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/integrity 1", name);
 	g_test_add (buf, SchedulerFixture, GINT_TO_POINTER (FALSE), setup,
 	            test_integrity, teardown);
@@ -305,12 +305,11 @@ add_tests_with_fixture (void (*setup) (SchedulerFixture *, gconstpointer),
 	g_test_add_repeated (buf, 250, SchedulerFixture, NULL, setup, test_order,
 	                     teardown);
 
-
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/destruction 1", name);
-	g_test_add_repeated (buf, 250, SchedulerFixture, NULL, setup, test_destruction_1, teardown);}
+	g_test_add_repeated (buf, 250, SchedulerFixture, NULL, setup, test_destruction_1, teardown);
 
 	g_snprintf (buf, 255, "/receiver-scheduler/%s/destruction 2", name);
-	g_test_add_repeated (buf, 2500, SchedulerFixture, NULL, setup, test_destruction_2, teardown);
+	g_test_add_repeated (buf, 250, SchedulerFixture, NULL, setup, test_destruction_2, teardown);
 }
 
 gint

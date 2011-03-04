@@ -18,6 +18,7 @@
  * 02110-1301 USA
  */
 
+#include "iris-debug.h"
 #include "iris-receiver-private.h"
 #include "iris-task-private.h"
 #include "iris-process.h"
@@ -39,13 +40,13 @@
  * iris_process_run(), and cancel at any point with iris_process_cancel().
  *
  * The process will be destroyed automatically by default (see #IrisTask for
- * more information on how this works). However, a process will not be freed
- * until iris_process_no_more_work() has been called. If running, it will spin
- * waiting for more work until you call iris_process_no_more_work(). If
- * canceled, the process will cease execution, but calls to
- * iris_process_enqueue() will still succeed (the work item will be discarded).
- * It is an error to call any other methods of #IrisProcess after calling
- * iris_process_cancel().
+ * more information on how this works). However, <emphasis>a process will never
+ * finish before iris_process_no_more_work() has been called</emphasis>. If
+ * running, it will spin waiting for more work until you call
+ * iris_process_no_more_work(). If canceled, the process will cease execution,
+ * but calls to iris_process_enqueue() will still succeed (the work item will
+ * be discarded). It is an error to call any other methods of #IrisProcess
+ * after calling iris_process_cancel().
  *
  * The reason for this feature is to ensure synchronisation. For example, the
  * following code is flawed:
@@ -84,6 +85,10 @@
  * this you may want to call iris_process_set_title() to give the process a
  * label. Note that progress update messages might not be sent until
  * iris_process_run() is called.
+ *
+ * Processes can be chained together, so that the results of one are queued in
+ * another for further processing. See iris_process_connect() for more
+ * information.
  *
  * <note><para>
  * Because processes run asynchronously in their own threads,
@@ -301,21 +306,19 @@ iris_process_cancel (IrisProcess *process)
  *  </listitem>
  *  <listitem>
  *   <para>
- *     cancel events are propagated UP the chain, so to cancel a whole chain
- *     you should call:
- *       |[ iris_process_cancel (tail); ]|
- *     If you cancel @head, @tail will carry on processing work.
+ *     cancel events are propagated up and down the chain; if one process is
+ *     canceled then they will all stop.
  *   </para>
  *  </listitem>
  * </itemizedlist>
  *
  * Callbacks and errbacks can still be connected to any process, using
  * iris_task_add_callback() and iris_task_add_errback(), but for them to be
- * called when the entire chain ends you must add them to @tail.
+ * called when the entire chain ends you must add them to @tail. You cannot
+ * pass connected processes to iris_task_add_dependency().
  *
  * It is not currently possible to disconnect processes. A process can only have
- * one source and one sink process. Both these things shouldn't be too hard to
- * implement.
+ * one source and one sink process.
  *
  * Remember that iris_process_connect() will return before the connection
  * actually takes place. However, because connections must be made before the
@@ -410,18 +413,19 @@ iris_process_enqueue (IrisProcess *process,
 
 	priv = process->priv;
 
-	if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_NO_MORE_WORK)) {
-		g_warning ("iris_process_enqueue: cannot enqueue more work items, "
-		           "because iris_process_no_more_work() has been called.");
-		return;
-	};
-
 	if (FLAG_IS_ON (process, IRIS_TASK_FLAG_CANCELED)) {
 		/* Don't enqueue more work if the process has been canceled */
 		iris_message_ref_sink (work_item);
 		iris_message_unref (work_item);
 		return;
-	}
+	} else
+	if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_NO_MORE_WORK)) {
+		g_warning ("process %lx: cannot enqueue more work items, "
+		           "because iris_process_no_more_work() has been called "
+		           "(or there is a bug in process connections)",
+		           (gulong)process);
+		return;
+	};
 
 	g_atomic_int_inc (&priv->total_items);
 
@@ -465,9 +469,18 @@ iris_process_forward (IrisProcess *process,
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (iris_process_has_successor (process));
 	g_return_if_fail (iris_process_is_executing (process));
-	g_return_if_fail (! iris_process_was_canceled (process));
 
 	priv = process->priv;
+
+	if (iris_process_was_canceled (process)) {
+		/* This is possible in a chain of 3 or more processes: the head can be
+		 * pushing work while the tail has been canceled, and the middle
+		 * process has processed DEP_CANCELED but head process hasn't done yet.
+		 */
+		iris_message_ref_sink (work_item);
+		iris_message_unref (work_item);
+		return;
+	}
 
 	/* 'sink' can only be changed before the process executes, and this
 	 * function can only be called while the process is executing */
@@ -1065,19 +1078,14 @@ handle_start_work (IrisProcess *process,
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 
-	if (iris_process_was_canceled (process)) {
-		/* Run after cancel is valid only if iris_process_no_more_work() has
-		 * not been called (process is still being prepared).
-		 */
-		g_warn_if_fail (FLAG_IS_OFF (process, IRIS_PROCESS_FLAG_NO_MORE_WORK));
-		return;
-	}
-
 	priv = process->priv;
 
 	/* Start the process, and then start any successors. */
 	IRIS_TASK_CLASS (iris_process_parent_class)->handle_message
 	  (IRIS_TASK (process), message);
+
+	if (iris_process_was_canceled (process))
+		return;
 
 	if (iris_process_has_successor (process)) {
 		if (!iris_task_is_executing (IRIS_TASK (priv->sink)))
@@ -1087,29 +1095,42 @@ handle_start_work (IrisProcess *process,
 
 static void
 handle_callbacks_finished (IrisProcess *process,
-                           IrisMessage *message)
+                           IrisMessage *in_message)
 {
 	IrisProcessPrivate *priv;
-	IrisMessage        *progress_message;
+	IrisMessage        *progress_message,
+	                   *dep_message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 
 	priv = process->priv;
 
-	if (FLAG_IS_ON (IRIS_TASK (process), IRIS_TASK_FLAG_FINISHED))
+	if (FLAG_IS_ON (IRIS_TASK (process), IRIS_TASK_FLAG_FINISHED)) {
 		return;
+	}
 
-	/* Send 'complete' to any watchers, now that iris_process_is_finished() will
-	 * return TRUE.
+	/* Send 'complete' to any process watchers, now that
+	 * iris_process_is_finished() will return TRUE.
 	 */
 	if (priv->watch_port_list != NULL) {
 		progress_message = iris_message_new (IRIS_PROGRESS_MESSAGE_COMPLETE);
 		post_progress_message (process, progress_message);
 	}
 
+	if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_HAS_SINK)) {
+		/* Stop ourselves getting messages from the sink since we are
+		 * finishing, and it will finish later
+		 */
+		g_return_if_fail (IRIS_IS_PROCESS (priv->sink));
+
+		dep_message = iris_message_new_data (IRIS_TASK_MESSAGE_REMOVE_OBSERVER,
+		                                     IRIS_TYPE_TASK, process);
+		iris_port_post (IRIS_TASK (priv->sink)->priv->port, dep_message);
+	}
+
 	/* Chain up */
 	IRIS_TASK_CLASS (iris_process_parent_class)->handle_message
-	  (IRIS_TASK (process), message);
+	  (IRIS_TASK (process), in_message);
 }
 
 /* We have to totally replace task's cancel handler to avoid it posting the
@@ -1120,7 +1141,7 @@ handle_start_cancel (IrisProcess *process,
                      IrisMessage *start_message)
 {
 	IrisProcessPrivate *priv;
-	IrisMessage        *finish_message;
+	IrisMessage        *message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (start_message != NULL);
@@ -1128,6 +1149,10 @@ handle_start_cancel (IrisProcess *process,
 	g_return_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_CANCELED));
 
 	priv = process->priv;
+
+	#ifdef IRIS_TRACE_TASK
+	g_print ("process %lx: got start-cancel\n", (gulong)process);
+	#endif
 
 	if (FLAG_IS_ON (process, IRIS_TASK_FLAG_CALLBACKS_ACTIVE))
 		/* Too late to cancel, callbacks have started */
@@ -1138,25 +1163,31 @@ handle_start_cancel (IrisProcess *process,
 
 		ENABLE_FLAG (process, IRIS_TASK_FLAG_CANCELED);
 
-		/* FIXME: presumably since it's best to notify the process predecessor
-		 * of cancel as soon as possible, it would be best to move IrisTask's
-		 * call to notify_observers into its handle_start_cancel() function as
-		 * well. And then if we start using the observer mechanism for our
-		 * process connections it will be in the right place already.
-		 */
-		if (iris_process_has_predecessor (process)) {
-			if (!iris_process_is_finished (priv->source))
-				iris_process_cancel (priv->source);
-		}
-
 		if (FLAG_IS_OFF (process, IRIS_PROCESS_FLAG_NO_MORE_WORK));
 			/* FINISH_CANCEL message will be sent when no_more_work is received */
 		else
 		if (FLAG_IS_ON (process, IRIS_TASK_FLAG_WORK_ACTIVE));
 			/* FINISH_CANCEL message will be sent when work function exits. */
 		else {
-			finish_message = iris_message_new (IRIS_TASK_MESSAGE_FINISH_CANCEL);
-			iris_port_post (IRIS_TASK (process)->priv->port, finish_message);
+			message = iris_message_new (IRIS_TASK_MESSAGE_FINISH_CANCEL);
+			iris_port_post (IRIS_TASK (process)->priv->port, message);
+		}
+
+		if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_HAS_SOURCE)) {
+			/* Set NO_MORE_WORK automatically if we have a source so work
+			 * function quits; the source will cancel when it finds out we
+			 * have canceled.
+			 */
+			ENABLE_FLAG (process, IRIS_PROCESS_FLAG_NO_MORE_WORK);
+		}
+
+		if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_HAS_SINK)) {
+			/* Stop ourselves getting messages from the sink since we are
+			 * finishing, and it will finish later
+			 */
+			message = iris_message_new_data (IRIS_TASK_MESSAGE_REMOVE_OBSERVER,
+			                                 IRIS_TYPE_TASK, process);
+			iris_port_post (IRIS_TASK (priv->sink)->priv->port, message);
 		}
 	}
 }
@@ -1166,7 +1197,8 @@ handle_finish_cancel (IrisProcess *process,
                       IrisMessage *message)
 {
 	IrisProcessPrivate *priv;
-	IrisMessage        *work_item;
+	IrisMessage        *work_item,
+	                   *finish_message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 
@@ -1199,7 +1231,87 @@ handle_finish_cancel (IrisProcess *process,
 
 	ENABLE_FLAG (process, IRIS_TASK_FLAG_FINISHED);
 
-	iris_task_finish (IRIS_TASK (process));
+	finish_message = iris_message_new (IRIS_TASK_MESSAGE_FINISH);
+	iris_port_post (IRIS_TASK (process)->priv->port, finish_message);
+}
+
+static void
+handle_dep_finished (IrisProcess *process,
+                     IrisMessage *message)
+{
+	IrisProcessPrivate *priv;
+	IrisTask           *observed;
+
+	g_return_if_fail (IRIS_IS_PROCESS (process));
+	g_return_if_fail (message != NULL);
+
+	if (FLAG_IS_ON (process, IRIS_TASK_FLAG_FINISHED))
+		/* This is possible when for example our source completes while we get
+		 * canceled, then it notifies us of completion but we already stopped
+		 */
+		return;
+
+	priv = process->priv;
+	observed = g_value_get_object (iris_message_get_data (message));
+
+	if (priv->source != NULL && IRIS_TASK (priv->source) == observed) {
+		g_warn_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_FINISHED));
+
+		ENABLE_FLAG (process, IRIS_PROCESS_FLAG_NO_MORE_WORK);
+	} else if (priv->sink != NULL && IRIS_TASK (priv->sink) == observed) {
+		/* Nothing to do */
+	} else {
+		/* Must be a task dependency */
+		IRIS_TASK_CLASS (iris_process_parent_class)->handle_message
+		  (IRIS_TASK (process), message);
+	}
+}
+
+static void
+handle_dep_canceled (IrisProcess *process,
+                     IrisMessage *message)
+{
+	IrisProcessPrivate *priv;
+	IrisTask           *observed;
+
+	g_return_if_fail (IRIS_IS_PROCESS (process));
+	g_return_if_fail (message != NULL);
+
+	if (FLAG_IS_ON (process, IRIS_TASK_FLAG_CANCELED) ||
+	    FLAG_IS_ON (process, IRIS_TASK_FLAG_FINISHED))
+		return;
+
+	priv = process->priv;
+	observed = g_value_get_object (iris_message_get_data (message));
+
+	if ((priv->source == NULL || IRIS_TASK (priv->source) != observed) &&
+	    (priv->sink == NULL || IRIS_TASK (priv->sink) != observed)) {
+		/* Must be a task dependency */
+		IRIS_TASK_CLASS (iris_process_parent_class)->handle_message
+		  (IRIS_TASK (process), message);
+		return;
+	}
+
+	#ifdef IRIS_TRACE_TASK
+	g_print ("process %lx: dep-canceled from %lx\n",
+	         (gulong)process, (gulong)observed);
+	#endif
+
+	/* If source or sink was canceled, game over for us too. Rather than send a
+	 * START_CANCEL message we excete handle_start_cancel() directly to avoid a
+	 * situation where NO_MORE_WORK is set but not CANCELED. This causes
+	 * problems when a process is still pushing us work with
+	 * iris_process_forward() but we have NO_MORE_WORK set, which without the
+	 * CANCELED flag set too will trigger a warning intended for work enqueued
+	 * by the user.
+	 */
+	if ((priv->source != NULL && IRIS_TASK (priv->source) == observed) ||
+	    (priv->sink != NULL && IRIS_TASK (priv->sink) == observed)) {
+		ENABLE_FLAG (process, IRIS_PROCESS_FLAG_NO_MORE_WORK);
+
+		if (FLAG_IS_OFF (process, IRIS_TASK_FLAG_FINISHED))
+			handle_start_cancel (process, message);
+	}
 }
 
 static void
@@ -1227,9 +1339,10 @@ static void
 handle_add_source (IrisProcess *process,
                    IrisMessage *message)
 {
-	IrisProcessPrivate           *priv;
-	const GValue                 *data;
-	IrisProcess                  *source_process;
+	IrisProcessPrivate *priv;
+	const GValue       *data;
+	IrisProcess        *source_process;
+	IrisMessage        *observer_message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (message != NULL);
@@ -1239,19 +1352,27 @@ handle_add_source (IrisProcess *process,
 
 	g_return_if_fail (IRIS_IS_PROCESS (source_process));
 
+	/* FIXME: check source is not in task deps, since that would break stuff */
+
 	priv = process->priv;
-	priv->source = source_process;
+	priv->source = g_object_ref (source_process);
 
 	ENABLE_FLAG (process, IRIS_PROCESS_FLAG_HAS_SOURCE);
+
+	/* Have the source process tell us when it's canceled/completed */
+	observer_message = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_OBSERVER,
+	                                          IRIS_TYPE_TASK, process);
+	iris_port_post (IRIS_TASK (source_process)->priv->port, observer_message);
 }
 
 static void
 handle_add_sink (IrisProcess *process,
                  IrisMessage *message)
 {
-	IrisProcessPrivate           *priv;
-	const GValue                 *data;
-	IrisProcess                  *sink_process;
+	IrisProcessPrivate *priv;
+	const GValue       *data;
+	IrisProcess        *sink_process;
+	IrisMessage        *observer_message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (message != NULL);
@@ -1264,10 +1385,17 @@ handle_add_sink (IrisProcess *process,
 	/*g_warn_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_EXECUTING));
 	g_warn_if_fail (FLAG_IS_OFF (sink_process, IRIS_TASK_FLAG_EXECUTING));*/
 
+	/* FIXME: check sink is not in task deps, that would ruin everything */
+
 	priv = process->priv;
-	priv->sink = sink_process;
+	priv->sink = g_object_ref (sink_process);
 
 	ENABLE_FLAG (process, IRIS_PROCESS_FLAG_HAS_SINK);
+
+	/* Have the source process tell us when it's canceled/completed */
+	observer_message = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_OBSERVER,
+	                                          IRIS_TYPE_TASK, process);
+	iris_port_post (IRIS_TASK (sink_process)->priv->port, observer_message);
 
 	post_output_estimate (process);
 }
@@ -1344,6 +1472,15 @@ handle_chain_estimate (IrisProcess *process,
 	post_output_estimate (process);
 }
 
+#ifdef IRIS_TRACE_TASK
+static const char *process_message_name[] =
+  { "no-more-work",
+    "add-source",
+    "add-sink",
+    "add-watch",
+    "chain-estimate"
+  };
+#endif
 
 static void
 iris_process_handle_message_real (IrisTask    *task,
@@ -1355,6 +1492,13 @@ iris_process_handle_message_real (IrisTask    *task,
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 
 	priv = process->priv;
+
+	#ifdef IRIS_TRACE_TASK
+	if (message->what >= IRIS_PROCESS_MESSAGE_NO_MORE_WORK &&
+	    message->what <= IRIS_PROCESS_MESSAGE_CHAIN_ESTIMATE)
+		g_print ("process %lx: got message %s\n",
+		         (gulong)process, process_message_name [message->what - IRIS_PROCESS_MESSAGE_NO_MORE_WORK]);
+	#endif
 
 	switch (message->what) {
 	case IRIS_TASK_MESSAGE_START_WORK:
@@ -1373,9 +1517,20 @@ iris_process_handle_message_real (IrisTask    *task,
 		handle_finish_cancel (process, message);
 		break;
 
+	case IRIS_TASK_MESSAGE_DEP_FINISHED:
+		handle_dep_finished (process, message);
+		break;
+
+	case IRIS_TASK_MESSAGE_DEP_CANCELED:
+		handle_dep_canceled (process, message);
+		break;
+
 	case IRIS_PROCESS_MESSAGE_NO_MORE_WORK:
 		handle_no_more_work (process, message);
 		break;
+
+	/* FIXME: watch add_dependency and check if we don't have the dep task
+	 * already as a source/sink */
 
 	case IRIS_PROCESS_MESSAGE_ADD_SOURCE:
 		handle_add_source (process, message);
@@ -1432,14 +1587,31 @@ iris_process_post_work_item (IrisMessage *work_item,
 	IRIS_PROCESS_GET_CLASS (process)->post_work_item (process, work_item);
 }
 
+static gboolean
+work_function_can_finish (IrisProcess *process)
+{
+	if (FLAG_IS_OFF (process, IRIS_PROCESS_FLAG_NO_MORE_WORK))
+		return FALSE;
+
+	/* No races possible: only recursive work items can post more work if
+	 * NO_MORE_WORK is set, and they must do so before that item completes.
+	 * Therefore 'processed' can never reach 'total' before the last work
+	 * item completes.
+	 */
+	if (iris_process_get_queue_length (process) > 0)
+		return FALSE;
+
+	return TRUE;
+}
+
+
 static void
 iris_process_execute_real (IrisTask *task)
 {
 	GValue    params[2] = { {0,}, {0,} };
 	gboolean  canceled;
 	GTimer   *timer;
-	IrisProcess        *process,
-	                   *source;
+	IrisProcess        *process;
 	IrisProcessPrivate *priv;
 	IrisScheduler      *work_scheduler;
 	IrisMessage        *message;
@@ -1480,22 +1652,10 @@ iris_process_execute_real (IrisTask *task)
 		work_item = iris_queue_try_pop (priv->work_queue);
 
 		if (!work_item) {
-			source = iris_process_get_predecessor (process);
-			if (source != NULL && iris_process_is_finished (source)) {
-				if (iris_process_get_queue_length (process) == 0)
-					break;
-			} else if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_NO_MORE_WORK)) {
-				/* No races possible: only recursive work items can post more work if the above flag
-				 * is set, and they must do so before they are marked as complete. Therefore
-				 * 'processed' can never reach 'total' before the last work item completes.
-				 */
-				if ((g_atomic_int_get (&priv->processed_items)) ==
-					(g_atomic_int_get (&priv->total_items)))
-					break;
-			}
+			if (work_function_can_finish (process))
+				break;
 
 _yield:
-			g_value_unset (&params[1]);
 			g_value_unset (&params[0]);
 
 			/* Yield, by reposting this function to the scheduler and returning.
@@ -1524,13 +1684,12 @@ _yield:
 		g_atomic_int_inc (&priv->processed_items);
 	};
 
-	g_value_unset (&params[1]);
 	g_value_unset (&params[0]);
 
 	if (priv->watch_port_list != NULL)
 		update_status (process, TRUE);
 
-	if (canceled) {
+	if (iris_task_was_canceled (task)) {
 		DISABLE_FLAG (task, IRIS_TASK_FLAG_WORK_ACTIVE);
 
 		if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_NO_MORE_WORK)) {
@@ -1571,6 +1730,12 @@ iris_process_finalize (GObject *object)
 	/* Work items left over from a cancel should have been freed in cancel() */
 	g_warn_if_fail (iris_queue_get_length (priv->work_queue) == 0);
 	g_object_unref (priv->work_queue);
+
+	if (priv->source != NULL)
+		g_object_unref (priv->source);
+
+	if (priv->sink != NULL)
+		g_object_unref (priv->sink);
 
 	g_slice_free (gfloat, (gfloat *)priv->output_estimate_factor);
 
@@ -1635,7 +1800,6 @@ iris_process_class_init (IrisProcessClass *process_class)
 
 	task_class = IRIS_TASK_CLASS (process_class);
 	task_class->execute = iris_process_execute_real;
-	/*task_class->cancel = iris_process_cancel_real;*/
 	task_class->handle_message = iris_process_handle_message_real;
 
 	object_class = G_OBJECT_CLASS (process_class);

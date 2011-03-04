@@ -31,7 +31,7 @@ test_execution_order = \
    "thread-1", "scheduler-1", "scheduler-manager-1", "gmainscheduler-1",
    "receiver-scheduler-1",
    "task-1", "service-1",
-   "process-1", "process-2",
+   "process-1",
    "scheduler-2",
    "progress-monitor-gtk-1", "progress-dialog-gtk-1"]
 

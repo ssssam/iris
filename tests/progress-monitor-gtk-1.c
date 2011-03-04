@@ -249,6 +249,7 @@ simple (ProgressFixture *fixture,
 
 	IrisProcess *process = iris_process_new_with_func (counter_callback, NULL,
 	                                                   NULL);
+	g_object_ref (process);
 	iris_progress_monitor_watch_process (fixture->monitor, process, 0);
 	iris_process_run (process);
 
@@ -259,7 +260,6 @@ simple (ProgressFixture *fixture,
 		g_thread_yield ();
 		g_main_context_iteration (NULL, FALSE);
 	}
-
 	g_object_unref (process);
 }
 
@@ -276,6 +276,7 @@ process_titles_1 (ProgressFixture *fixture,
 	/* A process with no title */
 	IrisProcess *process = iris_process_new_with_func (count_sheep_func,
 	                                                   NULL, NULL);
+	g_object_ref (process);
 	iris_progress_monitor_watch_process (fixture->monitor, process, 0);
 	iris_process_run (process);
 
@@ -312,6 +313,7 @@ process_titles_2 (ProgressFixture *fixture,
 
 	process_1 = iris_process_new_with_func (count_sheep_func,
 	                                        NULL, NULL);
+	g_object_ref (process_1);
 	iris_process_set_title (process_1, "Test");
 	iris_progress_monitor_watch_process (fixture->monitor, process_1, 0);
 	counter_enqueue (process_1, &counter, 50);
@@ -329,6 +331,7 @@ process_titles_2 (ProgressFixture *fixture,
 
 	process_2 = iris_process_new_with_func (count_sheep_func,
 	                                        NULL, NULL);
+	g_object_ref (process_2);
 	iris_process_set_title (process_2, "Test");
 	iris_progress_monitor_watch_process (fixture->monitor, process_2, 0);
 
@@ -355,8 +358,8 @@ process_titles_2 (ProgressFixture *fixture,
 	g_assert_cmpstr (ui_title_1, ==, "New Title");
 	g_assert_cmpstr (ui_title_2, ==, "New Title");
 
-	g_object_unref (process_2);
 	g_object_unref (process_1);
+	g_object_unref (process_2);
 }
 
 /* process titles 3: test process can change its title after completion
@@ -372,8 +375,9 @@ process_titles_3 (ProgressFixture *fixture,
 
 	iris_progress_monitor_set_watch_hide_delay (fixture->monitor, -1);
 
-	process= iris_process_new_with_func (count_sheep_func,
-	                                        NULL, NULL);
+	process = iris_process_new_with_func (count_sheep_func,
+	                                      NULL, NULL);
+	g_object_ref (process);
 	iris_process_set_title (process, "tseT");
 	iris_progress_monitor_watch_process (fixture->monitor, process, 0);
 	iris_process_run (process);
@@ -407,6 +411,7 @@ recurse_1 (ProgressFixture *fixture,
 
 	IrisProcess *recursive_process = iris_process_new_with_func
 	                                   (recursive_counter_callback, NULL, NULL);
+	g_object_ref (recursive_process);
 	iris_progress_monitor_watch_process (fixture->monitor, 
 	                                     recursive_process,
 	                                     0);
@@ -442,6 +447,7 @@ chaining_1 (ProgressFixture *fixture,
 	                              (pre_counter_callback, NULL, NULL);
 	IrisProcess *tail_process = iris_process_new_with_func
 	                              (counter_callback, NULL, NULL);
+	g_object_ref (tail_process);
 
 	iris_process_connect (head_process, tail_process);
 	iris_progress_monitor_watch_process_chain (fixture->monitor,
@@ -463,7 +469,6 @@ chaining_1 (ProgressFixture *fixture,
 		g_main_context_iteration (NULL, FALSE);
 	}
 
-	g_object_unref (head_process);
 	g_object_unref (tail_process);
 }
 

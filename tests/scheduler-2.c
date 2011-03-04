@@ -53,9 +53,6 @@ test_load_spread ()
 	for (i=0; i<4; i++)
 		g_atomic_int_set (&wait_state[i], 2);
 
-	for (i=0; i<4; i++)
-		g_object_unref (process[i]);
-
 	g_object_unref (work_scheduler);
 }
 

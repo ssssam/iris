@@ -38,7 +38,7 @@ typedef enum
 	IRIS_TASK_FLAG_STARTED  = 1 << 0,  /* set when work function starts, task
 	                                      is immutable once set */
 	IRIS_TASK_FLAG_FINISHED = 1 << 1,  /* corresponds to
-	                                      iris_task_has_executed() */
+	                                      iris_task_is_finished() */
 
 	/* More detailed state */
 	IRIS_TASK_FLAG_NEED_EXECUTE       = 1 << 2,
@@ -57,15 +57,16 @@ typedef enum
 typedef enum
 {
 	IRIS_TASK_MESSAGE_START_WORK = 1,
-	IRIS_TASK_MESSAGE_PROGRESS_CALLBACKS,
 	IRIS_TASK_MESSAGE_WORK_FINISHED,
+	IRIS_TASK_MESSAGE_PROGRESS_CALLBACKS,
 	IRIS_TASK_MESSAGE_CALLBACKS_FINISHED,
 	IRIS_TASK_MESSAGE_START_CANCEL,
 	IRIS_TASK_MESSAGE_FINISH_CANCEL,
+	IRIS_TASK_MESSAGE_FINISH,
 	IRIS_TASK_MESSAGE_ADD_HANDLER,
 	IRIS_TASK_MESSAGE_ADD_DEPENDENCY,
-	IRIS_TASK_MESSAGE_REMOVE_DEPENDENCY,
-	IRIS_TASK_MESSAGE_SET_MAIN_CONTEXT = 10,
+	IRIS_TASK_MESSAGE_REMOVE_DEPENDENCY,   /* 10 */
+	IRIS_TASK_MESSAGE_SET_MAIN_CONTEXT,
 	IRIS_TASK_MESSAGE_DEP_FINISHED,
 	IRIS_TASK_MESSAGE_DEP_CANCELED,
 	IRIS_TASK_MESSAGE_ADD_OBSERVER,
@@ -116,8 +117,5 @@ struct _IrisTaskPrivate
 };
 
 void iris_task_remove_dependency_sync (IrisTask *task, IrisTask *dep);
-
-/* Exposed so process can override task's cancel handler completely */
-void iris_task_finish (IrisTask *task);
 
 #endif /* __IRIS_TASK_PRIVATE_H__ */

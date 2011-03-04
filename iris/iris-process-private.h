@@ -35,10 +35,9 @@
 
 typedef enum
 {
-	/* Last IRIS_TASK_FLAG is 1 << 5, let's leave some space. */
 	IRIS_PROCESS_FLAG_NO_MORE_WORK    = 1 << 10,
 	IRIS_PROCESS_FLAG_HAS_SOURCE      = 1 << 11,
-	IRIS_PROCESS_FLAG_HAS_SINK        = 1 << 12
+	IRIS_PROCESS_FLAG_HAS_SINK        = 1 << 12,
 } IrisProcessFlags;
 
 typedef enum

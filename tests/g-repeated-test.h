@@ -4,12 +4,14 @@
  */
 typedef struct {
 	gint          times;
+	gboolean      has_data;
 	gint          fixture_size;
 	gconstpointer tdata;
 	void (*fsetup)        (gpointer, gconstpointer);
 	void (*ftest_fixture) (gpointer, gconstpointer);
 	void (*fteardown)     (gpointer, gconstpointer);
 	void (*ftest)         ();
+	void (*ftest_data)    (gconstpointer);
 } RepeatedTestCase;
 
 static void repeated_test_func (gconstpointer data);
@@ -44,7 +46,10 @@ static void repeated_test_func (gconstpointer data)
 	if (0) repeated_test_fixture (NULL);
 
 	for (i=0; i<test_case->times; i++) {
-		test_case->ftest ();
+		if (test_case->has_data)
+			test_case->ftest_data (test_case->tdata);
+		else
+			test_case->ftest ();
 	}
 
 	g_slice_free (RepeatedTestCase, test_case);
@@ -62,10 +67,21 @@ static void repeated_test_func (gconstpointer data)
       g_test_add_data_func (testpath, test_case, repeated_test_fixture); \
   } G_STMT_END
 
-#define g_test_add_func_repeated(testpath, _times, _ftest) \
-  G_STMT_START { \
-      RepeatedTestCase *test_case = g_slice_new (RepeatedTestCase); \
-      test_case->times = _times;    \
-      test_case->ftest = _ftest; \
+#define g_test_add_func_repeated(testpath, _times, _ftest)            \
+  G_STMT_START {                                                      \
+      RepeatedTestCase *test_case = g_slice_new (RepeatedTestCase);   \
+      test_case->has_data = FALSE;                                    \
+      test_case->times = _times;                                      \
+      test_case->ftest = _ftest;                                      \
       g_test_add_data_func (testpath, test_case, repeated_test_func); \
+  } G_STMT_END
+
+#define g_test_add_data_func_repeated(testpath, _times, _tdata, _ftest) \
+  G_STMT_START {                                                        \
+      RepeatedTestCase *test_case = g_slice_new (RepeatedTestCase);     \
+      test_case->has_data = TRUE;                                       \
+      test_case->times = _times;                                        \
+      test_case->tdata = _tdata;                                        \
+      test_case->ftest_data = _ftest;                                   \
+      g_test_add_data_func (testpath, test_case, repeated_test_func);   \
   } G_STMT_END
