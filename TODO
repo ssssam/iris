@@ -2,12 +2,6 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-* Fix cancellation of tasks and process & tests for it
-  => process/chaining 1: when a source task finalizes it needs to remove itself
-     from its sink .. really I think this is time to use the task observer's
-     mechanism to sort out chaining
-  => tests/scheduler-process-1 fails
-
 * Valgrind tasks-1 and process-1 a  bit
 
 * I think rename was_canceled back to is_canceled ...
@@ -15,7 +9,7 @@ Iris 0.3.0
 * iris_receiver_destroy() shouldn't take those parameters. Message processing
   should be quick; maybe put a note to that effect in the docs. A scheduler
   can provide an 'iterate' function which would iterate the gmain context, or
-  do nothing in other cases.
+  nothing in other cases.
 
 * Grep FIXME
 
@@ -83,6 +77,14 @@ Known bugs
 
 * The scheduling is very dumb.
 
+* Tests /process/cancel chain - head/tail run very slowly at the moment. This
+  is due to dumb process scheduling: the tail process runs
+  time_waster_callback() which of course is slow. Process work functions only
+  yield every 1s so it takes a couple of seconds for the cancel to propagate
+  from the head process to the tail on each run. The solution is to improve
+  process scheduling (see above, it's dumb) so that cancels are recognised
+  much faster.
+
 ---------------------------------------------------------------------------
 Things for next version
 ---------------------------------------------------------------------------
@@ -98,16 +100,9 @@ Things for next version
 Missing or Incompleteness
 ---------------------------------------------------------------------------
 
-?* Doc some internal task/process stuff, I'm thinking:
-  - how cancel works
-  mainly :)
-
 Why do the recursion tests take so long?
 
 info-bar: size-group for titles? This would make examples/progress-groups prettier
-
-Valgrind it a bit. Some things you need:
-  - test where you enqueue messages in a process and test they all get freed
 
 General test improvements needed:
   * Tests should always use a fresh scheduler, no?
@@ -116,8 +111,6 @@ General test improvements needed:
   * Disallow g_sleep to allow messages to be delivered; we should use mocks
     where possible and spy on the message channel for what we want when not .. even
     wait_messages in process-1.c is way better than g_usleep()
-
-Should we remove message->data? Seems like a bit of a confusing api ...
 
 waf should build the gtk-docs
 
