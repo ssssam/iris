@@ -102,6 +102,11 @@ struct _GAsyncQueue
 static void
 iris_queue_finalize (GObject *object)
 {
+	IrisQueue *queue = IRIS_QUEUE (object);
+
+	if (queue->priv->q != NULL)
+		g_async_queue_unref (queue->priv->q);
+
 	G_OBJECT_CLASS (iris_queue_parent_class)->finalize (object);
 }
 
@@ -133,6 +138,8 @@ iris_queue_init (IrisQueue *queue)
 	/* only create GAsyncQueue if needed */
 	if (G_TYPE_FROM_INSTANCE (queue) == IRIS_TYPE_QUEUE)
 		queue->priv->q = g_async_queue_new ();
+	else
+		queue->priv->q = NULL;
 
 	queue->priv->open = TRUE;
 }

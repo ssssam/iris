@@ -1659,6 +1659,7 @@ iris_process_execute_real (IrisTask *task)
 
 _yield:
 			g_value_unset (&params[0]);
+			g_timer_destroy (timer);
 
 			/* Yield, by reposting this function to the scheduler and returning.
 			 * FIXME: would be nice if we could tell the scheduler "don't execute this for at least
@@ -1687,6 +1688,7 @@ _yield:
 	};
 
 	g_value_unset (&params[0]);
+	g_timer_destroy (timer);
 
 	if (priv->watch_port_list != NULL)
 		update_status (process, TRUE);
@@ -1694,15 +1696,15 @@ _yield:
 	if (iris_task_was_canceled (task)) {
 		DISABLE_FLAG (task, IRIS_TASK_FLAG_WORK_ACTIVE);
 
-		if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_NO_MORE_WORK)) {
-			message = iris_message_new (IRIS_TASK_MESSAGE_FINISH_CANCEL);
-			iris_port_post (IRIS_TASK (process)->priv->port, message);
-		}
-
 		if (priv->watch_port_list != NULL) {
 			/* Send to watchers now no more progress messages can be sent */
 			message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELED);
 			post_progress_message (process, message);
+		}
+
+		if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_NO_MORE_WORK)) {
+			message = iris_message_new (IRIS_TASK_MESSAGE_FINISH_CANCEL);
+			iris_port_post (IRIS_TASK (process)->priv->port, message);
 		}
 	} else {
 		/* Execute callbacks, mark finished and unref. */

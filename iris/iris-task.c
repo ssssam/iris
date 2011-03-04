@@ -1818,8 +1818,12 @@ iris_task_handle_message (IrisMessage *message,
 		                   &task_was_finalized);
 		g_object_unref (task);
 
-		if (! task_was_finalized)
+		if (! task_was_finalized) {
 			task->priv->in_message_handler = FALSE;
+			g_object_weak_unref (G_OBJECT (task),
+			                     task_was_finalized_cb,
+			                     &task_was_finalized);
+		}
 	} else {
 		task->priv->in_message_handler = FALSE;
 	}
