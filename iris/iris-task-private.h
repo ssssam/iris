@@ -118,4 +118,6 @@ struct _IrisTaskPrivate
 
 void iris_task_remove_dependency_sync (IrisTask *task, IrisTask *dep);
 
+void iris_task_notify_observers (IrisTask *task);
+
 #endif /* __IRIS_TASK_PRIVATE_H__ */

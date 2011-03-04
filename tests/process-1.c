@@ -797,11 +797,11 @@ int main(int argc, char *argv[]) {
 	g_test_add_func ("/process/chaining 2", chaining_2);
 	g_test_add_func ("/process/chaining 3", test_chaining_3);
 	g_test_add_data_func_repeated ("/process/cancel chain - head",
-	                               10,
+	                               20,
 	                               GINT_TO_POINTER (FALSE),
 	                               test_cancelling_chained);
 	g_test_add_data_func_repeated ("/process/cancel chain - tail",
-	                               10,
+	                               20,
 	                               GINT_TO_POINTER (TRUE),
 	                               test_cancelling_chained);
 	g_test_add_func ("/process/cancelling chained 2", test_cancel_before_chained);

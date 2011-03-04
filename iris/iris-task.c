@@ -1099,7 +1099,7 @@ iris_task_progress_callbacks (IrisTask *task)
 	}
 }
 
-static void
+void
 iris_task_notify_observers (IrisTask *task)
 {
 	IrisTaskPrivate *priv;
@@ -1300,6 +1300,8 @@ handle_callbacks_finished (IrisTask    *task,
 	ENABLE_FLAG (task, IRIS_TASK_FLAG_FINISHED);
 	DISABLE_FLAG (task, IRIS_TASK_FLAG_CALLBACKS_ACTIVE);
 
+	iris_task_notify_observers (task);
+
 	finish_message = iris_message_new (IRIS_TASK_MESSAGE_FINISH);
 	iris_port_post (task->priv->port, finish_message);
 }
@@ -1327,6 +1329,8 @@ handle_start_cancel (IrisTask    *task,
 		DISABLE_FLAG (task, IRIS_TASK_FLAG_NEED_EXECUTE);
 
 		ENABLE_FLAG (task, IRIS_TASK_FLAG_CANCELED);
+
+		iris_task_notify_observers (task);
 
 		if (FLAG_IS_ON (task, IRIS_TASK_FLAG_WORK_ACTIVE));
 			/* FINISH_CANCEL message will be sent when work function exits. */
@@ -1389,7 +1393,6 @@ handle_finish (IrisTask    *task,
 	}
 	#endif
 
-	iris_task_notify_observers (task);
 	iris_task_complete_async_result (task);
 
 	if (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED))

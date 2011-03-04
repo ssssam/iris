@@ -1163,6 +1163,8 @@ handle_start_cancel (IrisProcess *process,
 
 		ENABLE_FLAG (process, IRIS_TASK_FLAG_CANCELED);
 
+		iris_task_notify_observers (IRIS_TASK (process));
+
 		if (FLAG_IS_OFF (process, IRIS_PROCESS_FLAG_NO_MORE_WORK));
 			/* FINISH_CANCEL message will be sent when no_more_work is received */
 		else
@@ -1175,8 +1177,8 @@ handle_start_cancel (IrisProcess *process,
 
 		if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_HAS_SOURCE)) {
 			/* Set NO_MORE_WORK automatically if we have a source so work
-			 * function quits; the source will cancel when it finds out we
-			 * have canceled.
+			 * function quits; the source will when gets our
+			 * DEP_CANCELED message
 			 */
 			ENABLE_FLAG (process, IRIS_PROCESS_FLAG_NO_MORE_WORK);
 		}
