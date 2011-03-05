@@ -36,6 +36,7 @@
 typedef enum
 {
 	IRIS_PROCESS_FLAG_NO_MORE_WORK    = 1 << 10,
+
 	IRIS_PROCESS_FLAG_HAS_SOURCE      = 1 << 11,
 	IRIS_PROCESS_FLAG_HAS_SINK        = 1 << 12,
 } IrisProcessFlags;
@@ -56,7 +57,10 @@ struct _IrisProcessPrivate
 	IrisReceiver *work_receiver;
 	IrisQueue    *work_queue;
 
-	/* Connections */
+	/* Connections. These will be set to NULL if we get a DEP_CANCELED or
+	 * DEP_FINISHED message from them (because we release our reference on them
+	 * at that point)
+	 */
 	IrisProcess  *source, *sink;
 
 	/* These are updated atomically from multiple threads. */

@@ -1117,12 +1117,7 @@ handle_callbacks_finished (IrisProcess *process,
 		post_progress_message (process, progress_message);
 	}
 
-	if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_HAS_SINK)) {
-		/* Stop ourselves getting messages from the sink since we are
-		 * finishing, and it will finish later
-		 */
-		g_return_if_fail (IRIS_IS_PROCESS (priv->sink));
-
+	if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_HAS_SINK) && priv->sink != NULL) {
 		dep_message = iris_message_new_data (IRIS_TASK_MESSAGE_REMOVE_OBSERVER,
 		                                     IRIS_TYPE_TASK, process);
 		iris_port_post (IRIS_TASK (priv->sink)->priv->port, dep_message);
@@ -1183,7 +1178,8 @@ handle_start_cancel (IrisProcess *process,
 			ENABLE_FLAG (process, IRIS_PROCESS_FLAG_NO_MORE_WORK);
 		}
 
-		if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_HAS_SINK)) {
+		if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_HAS_SINK) &&
+		    priv->sink != NULL) {
 			/* Stop ourselves getting messages from the sink since we are
 			 * finishing, and it will finish later
 			 */
@@ -1256,16 +1252,30 @@ handle_dep_finished (IrisProcess *process,
 	priv = process->priv;
 	observed = g_value_get_object (iris_message_get_data (message));
 
+	if ((priv->source == NULL || IRIS_TASK (priv->source) != observed) &&
+	    (priv->sink == NULL || IRIS_TASK (priv->sink) != observed)) {
+		/* Must be a task dependency */
+		IRIS_TASK_CLASS (iris_process_parent_class)->handle_message
+		  (IRIS_TASK (process), message);
+		return;
+	}
+
+	#ifdef IRIS_TRACE_TASK
+	g_print ("process %lx: dep-finished from %lx\n",
+	         (gulong)process, (gulong)observed);
+	#endif
+
 	if (priv->source != NULL && IRIS_TASK (priv->source) == observed) {
 		g_warn_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_FINISHED));
 
 		ENABLE_FLAG (process, IRIS_PROCESS_FLAG_NO_MORE_WORK);
-	} else if (priv->sink != NULL && IRIS_TASK (priv->sink) == observed) {
-		/* Nothing to do */
-	} else {
-		/* Must be a task dependency */
-		IRIS_TASK_CLASS (iris_process_parent_class)->handle_message
-		  (IRIS_TASK (process), message);
+
+		g_object_unref (priv->source);
+		priv->source = NULL;
+	} else
+	if (priv->sink != NULL && IRIS_TASK (priv->sink) == observed) {
+		g_object_unref (priv->sink);
+		priv->sink = NULL;
 	}
 }
 
@@ -1307,9 +1317,21 @@ handle_dep_canceled (IrisProcess *process,
 	 * CANCELED flag set too will trigger a warning intended for work enqueued
 	 * by the user.
 	 */
-	if ((priv->source != NULL && IRIS_TASK (priv->source) == observed) ||
-	    (priv->sink != NULL && IRIS_TASK (priv->sink) == observed)) {
+	if (priv->source != NULL && IRIS_TASK (priv->source) == observed) {
 		ENABLE_FLAG (process, IRIS_PROCESS_FLAG_NO_MORE_WORK);
+
+		g_object_unref (priv->source);
+		priv->source = NULL;
+
+		if (FLAG_IS_OFF (process, IRIS_TASK_FLAG_FINISHED))
+			handle_start_cancel (process, message);
+	}
+
+	if (priv->sink != NULL && IRIS_TASK (priv->sink) == observed) {
+		ENABLE_FLAG (process, IRIS_PROCESS_FLAG_NO_MORE_WORK);
+
+		g_object_unref (priv->sink);
+		priv->sink = NULL;
 
 		if (FLAG_IS_OFF (process, IRIS_TASK_FLAG_FINISHED))
 			handle_start_cancel (process, message);

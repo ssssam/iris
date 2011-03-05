@@ -1818,6 +1818,14 @@ iris_task_handle_message (IrisMessage *message,
 		                   &task_was_finalized);
 		g_object_unref (task);
 
+		#ifdef IRIS_TRACE_TASK
+		if (task_was_finalized)
+			g_print ("task %lx: freed after finish\n", (gulong)task);
+		else
+			g_print ("task %lx: not freed, refs now %i\n", (gulong)task,
+			         G_OBJECT(task)->ref_count);
+		#endif
+
 		if (! task_was_finalized) {
 			task->priv->in_message_handler = FALSE;
 			g_object_weak_unref (G_OBJECT (task),
