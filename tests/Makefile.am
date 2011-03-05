@@ -13,7 +13,6 @@ noinst_PROGRAMS =		\
 	message-1		\
 	port-1			\
 	process-1		\
-	process-2		\
 	queue-1			\
 	receiver-1		\
 	receiver-scheduler-1	\
@@ -38,7 +37,6 @@ TEST_PROGS +=			\
 	message-1		\
 	port-1			\
 	process-1		\
-	process-2		\
 	queue-1			\
 	receiver-1		\
 	receiver-scheduler-1	\
@@ -84,7 +82,6 @@ gdestructiblepointer_1_sources = gdestructiblepointer-1.c
 message_1_sources = message-1.c
 port_1_sources = port-1.c mocks/mock-callback-receiver.c
 process_1_sources = process-1.c
-process_2_sources = process-2.c
 receiver_1_sources = receiver-1.c
 scheduler_manager_1_sources = scheduler-manager-1.c
 scheduler_1_sources = scheduler-1.c
