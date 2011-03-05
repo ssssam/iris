@@ -357,7 +357,6 @@ test_cancel_execution_2 (void)
 }
 
 /* cancel in execution 3: Test work items are freed on cancel */
-#if 0
 static void
 test_cancel_execution_3 (void) {
 	IrisProcess *process;
@@ -384,17 +383,15 @@ test_cancel_execution_3 (void) {
 
 	g_assert (iris_process_is_finished (process));
 
-	g_assert_cmpint (G_OBJECT (process)->ref_count, ==, 1);
+	g_assert_cmpint (G_OBJECT (process)->ref_count, <=, 2);
 	g_object_unref (process);
 
 	/* Queued work items should all have been freed */
 	for (i=0; i<50; i++) {
-		g_print ("%i ", i);
 		g_assert_cmpint (message[i]->ref_count, ==, 1);
 		iris_message_unref (message[i]);
 	}
 };
-#endif
 
 /* titles: Check the title property does not break */
 static void
@@ -466,7 +463,8 @@ chaining_1 (void)
 	                              (push_next_func, NULL, NULL);
 	IrisProcess *tail_process = iris_process_new_with_func
 	                              (dummy_func, NULL, NULL);
-	g_object_ref (head_process);
+	g_object_add_weak_pointer (G_OBJECT (head_process),
+	                           (gpointer *)&head_process);
 
 	iris_process_connect (head_process, tail_process);
 
@@ -485,12 +483,9 @@ chaining_1 (void)
 	g_assert (iris_process_has_predecessor (tail_process) == TRUE);
 
 	iris_process_no_more_work (head_process);
-	while (! iris_process_is_finished (head_process))
-		wait_control_messages (head_process);
 
-	g_assert_cmpint (G_OBJECT (head_process)->ref_count, <=, 2);
-
-	g_object_unref (head_process);
+	while (head_process != NULL)
+		g_thread_yield ();
 }
 
 /* chaining 2: test chained work is actually executed */
@@ -787,8 +782,7 @@ int main(int argc, char *argv[]) {
 	g_test_add_func_repeated ("/process/cancel - preparation", 50, test_cancel_preparation);
 	g_test_add_func_repeated ("/process/cancel - execution 1", 50, test_cancel_execution_1);
 	g_test_add_func_repeated ("/process/cancel - execution 2", 50, test_cancel_execution_2);
-	/* FIXME: complete this */
-	/* g_test_add_func ("/process/cancel - execution 3", test_cancel_execution_3); */
+	g_test_add_func ("/process/cancel - execution 3", test_cancel_execution_3);
 
 	g_test_add_func ("/process/titles", titles);
 
