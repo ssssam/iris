@@ -28,18 +28,9 @@
 
 struct _IrisPortPrivate
 {
-	IrisMessage *current;    /* Contains the current message in the
-	                          * port. This happens if the receiver
-	                          * did not accept our message and we
-	                          * removed the receiver, or if we have
-	                          * no receiver. After a message is in
-	                          * current, all future post's go into
-	                          * the queue.
-	                          */
-
-	GQueue *queue;           /* Queue for incoming messages that
-	                          * cannot yet be delivered.
-	                          */
+	/* Queuing: 'current' is the head of the queue, messages in 'queue' follow */
+	IrisMessage *current;
+	GQueue *queue;
 
 	IrisReceiver *receiver;  /* Our receiver to deliver messages. */
 

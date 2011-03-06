@@ -195,6 +195,34 @@ flush1 (void)
 	g_assert_cmpint (iris_port_get_queue_length (port), ==, 0);
 }
 
+/* finalize queue: test message queue contents are unreffed on finalize */
+static void
+test_finalize_queue ()
+{
+	const gint   n_messages = 4;
+
+	IrisPort    *port;
+	IrisMessage *message[n_messages];
+	int          i;
+
+	port = iris_port_new ();
+
+	for (i=0; i<n_messages; i++) {
+		message[i] = iris_message_new (0);
+		iris_message_ref (message[i]);
+		iris_port_post (port, message[i]);
+	}
+
+	g_assert_cmpint (iris_port_get_queue_length (port), ==, n_messages);
+
+	g_object_unref (port);
+
+	for (i=0; i<n_messages; i++) {
+		g_assert_cmpint (message[i]->ref_count, ==, 1);
+		iris_message_unref (message[i]);
+	}
+}
+
 gint
 main (int   argc,
       char *argv[])
@@ -210,6 +238,7 @@ main (int   argc,
 	g_test_add_func ("/port/queue1", queue1);
 	g_test_add_func ("/port/queue2", queue2);
 	g_test_add_func ("/port/flush1", flush1);
+	g_test_add_func ("/port/finalize queue", test_finalize_queue);
 
 	return g_test_run ();
 }

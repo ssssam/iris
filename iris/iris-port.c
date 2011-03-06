@@ -88,12 +88,22 @@ iris_port_finalize (GObject *object)
 {
 	IrisPort        *port;
 	IrisPortPrivate *priv;
+	IrisMessage     *message;
 
 	port = IRIS_PORT (object);
 	priv = port->priv;
 
-	if (priv->queue != NULL)
+	if (priv->queue != NULL) {
+		while ((message = g_queue_pop_head (priv->queue)))
+			iris_message_unref (message);
 		g_queue_free (priv->queue);
+		priv->queue = NULL;
+	}
+
+	if (priv->current != NULL) {
+		iris_message_unref (priv->current);
+		priv->current = NULL;
+	}
 
 	g_mutex_free (priv->mutex);
 
@@ -167,7 +177,7 @@ store_message_at_tail_ul (IrisPort    *port,
 		if (!priv->queue)
 			priv->queue = g_queue_new();
 
-		g_queue_push_tail (priv->queue, iris_message_ref (message));
+		g_queue_push_tail (priv->queue, iris_message_ref_sink (message));
 	}
 }
 
