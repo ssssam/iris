@@ -4,7 +4,7 @@
 #include <glib/gthread.h>
 #include <iris.h>
 
-#define ITER_MAX 1000000
+#define ITER_MAX 10000
 #define MSG_DO_SMTHNG 1
 
 static GCond  *cond  = NULL;
