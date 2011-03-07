@@ -54,7 +54,6 @@ push_next_func (IrisProcess *process,
 {
 	gint delay = GPOINTER_TO_INT (user_data);
 
-	iris_message_ref (work_item);
 	iris_process_forward (process, work_item);
 
 	if (delay)
@@ -62,17 +61,18 @@ push_next_func (IrisProcess *process,
 }
 
 static void
-wait_func (IrisProcess *process,
-           IrisMessage *work_item,
-           gpointer     user_data)
+wait_process_func (IrisProcess *process,
+                   IrisMessage *work_item,
+                   gpointer     user_data)
 {
-	gint *wait_state = user_data;
+	gint *p_wait_state = user_data;
 
-	if (g_atomic_int_get (wait_state)==0)
-		g_atomic_int_set (wait_state, 1);
-	else
-		while (g_atomic_int_get (wait_state) != 2)
-			g_usleep (100000);
+	g_assert_cmpint (g_atomic_int_get (p_wait_state), ==, 0);
+
+	g_atomic_int_set (p_wait_state, 1);
+
+	while (g_atomic_int_get (p_wait_state) != 2)
+		g_thread_yield ();
 }
 
 /* Work item to increment a global counter, so we can tell if the whole queue
@@ -189,6 +189,8 @@ test_simple (void)
 	g_assert (iris_process_is_finished (process) == TRUE);
 	g_assert (iris_process_was_canceled (process) == FALSE);
 	g_assert (iris_process_has_succeeded (process) == TRUE);
+
+	g_object_unref (process);
 }
 
 static void
@@ -465,6 +467,8 @@ chaining_1 (void)
 	                              (dummy_func, NULL, NULL);
 	g_object_add_weak_pointer (G_OBJECT (head_process),
 	                           (gpointer *)&head_process);
+	g_object_add_weak_pointer (G_OBJECT (tail_process),
+	                           (gpointer *)&tail_process);
 
 	iris_process_connect (head_process, tail_process);
 
@@ -472,19 +476,18 @@ chaining_1 (void)
 
 	while (! iris_process_is_executing (head_process))
 		wait_control_messages (head_process);
+	wait_control_messages (tail_process);
 
 	g_assert (iris_process_has_successor (head_process) == TRUE);
 	g_assert (iris_process_has_predecessor (head_process) == FALSE);
 
-	/* Hang here, seem to be getting a finalize and a process work func???? */
-	wait_control_messages (tail_process);
-
 	g_assert (iris_process_has_successor (tail_process) == FALSE);
 	g_assert (iris_process_has_predecessor (tail_process) == TRUE);
 
+	/* Chain will finish now */
 	iris_process_no_more_work (head_process);
 
-	while (head_process != NULL)
+	while (head_process != NULL || tail_process != NULL)
 		g_thread_yield ();
 }
 
@@ -561,6 +564,7 @@ test_chaining_3 (void) {
 static void
 test_cancelling_chained (gconstpointer user_data) {
 	IrisProcess *head_process, *mid_process, *tail_process;
+	IrisMessage *message[50];
 	gboolean     cancel_tail = GPOINTER_TO_INT (user_data);
 	int i;
 
@@ -575,21 +579,19 @@ test_cancelling_chained (gconstpointer user_data) {
 
 	iris_process_run (head_process);
 
-	for (i=0; i < 50; i++)
-		iris_process_enqueue (head_process, iris_message_new (0));
+	for (i=0; i < 50; i++) {
+		message[i] = iris_message_ref (iris_message_new (i));
+		iris_process_enqueue (head_process, message[i]);
+	}
 	iris_process_no_more_work (head_process);
 
 	/* Deliberately don't wait for the connect messages to be processed before
-	 * we send the cancel, to make sure that case is handled
+	 * we send the cancel.
 	 */
-	/*while (! iris_process_has_predecessor (mid_process))
-		wait_control_messages (mid_process);
-	while (! iris_process_has_predecessor (tail_process))
-		wait_control_messages (tail_process);*/
 
 	if (cancel_tail) {
 		iris_process_cancel (tail_process);
-		while (! iris_process_is_finished (head_process))
+		while (! iris_process_is_finished (tail_process))
 			wait_control_messages (head_process);
 	} else {
 		iris_process_cancel (head_process);
@@ -599,6 +601,12 @@ test_cancelling_chained (gconstpointer user_data) {
 
 	g_object_unref (head_process);
 	g_object_unref (tail_process);
+
+	/* Check no work items were leaked */
+	for (i=0; i < 50; i++) {
+		g_assert_cmpint (message[i]->ref_count, ==, 1);
+		iris_message_unref (message[i]);
+	}
 };
 
 /* cancel before chained: cancel a process before chaining it to another.
@@ -624,6 +632,51 @@ test_cancel_before_chained (void) {
 		wait_control_messages (tail_process);
 
 	g_assert (iris_process_was_canceled (tail_process));
+
+	g_object_unref (tail_process);
+};
+
+/* canceled chain is_finished(): the tail process should not return TRUE for
+ * is_finished() until the whole chain has finished, even if the tail process
+ * was explicitly canceled first.
+ */
+static void
+test_canceled_chain_is_finished (void) {
+	IrisProcess   *head_process, *tail_process;
+	volatile gint  wait_state;
+
+	head_process = iris_process_new_with_func (wait_process_func,
+	                                           (gpointer)&wait_state, NULL);
+	tail_process = iris_process_new_with_func (time_waster_callback,
+	                                           NULL, NULL);
+	iris_process_connect (head_process, tail_process);
+
+	g_object_ref (tail_process);
+
+	wait_state = 0;
+	iris_process_enqueue (head_process, iris_message_new(0));
+	iris_process_no_more_work (head_process);
+	iris_process_run (head_process);
+
+	while (g_atomic_int_get (&wait_state) != 1)
+		g_thread_yield ();
+
+	/* Head process is blocking now */
+	iris_process_cancel (tail_process);
+
+	while (! iris_process_was_canceled (tail_process))
+		wait_control_messages (tail_process);
+
+	/* Tail process is canceled, but the CHAIN cannot finish until head_process
+	 * fully cancels so this should not return TRUE yet.
+	 */
+	g_assert (! iris_process_is_finished (tail_process));
+
+	g_atomic_int_set (&wait_state, 2);
+
+	/* Head process can now complete, so the chain should finish */
+	while (! iris_process_is_finished (tail_process))
+		wait_control_messages (tail_process);
 
 	g_object_unref (tail_process);
 };
@@ -719,8 +772,10 @@ test_output_estimates_cancel (void)
 	gint         j, wait_state = 0,
 	             processed_items, total_items;
 
-	process_1 = iris_process_new_with_func (push_next_func, GINT_TO_POINTER (100000), NULL);
-	process_2 = iris_process_new_with_func (wait_func, &wait_state, NULL);
+	process_1 = iris_process_new_with_func (push_next_func,
+	                                        GINT_TO_POINTER (100000), NULL);
+	process_2 = iris_process_new_with_func (wait_process_func,
+	                                        &wait_state, NULL);
 	iris_process_connect (process_1, process_2);
 	g_object_ref (process_1);
 	g_object_ref (process_2);
@@ -791,14 +846,17 @@ int main(int argc, char *argv[]) {
 	g_test_add_func ("/process/chaining 2", chaining_2);
 	g_test_add_func ("/process/chaining 3", test_chaining_3);
 	g_test_add_data_func_repeated ("/process/cancel chain - head",
-	                               20,
+	                               5,
 	                               GINT_TO_POINTER (FALSE),
 	                               test_cancelling_chained);
 	g_test_add_data_func_repeated ("/process/cancel chain - tail",
-	                               20,
+	                               5,
 	                               GINT_TO_POINTER (TRUE),
 	                               test_cancelling_chained);
-	g_test_add_func ("/process/cancelling chained 2", test_cancel_before_chained);
+	g_test_add_func ("/process/canceling chained 2", test_cancel_before_chained);
+	g_test_add_func_repeated ("/process/canceled chain is_finished()",
+	                          50,
+	                          test_canceled_chain_is_finished);
 
 	g_test_add_func ("/process/output estimates basic", test_output_estimates_basic);
 	g_test_add_func ("/process/output estimates low", test_output_estimates_low);
