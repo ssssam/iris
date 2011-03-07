@@ -627,7 +627,7 @@ _iris_progress_monitor_cancel_group   (IrisProgressMonitor *progress_monitor,
 		 */
 		if (IRIS_IS_PROCESS (watch->task)) {
 			if (iris_process_is_executing (IRIS_PROCESS (watch->task)) &&
-			    iris_process_has_successor (IRIS_PROCESS (watch->task)))
+			    iris_process_has_sink (IRIS_PROCESS (watch->task)))
 				continue;
 		}
 
@@ -677,8 +677,8 @@ watch_chain (IrisProgressMonitor             *progress_monitor,
 	group = watch->group;
 
 	head = added_process;
-	while (iris_process_has_predecessor (head))
-		head = iris_process_get_predecessor (head);
+	while (iris_process_has_source (head))
+		head = iris_process_get_source (head);
 
 	process = head;
 	do {
@@ -694,7 +694,7 @@ watch_chain (IrisProgressMonitor             *progress_monitor,
 			                        process,
 			                        group,
 			                        FALSE);
-	} while ((process = iris_process_get_successor (process)) != NULL);
+	} while ((process = iris_process_get_sink (process)) != NULL);
 }
 
 static void

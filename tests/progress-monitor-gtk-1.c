@@ -590,7 +590,7 @@ recurse_2_head_callback (IrisProcess *process,
                          gpointer     user_data) {
 	IrisMessage *new_work_item;
 
-	g_assert (iris_process_has_successor (process));
+	g_assert (iris_process_has_sink (process));
 
 	new_work_item = iris_message_new (2);
 	iris_process_forward (process, new_work_item);

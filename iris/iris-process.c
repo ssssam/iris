@@ -145,7 +145,7 @@
  *
  *   while (1)
  *     if (iris_process_is_executing (head)) {
- *       g_assert (iris_process_has_successor (head));
+ *       g_assert (iris_process_has_sink (head));
  *       break;
  *     }
  * ]|
@@ -309,11 +309,9 @@ iris_process_cancel (IrisProcess *process)
  * tasks execute, it is guaranteed that the connection has taken place once
  * iris_process_is_executing() returns %TRUE. It is also guaranteed to have
  * taken place if you are calling from the work function, of course. This
- * affects the functions iris_process_get_predecessor(),
- * iris_process_get_successor(), iris_process_has_predecessor() and
- * iris_process_has_successor().
+ * affects the functions iris_process_get_source(), iris_process_get_sink(),
+ * iris_process_has_source() and iris_process_has_sink().
  */
-
 void
 iris_process_connect (IrisProcess *head,
                       IrisProcess *tail)
@@ -457,7 +455,7 @@ iris_process_forward (IrisProcess *process,
 	IrisProcessPrivate *priv;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
-	g_return_if_fail (iris_process_has_successor (process));
+	g_return_if_fail (iris_process_has_sink (process));
 	g_return_if_fail (iris_process_is_executing (process));
 
 	priv = process->priv;
@@ -532,7 +530,7 @@ iris_process_no_more_work (IrisProcess *process)
 {
 	IrisTaskPrivate *task_priv = IRIS_TASK(process)->priv;
 
-	g_return_if_fail (! iris_process_has_predecessor (process));
+	g_return_if_fail (! iris_process_has_source (process));
 
 	IrisMessage *message = iris_message_new (IRIS_PROCESS_MESSAGE_NO_MORE_WORK);
 	iris_port_post (task_priv->port, message);
@@ -613,7 +611,7 @@ iris_process_has_succeeded (IrisProcess *process)
 
 	priv = process->priv;
 
-	if (!iris_process_has_predecessor (process))
+	if (!iris_process_has_source (process))
 		return iris_task_has_succeeded (IRIS_TASK (process));
 	else
 		return iris_process_has_succeeded (priv->source) &&
@@ -621,7 +619,7 @@ iris_process_has_succeeded (IrisProcess *process)
 };
 
 /**
- * iris_process_has_predecessor:
+ * iris_process_has_source:
  * @process: An #IrisProcess
  *
  * Checks if @process has another process feeding it work. For more
@@ -631,10 +629,10 @@ iris_process_has_succeeded (IrisProcess *process)
  * made. You should not call this function outside of the work function, unless
  * iris_process_is_executing() returns %TRUE. See above for more information.
  *
- * Return value: %TRUE if the process has a predecessor connected.
+ * Return value: %TRUE if the process has a source process connected.
  */
 gboolean
-iris_process_has_predecessor (IrisProcess *process)
+iris_process_has_source (IrisProcess *process)
 {
 	g_return_val_if_fail (IRIS_IS_PROCESS (process), FALSE);
 
@@ -642,20 +640,20 @@ iris_process_has_predecessor (IrisProcess *process)
 }
 
 /**
- * iris_process_has_successor:
+ * iris_process_has_sink:
  * @process: An #IrisProcess
  *
  * Checks if @process is connected to a process that it can send work to using
  * iris_process_forward(). For more information, see iris_process_connect().
  *
- * Note: iris_process_connect() returns before the connection is actually
- * made. You should not call this function outside of the work function, unless
+ * Note: iris_process_connect() returns before the connection is actually made.
+ * You should not call this function outside of the work function, unless
  * iris_process_is_executing() returns %TRUE. See above for more information.
  *
- * Return value: %TRUE if the process has a successor connected.
+ * Return value: %TRUE if the process has a sink process connected.
  */
 gboolean
-iris_process_has_successor (IrisProcess *process)
+iris_process_has_sink (IrisProcess *process)
 {
 	g_return_val_if_fail (IRIS_IS_PROCESS (process), FALSE);
 
@@ -663,7 +661,7 @@ iris_process_has_successor (IrisProcess *process)
 }
 
 /**
- * iris_process_get_predecessor:
+ * iris_process_get_source:
  * @process: An #IrisProcess
  *
  * Returns the previous process in the chain from @process, or %NULL.
@@ -675,7 +673,7 @@ iris_process_has_successor (IrisProcess *process)
  * Return value: a pointer to the an #IrisProcess, or %NULL
  */
 IrisProcess *
-iris_process_get_predecessor (IrisProcess *process)
+iris_process_get_source (IrisProcess *process)
 {
 	g_return_val_if_fail (IRIS_IS_PROCESS (process), NULL);
 
@@ -683,7 +681,7 @@ iris_process_get_predecessor (IrisProcess *process)
 }
 
 /**
- * iris_process_get_successor:
+ * iris_process_get_sink:
  * @process: An #IrisProcess
  *
  * Returns the next process in the chain from @process, or %NULL.
@@ -695,7 +693,7 @@ iris_process_get_predecessor (IrisProcess *process)
  * Return value: a pointer to the an #IrisProcess, or %NULL
  */
 IrisProcess *
-iris_process_get_successor (IrisProcess *process)
+iris_process_get_sink (IrisProcess *process)
 {
 	g_return_val_if_fail (IRIS_IS_PROCESS (process), NULL);
 
@@ -975,7 +973,7 @@ post_output_estimate (IrisProcess *process)
 
 	priv = process->priv;
 
-	sink = iris_process_get_successor (process);
+	sink = iris_process_get_sink (process);
 
 	if (sink == NULL)
 		return;
@@ -1035,7 +1033,7 @@ update_status (IrisProcess *process, gboolean force)
 	if (IRIS_TASK (process)->priv->progress_mode == IRIS_PROGRESS_ACTIVITY_ONLY)
 		message = iris_message_new (IRIS_PROGRESS_MESSAGE_PULSE);
 	else {
-		source = iris_process_get_predecessor (process);
+		source = iris_process_get_source (process);
 		total = g_atomic_int_get (&priv->total_items);
 
 		if (source != NULL) {
@@ -1083,7 +1081,7 @@ handle_start_work (IrisProcess *process,
 	IRIS_TASK_CLASS (iris_process_parent_class)->handle_message
 	  (IRIS_TASK (process), message);
 
-	if (iris_process_has_successor (process)) {
+	if (iris_process_has_sink (process)) {
 		if (! iris_task_is_executing (IRIS_TASK (priv->sink)))
 			iris_process_run (priv->sink);
 	}
@@ -1233,7 +1231,7 @@ handle_finish_cancel (IrisProcess *process,
 
 	ENABLE_FLAG (process, IRIS_TASK_FLAG_FINISHED);
 
-	if (iris_process_has_successor (process)) {
+	if (iris_process_has_sink (process)) {
 		/* Trigger finish cancel in sink now we are done */
 		out_message = iris_message_new (IRIS_PROCESS_MESSAGE_CHAIN_CANCEL);
 		iris_port_post (IRIS_TASK (priv->sink)->priv->port, out_message);
@@ -1433,7 +1431,7 @@ handle_chain_cancel (IrisProcess *process,
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (in_message != NULL);
 
-	g_return_if_fail (iris_process_has_predecessor (process));
+	g_return_if_fail (iris_process_has_source (process));
 
 	if (FLAG_IS_OFF (process, IRIS_TASK_FLAG_WORK_ACTIVE)) {
 		out_message = iris_message_new (IRIS_TASK_MESSAGE_FINISH_CANCEL);
@@ -1497,7 +1495,7 @@ handle_chain_estimate (IrisProcess *process,
 
 	priv = process->priv;
 
-	source = iris_process_get_predecessor (process);
+	source = iris_process_get_source (process);
 
 	if (!source)
 		return;
@@ -1753,7 +1751,7 @@ _yield:
 		 * already happened we need to send it ourselves
 		 */
 		send_finish_cancel = FALSE;
-		if (iris_process_has_predecessor (process)) {
+		if (iris_process_has_source (process)) {
 			if (iris_process_is_finished (priv->source))
 				send_finish_cancel = TRUE;
 		} else

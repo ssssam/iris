@@ -44,14 +44,12 @@ typedef enum
 	IRIS_TASK_FLAG_NEED_EXECUTE       = 1 << 2,
 	IRIS_TASK_FLAG_WORK_ACTIVE        = 1 << 3,
 	IRIS_TASK_FLAG_CALLBACKS_ACTIVE   = 1 << 4,
-	/*IRIS_TASK_FLAG_WORK_FINISHED      = 1 << 4,*/  /* not actually used */
-	IRIS_TASK_FLAG_CALLBACKS_FINISHED = 1 << 5,
-	IRIS_TASK_FLAG_CANCELED           = 1 << 6,
+	IRIS_TASK_FLAG_CANCELED           = 1 << 5,
 
 	/* A couple of other flags are currently volatile gint, but they can be
 	 * moved here once we make all flag access atomic ... */
 
-	IRIS_TASK_FLAG_ASYNC              = 1 << 7
+	IRIS_TASK_FLAG_ASYNC              = 1 << 6
 } IrisTaskFlags;
 
 typedef enum

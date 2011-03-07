@@ -478,11 +478,11 @@ chaining_1 (void)
 		wait_control_messages (head_process);
 	wait_control_messages (tail_process);
 
-	g_assert (iris_process_has_successor (head_process) == TRUE);
-	g_assert (iris_process_has_predecessor (head_process) == FALSE);
+	g_assert (iris_process_has_sink (head_process) == TRUE);
+	g_assert (iris_process_has_source (head_process) == FALSE);
 
-	g_assert (iris_process_has_successor (tail_process) == FALSE);
-	g_assert (iris_process_has_predecessor (tail_process) == TRUE);
+	g_assert (iris_process_has_sink (tail_process) == FALSE);
+	g_assert (iris_process_has_source (tail_process) == TRUE);
 
 	/* Chain will finish now */
 	iris_process_no_more_work (head_process);
@@ -785,7 +785,7 @@ test_output_estimates_cancel (void)
 	/* Wait for connection to be processed */
 	wait_control_messages (process_1);
 
-	g_assert (iris_process_get_successor (process_1) == process_2);
+	g_assert (iris_process_get_sink (process_1) == process_2);
 
 	wait_state = 0;
 	for (j=0; j<100; j++)

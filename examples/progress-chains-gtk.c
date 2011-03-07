@@ -57,7 +57,7 @@ push_forward_func (IrisProcess *process,
 {
 	g_usleep (10000);
 
-	if (iris_process_has_successor (process)) {
+	if (iris_process_has_sink (process)) {
 		iris_message_ref (work_item);
 		iris_process_forward (process, work_item);
 	}

@@ -100,11 +100,11 @@ gboolean      iris_process_is_finished           (IrisProcess            *proces
 gboolean      iris_process_has_succeeded         (IrisProcess            *process);
 gboolean      iris_process_was_canceled          (IrisProcess            *process);
 
-gboolean      iris_process_has_predecessor       (IrisProcess            *process);
-gboolean      iris_process_has_successor         (IrisProcess            *process);
+gboolean      iris_process_has_source            (IrisProcess            *process);
+gboolean      iris_process_has_sink              (IrisProcess            *process);
 
-IrisProcess*  iris_process_get_predecessor       (IrisProcess            *process);
-IrisProcess*  iris_process_get_successor         (IrisProcess            *process);
+IrisProcess*  iris_process_get_source            (IrisProcess            *process);
+IrisProcess*  iris_process_get_sink              (IrisProcess            *process);
 const gchar*  iris_process_get_title             (IrisProcess            *process);
 void          iris_process_get_status            (IrisProcess            *process,
                                                   gint                   *p_processed_items,
