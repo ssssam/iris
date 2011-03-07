@@ -472,6 +472,38 @@ chaining_1 (ProgressFixture *fixture,
 	g_object_unref (tail_process);
 }
 
+/* cancel chain: test cancel for a process group works cleanly */
+static void
+test_cancel_chain (ProgressFixture *fixture,
+                   gconstpointer    data)
+{
+	IrisProgressGroup *group;
+
+	IrisProcess *head_process = iris_process_new_with_func
+	                              (NULL, NULL, NULL);
+	IrisProcess *tail_process = iris_process_new_with_func
+	                              (NULL, NULL, NULL);
+	iris_process_connect (head_process, tail_process);
+	iris_process_no_more_work (head_process);
+	g_object_ref (tail_process);
+
+	group = iris_progress_monitor_add_group (fixture->monitor, "Test Group", NULL);
+	iris_progress_monitor_watch_process_chain_in_group (fixture->monitor,
+	                                                    head_process,
+	                                                    group);
+
+	_iris_progress_monitor_cancel_group (fixture->monitor, group);
+
+	while (!iris_process_is_finished (tail_process)) {
+		g_thread_yield ();
+		g_main_context_iteration (NULL, FALSE);
+	}
+
+	g_assert (iris_process_was_canceled (tail_process) == TRUE);
+
+	g_object_unref (tail_process);
+}
+
 /* finished 1: run several processes under the same monitor, all completing
  *             quickly. This tests the progress monitor emits 'finished' at
  *             the right time: too early and segfaults occur.
@@ -683,6 +715,9 @@ add_tests_with_fixture (void (*setup) (ProgressFixture *, gconstpointer),
 
 	g_snprintf (buf, 255, "/progress-monitor/%s/chaining 1", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, chaining_1, teardown);
+
+	g_snprintf (buf, 255, "/progress-monitor/%s/cancel chain", name);
+	g_test_add (buf, ProgressFixture, NULL, setup, test_cancel_chain, teardown);
 
 	g_snprintf (buf, 255, "/progress-monitor/%s/finished 1", name);
 	g_test_add (buf, ProgressFixture, NULL, setup, finished_1, teardown);

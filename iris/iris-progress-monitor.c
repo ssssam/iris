@@ -621,6 +621,16 @@ _iris_progress_monitor_cancel_group   (IrisProgressMonitor *progress_monitor,
 		if (watch->canceled || watch->complete)
 			continue;
 
+		/* Avoid cancelling every process in a chain; cancel the tails and the
+		 * rest will follow (if they didn't already complete). If not running
+		 * the connection info is not reliable of course so we ignore it.
+		 */
+		if (IRIS_IS_PROCESS (watch->task)) {
+			if (iris_process_is_executing (IRIS_PROCESS (watch->task)) &&
+			    iris_process_has_successor (IRIS_PROCESS (watch->task)))
+				continue;
+		}
+
 		iris_task_cancel (IRIS_TASK (watch->task));
 	}
 
