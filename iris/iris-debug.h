@@ -24,7 +24,7 @@
 #include <glib.h>
 
 /* Define to print out task & process messages */
-//#define IRIS_TRACE_TASK
+/* #define IRIS_TRACE_TASK */
 
 typedef enum
 {
