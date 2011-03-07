@@ -114,6 +114,7 @@
  * intended to be running simultaneously. It is not possible to disconnect
  * processes or connect them after they have started running. Also, a process
  * can currently only have one source and one sink process.
+ * </para>
  * </refsect2>
  *
  * <refsect2 id="synchronisation">

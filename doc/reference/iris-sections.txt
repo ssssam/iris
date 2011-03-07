@@ -56,6 +56,7 @@ iris_task_run_with_async_result
 iris_task_cancel
 iris_task_work_finished
 iris_task_set_progress_mode
+iris_task_get_progress_mode
 iris_task_add_callback
 iris_task_add_errback
 iris_task_add_callback_closure
