@@ -1261,17 +1261,8 @@ handle_callbacks_finished (IrisTask    *task,
 
 	priv = task->priv;
 
-	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED))
-		return;
-
-	/* FIXME: these two should be impossible now tasks are immutable after run */
-	if (PROGRESS_BLOCKED (task))
-		return;
-
-	if (priv->handlers) {
-		iris_task_progress_callbacks_or_finish (task);
-		return;
-	}
+	/* Callbacks should all have executed and been removed from the list */
+	g_return_if_fail (priv->handlers == NULL);
 
 	ENABLE_FLAG (task, IRIS_TASK_FLAG_FINISHED);
 	DISABLE_FLAG (task, IRIS_TASK_FLAG_CALLBACKS_ACTIVE);
