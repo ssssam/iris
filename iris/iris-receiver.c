@@ -473,9 +473,6 @@ iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
  * @receiver: An #IrisReceiver
  * @in_message: Pass %TRUE if this function was called from the message handler
  *              of @receiver itself.
- * @main_context: A #GMainContext (if %NULL, the default context will be used)
- * @iterate_main_context: Whether to run @main_context while waiting for the
- *                        messages to process (default: %FALSE).
  *
  * Disconnects the port connected to @receiver, cancels any messages that are
  * still pending and frees @receiver. Note that any or all of the messages may
@@ -486,22 +483,6 @@ iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
  * and making sure all messages have completed. If you call the function from
  * the receiver's own message handler you must pass %TRUE to @in_message so
  * @receiver knows not to wait for this message to complete.
- *
- * Because iris_receiver_destroy() involves flushing queued events from the
- * scheduler, users of the GLib main loop may need to pass their application's
- * #GMainContext (%NULL for the default one) as @main_context and %TRUE to
- * @iterate_main_context. This is necessary when you are calling
- * iris_receiver_destroy() from the main loop thread <emphasis>and</emphasis>
- * any of the following are true:
- * <itemizedlist>
- * <listitem>@receiver's scheduler is an #IrisGMainScheduler running
- *           in the same main loop</listitem>
- * <listitem>The message handling callback for @receiver may take a long time
- *           to execute and you would like to keep processing other event
- *           sources (such as a GUI)</listitem>
- * <listitem>The message handling callback for @receiver depends on the main
- *           loop in some way (although that would be weird)</listitem>
- * </itemizedlist>
  */
 /* FIXME: it might be nice if we could set a flag on 'port' so that the owner
  * knows (if they had no other way of knowing) that the communication channel
@@ -509,9 +490,7 @@ iris_receiver_worker_unqueue_cb (IrisScheduler *scheduler,
  */
 void
 iris_receiver_destroy (IrisReceiver *receiver,
-                       gboolean      in_message,
-                       GMainContext *main_context,
-                       gboolean      iterate_main_context)
+                       gboolean      in_message)
 {
 	IrisReceiverPrivate *priv;
 	gint                 max_messages;
@@ -543,10 +522,7 @@ iris_receiver_destroy (IrisReceiver *receiver,
 		 * already running, so here we wait for these to complete.
 		 */
 
-		g_thread_yield ();
-
-		if (iterate_main_context)
-			g_main_context_iteration (main_context, FALSE);
+		IRIS_SCHEDULER_GET_CLASS (priv->scheduler)->iterate (priv->scheduler);
 	}
 
 	g_static_rec_mutex_unlock (&priv->destroy_mutex);

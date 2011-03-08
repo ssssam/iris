@@ -1870,11 +1870,7 @@ iris_task_finalize (GObject *object)
 
 	priv = IRIS_TASK(object)->priv;
 
-	iris_receiver_destroy (priv->receiver,
-	                       priv->in_message_handler,
-	                       NULL,
-	                       FALSE);
-
+	iris_receiver_destroy (priv->receiver, priv->in_message_handler);
 	g_object_unref (priv->port);
 
 	g_mutex_free (priv->mutex);

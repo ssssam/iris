@@ -138,6 +138,20 @@ iris_gmainscheduler_add_thread_real (IrisScheduler  *scheduler,
 }
 
 static void
+iris_gmainscheduler_iterate_real (IrisScheduler *scheduler)
+{
+	IrisGMainScheduler        *gmain_scheduler;
+	IrisGMainSchedulerPrivate *priv;
+
+	g_return_if_fail (IRIS_IS_GMAINSCHEDULER (scheduler));
+
+	gmain_scheduler = IRIS_GMAINSCHEDULER (scheduler);
+	priv = gmain_scheduler->priv;
+
+	g_main_context_iteration (priv->context, FALSE);
+}
+
+static void
 iris_gmainscheduler_finalize (GObject *object)
 {
 	IrisGMainSchedulerPrivate *priv;
@@ -164,6 +178,7 @@ iris_gmainscheduler_class_init (IrisGMainSchedulerClass *klass)
 	sched_class->foreach = iris_gmainscheduler_foreach_real;
 	sched_class->add_thread = iris_gmainscheduler_add_thread_real;
 	sched_class->remove_thread = iris_gmainscheduler_remove_thread_real;
+	sched_class->iterate = iris_gmainscheduler_iterate_real;
 
 	object_class = G_OBJECT_CLASS (klass);
 	object_class->finalize = iris_gmainscheduler_finalize;

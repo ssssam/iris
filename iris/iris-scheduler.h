@@ -115,6 +115,9 @@ struct _IrisSchedulerClass
 	                          gboolean        exclusive);
 	void    (*remove_thread) (IrisScheduler  *scheduler,
 	                          IrisThread     *thread);
+
+	/* Private */
+	void    (*iterate)       (IrisScheduler  *scheduler);
 };
 
 struct _IrisThread

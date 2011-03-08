@@ -382,6 +382,14 @@ iris_scheduler_remove_thread_real (IrisScheduler *scheduler,
 }
 
 static void
+iris_scheduler_iterate_real (IrisScheduler *scheduler) {
+	/* No-op, this is only used by IrisGMainScheduler, but since this function
+	 * is to be called while waiting for the scheduler to process something a
+	 * yield won't go amiss. */
+	g_thread_yield ();
+}
+
+static void
 release_thread (gpointer data,
                 gpointer user_data)
 {
@@ -456,6 +464,7 @@ iris_scheduler_class_init (IrisSchedulerClass *klass)
 	klass->get_max_threads = iris_scheduler_get_max_threads_real;
 	klass->add_thread = iris_scheduler_add_thread_real;
 	klass->remove_thread = iris_scheduler_remove_thread_real;
+	klass->iterate = iris_scheduler_iterate_real;
 
 	object_class->finalize = iris_scheduler_finalize;
 

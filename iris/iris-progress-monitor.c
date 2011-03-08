@@ -303,7 +303,7 @@ _iris_progress_watch_disconnect (IrisProgressWatch *watch)
 	 * imply the watch has disconnected/whatever.
 	 */
 
-	iris_receiver_destroy (watch->receiver, FALSE, NULL, FALSE);
+	iris_receiver_destroy (watch->receiver, FALSE);
 }
 
 void

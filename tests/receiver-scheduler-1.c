@@ -161,7 +161,7 @@ test_integrity (SchedulerFixture *fixture,
 	while (g_atomic_int_get (&message_counter) < 51)
 		yield (fixture, 50);
 
-	iris_receiver_destroy (receiver, FALSE, NULL, IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
+	iris_receiver_destroy (receiver, FALSE);
 	g_object_unref (port);
 }
 
@@ -193,7 +193,7 @@ test_order (SchedulerFixture *fixture,
 		yield (fixture, 50);
 
 	g_object_unref (port);
-	iris_receiver_destroy (receiver, FALSE, NULL, IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
+	iris_receiver_destroy (receiver, FALSE);
 }
 
 static void
@@ -219,7 +219,7 @@ test_destruction_1 (SchedulerFixture *fixture,
 		iris_port_post (p, msg);
 	}
 
-	iris_receiver_destroy (r, FALSE, NULL, IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
+	iris_receiver_destroy (r, FALSE);
 
 	yield (fixture, 50);
 
@@ -237,10 +237,7 @@ destroy_message_handler (IrisMessage *message,
 
 	if (message->what == 2) {
 		IrisReceiver *receiver = IRIS_RECEIVER (iris_message_get_object (message, "receiver"));
-		iris_receiver_destroy (receiver,
-		                       TRUE,
-		                       NULL,
-		                       iris_message_get_boolean (message, "is-gmain"));
+		iris_receiver_destroy (receiver, TRUE);
 		*p_destroyed = TRUE;
 
 		/* Message still holds a ref at this point of course */
@@ -272,7 +269,6 @@ test_destruction_2 (SchedulerFixture *fixture,
 
 	message = iris_message_new (2);
 	iris_message_set_object (message, "receiver", G_OBJECT (receiver));
-	iris_message_set_boolean (message, "is-gmain", IRIS_IS_GMAINSCHEDULER (fixture->scheduler));
 	iris_port_post (port, message);
 
 	for (j = 0; j < 20; j++) {

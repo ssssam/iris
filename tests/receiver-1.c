@@ -23,7 +23,7 @@ message_handler (IrisMessage *message,
 		IrisReceiver *receiver;
 
 		receiver = IRIS_RECEIVER (iris_message_get_object (message, "receiver"));
-		iris_receiver_destroy (receiver, TRUE, NULL, FALSE);
+		iris_receiver_destroy (receiver, TRUE);
 	}
 }
 
@@ -144,7 +144,7 @@ test_destroy (void)
 	iris_arbiter_coordinate (receiver, NULL, NULL);
 	g_object_ref (receiver);
 
-	iris_receiver_destroy (receiver, FALSE, NULL, FALSE);
+	iris_receiver_destroy (receiver, FALSE);
 
 	g_assert_cmpint (G_OBJECT(receiver)->ref_count, ==, 1);
 	g_assert_cmpint (G_OBJECT(port)->ref_count, ==, 1);

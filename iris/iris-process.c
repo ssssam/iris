@@ -1219,7 +1219,7 @@ handle_finish_cancel (IrisProcess *process,
 	g_return_if_fail (priv->work_receiver != NULL);
 
 	if (priv->work_port != NULL) {
-		iris_receiver_destroy (priv->work_receiver, FALSE, NULL, FALSE);
+		iris_receiver_destroy (priv->work_receiver, FALSE);
 		g_object_unref (priv->work_port);
 
 		priv->work_receiver = NULL;
@@ -1780,7 +1780,7 @@ iris_process_finalize (GObject *object)
 	GList              *node;
 
 	if (priv->work_port != NULL) {
-		iris_receiver_destroy (priv->work_receiver, FALSE, NULL, FALSE);
+		iris_receiver_destroy (priv->work_receiver, FALSE);
 		g_object_unref (priv->work_port);
 
 		priv->work_receiver = NULL;
