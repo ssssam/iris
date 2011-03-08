@@ -58,15 +58,17 @@ if ENABLE_PROFILING
 libiris_gtk_@IRIS_API_VERSION@_la_CFLAGS += "-DENABLE_PROFILING"
 endif
 
-libiris_gtk_@IRIS_API_VERSION@_la_LDFLAGS =				\
-	$(IRIS_GLIB_LT_LDFLAGS) 				\
-	-export-dynamic 					\
-	-export-symbols-regex "^iris.*" 			\
-	-rpath $(libdir) 					\
+libiris_gtk_@IRIS_API_VERSION@_la_LDFLAGS = \
+	$(IRIS_GLIB_LT_LDFLAGS)                 \
+	-export-dynamic                         \
+	-rpath $(libdir)                        \
 	$(NULL)
 
 
-libiris_gtk_@IRIS_API_VERSION@_la_LIBADD = $(IRIS_GTK_LIBS)
+libiris_gtk_@IRIS_API_VERSION@_la_LIBADD =  \
+	$(IRIS_LIBS)                            \
+	$(IRIS_GTK_LIBS)                        \
+	$(top_builddir)/iris/libiris-1.0.la
 
 EXTRA_DIST =							\
 	iris-gtk.h							\

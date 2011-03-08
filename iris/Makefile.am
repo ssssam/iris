@@ -125,11 +125,10 @@ if ENABLE_PROFILING
 libiris_@IRIS_API_VERSION@_la_CFLAGS += "-DENABLE_PROFILING"
 endif
 
-libiris_@IRIS_API_VERSION@_la_LDFLAGS =				\
-	$(IRIS_GLIB_LT_LDFLAGS) 				\
-	-export-dynamic 					\
-	-export-symbols-regex "^iris.*" 			\
-	-rpath $(libdir) 					\
+libiris_@IRIS_API_VERSION@_la_LDFLAGS =  \
+	$(IRIS_GLIB_LT_LDFLAGS)              \
+	-export-dynamic                      \
+	-rpath $(libdir)                     \
 	$(NULL)
 
 
