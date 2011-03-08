@@ -1683,7 +1683,7 @@ iris_process_execute_real (IrisTask *task)
 
 		canceled = iris_process_was_canceled (process);
 
-		/* Update progress monitors, no more than four times a second */
+		/* Update progress monitors, no more than five times a second */
 		if (priv->watch_port_list != NULL &&
 		    g_timer_elapsed (priv->watch_timer, NULL) >= 0.200) {
 			g_timer_reset (priv->watch_timer);
