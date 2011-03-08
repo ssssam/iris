@@ -7,5 +7,5 @@ Name: iris
 Description: iris, message passing and asynchronous tasks for GObject
 Version: @VERSION@
 Libs: -L${libdir} -liris-1.0 @IRIS_EXTRA_LIBS@
-Cflags: -I${includedir}/iris-1.0 @IRIS_EXTRA_CFLAGS@
+Cflags: -I${includedir}/iris-1.0/iris @IRIS_EXTRA_CFLAGS@
 Requires: gobject-2.0 gthread-2.0 gio-2.0 @IRIS_EXTRA_PACKAGES@

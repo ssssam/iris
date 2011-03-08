@@ -7,5 +7,5 @@ Name: iris-gtk
 Description: iris-gtk, message passing and asynchronous tasks for GObject (Gtk widgets)
 Version: @VERSION@
 Libs: -L${libdir} -liris-gtk-1.0 
-Cflags: -I${includedir}/iris-1.0
-Requires: gobject-2.0 gthread-2.0 gio-2.0 gtk-2.0 iris-1.0
+Cflags: -I${includedir}/iris-1.0/iris-gtk
+Requires: gobject-2.0 gthread-2.0 gio-2.0 gtk+-2.0 iris-1.0
