@@ -1370,9 +1370,9 @@ handle_add_source (IrisProcess *process,
 	source_process = g_value_get_object (data);
 
 	g_return_if_fail (IRIS_IS_PROCESS (source_process));
+	g_return_if_fail (g_list_find (IRIS_TASK (process)->priv->dependencies,
+	                               IRIS_TASK (source_process)) == NULL);
 	g_warn_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_STARTED));
-
-	/* FIXME: check source is not in task deps, since that would break stuff */
 
 	priv->source = g_object_ref (source_process);
 
@@ -1401,9 +1401,9 @@ handle_add_sink (IrisProcess *process,
 	sink_process = g_value_get_object (data);
 
 	g_return_if_fail (IRIS_IS_PROCESS (sink_process));
+	g_return_if_fail (g_list_find (IRIS_TASK (process)->priv->dependencies,
+	                               IRIS_TASK (sink_process)) == NULL);
 	g_warn_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_STARTED));
-
-	/* FIXME: check sink is not in task deps, that would ruin everything */
 
 	priv->sink = sink_process;
 
@@ -1568,9 +1568,6 @@ iris_process_handle_message_real (IrisTask    *task,
 	case IRIS_PROCESS_MESSAGE_NO_MORE_WORK:
 		handle_no_more_work (process, message);
 		break;
-
-	/* FIXME: watch add_dependency and check if we don't have the dep task
-	 * already as a source/sink */
 
 	case IRIS_PROCESS_MESSAGE_ADD_SOURCE:
 		handle_add_source (process, message);
