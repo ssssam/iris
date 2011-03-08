@@ -29,8 +29,6 @@
 #include <iris.h>
 #include <iris-gtk.h>
 
-#include <iris/iris-progress-monitor-private.h>
-
 GtkWidget *demo_window = NULL;
 
 GList *monitor_list = NULL;
