@@ -94,9 +94,9 @@
 #define FLAG_IS_OFF(t,f) ((t->priv->flags & f) == 0)
 #define ENABLE_FLAG(t,f) G_STMT_START{t->priv->flags|=f;}G_STMT_END
 #define DISABLE_FLAG(t,f) G_STMT_START{t->priv->flags&=~f;}G_STMT_END
-#define PROGRESS_BLOCKED(t)                                             \
-	(t->priv->dependencies != NULL &&                               \
-	 FLAG_IS_OFF (t, IRIS_TASK_FLAG_CANCELED))
+#define PROGRESS_BLOCKED(t)                          \
+          (t->priv->dependencies != NULL &&          \
+           FLAG_IS_OFF (t, IRIS_TASK_FLAG_CANCELED))
 
 G_DEFINE_TYPE (IrisTask, iris_task, G_TYPE_INITIALLY_UNOWNED);
 
@@ -286,7 +286,7 @@ iris_task_run (IrisTask *task)
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 
-	if (iris_task_was_canceled (task))
+	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELED))
 		return;
 
 	priv = task->priv;
@@ -682,6 +682,7 @@ gboolean
 iris_task_is_async (IrisTask *task)
 {
 	g_return_val_if_fail (IRIS_IS_TASK (task), FALSE);
+
 	return FLAG_IS_ON (task, IRIS_TASK_FLAG_ASYNC);
 }
 
@@ -697,7 +698,7 @@ gboolean
 iris_task_is_executing (IrisTask *task)
 {
 	g_return_val_if_fail (IRIS_IS_TASK (task), FALSE);
-	/* FIXME: use IRIS_TASK_FLAG_RUNNING */
+
 	return FLAG_IS_ON (task, IRIS_TASK_FLAG_WORK_ACTIVE) ||
 	       FLAG_IS_ON (task, IRIS_TASK_FLAG_CALLBACKS_ACTIVE);
 }
@@ -716,6 +717,7 @@ gboolean
 iris_task_is_finished (IrisTask *task)
 {
 	g_return_val_if_fail (IRIS_IS_TASK (task), FALSE);
+
 	return FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED);
 }
 
@@ -1093,12 +1095,15 @@ iris_task_notify_observers (IrisTask *task)
 	if (priv->observers == NULL)
 		return;
 
-	if (iris_task_was_canceled (task))
+	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELED))
 		msg = iris_message_new_data (IRIS_TASK_MESSAGE_DEP_CANCELED,
 		                             IRIS_TYPE_TASK, task);
 	else
+	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED))
 		msg = iris_message_new_data (IRIS_TASK_MESSAGE_DEP_FINISHED,
 		                             IRIS_TYPE_TASK, task);
+	else
+		g_warn_if_reached ();
 
 	iris_message_ref (msg);
 
@@ -1199,12 +1204,11 @@ handle_start_work (IrisTask    *task,
 	if (G_VALUE_TYPE (value) == G_TYPE_OBJECT)
 		priv->async_result = g_value_get_object (value);
 
-	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELED)) {
+	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELED))
 		/* Don't run if we have already been canceled. We should probably
 		 * do something with the async result here.
 		 */
 		return;
-	}
 
 	ENABLE_FLAG (task, IRIS_TASK_FLAG_NEED_EXECUTE);
 
@@ -1362,6 +1366,9 @@ handle_finish (IrisTask    *task,
 
 	iris_task_complete_async_result (task);
 
+	/* FIXME: this ref is added even when the task is a process with a sink
+	 * process that will have taken this ref ...
+	 */
 	if (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED))
 		g_object_ref_sink (task);
 
@@ -1381,13 +1388,13 @@ handle_add_dependency (IrisTask    *task,
 	g_return_if_fail (IRIS_IS_TASK (task));
 	g_return_if_fail (message != NULL);
 
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED));
+
 	priv = task->priv;
 	dep = g_value_get_object (iris_message_get_data (message));
 
 	priv->dependencies = g_list_prepend (priv->dependencies,
 	                                     g_object_ref (dep));
-
-	g_warn_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_FINISHED));
 
 	msg = iris_message_new_data (IRIS_TASK_MESSAGE_ADD_OBSERVER,
 	                             IRIS_TYPE_TASK, task);
@@ -1434,7 +1441,7 @@ iris_task_remove_dependency_sync (IrisTask *task,
 	if ((node = g_list_find (priv->dependencies, dependency)) != NULL) {
 		dep = IRIS_TASK (node->data);
 
-		if (! iris_task_is_finished (dep)) {
+		if (FLAG_IS_OFF (dep, IRIS_TASK_FLAG_FINISHED)) {
 			message = iris_message_new_data (IRIS_TASK_MESSAGE_REMOVE_OBSERVER,
 			                                 IRIS_TYPE_TASK, task);
 			iris_port_post (dep->priv->port, message);
@@ -1467,12 +1474,7 @@ handle_add_handler (IrisTask    *task,
 	if (!(handler = g_value_get_pointer (iris_message_get_data (message))))
 		return;
 
-	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_WORK_ACTIVE) ||
-	    FLAG_IS_ON (task, IRIS_TASK_FLAG_CALLBACKS_ACTIVE) ||
-	    FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED)) {
-		/* FIXME: better to have flag that changes when run than all the
-		 * above checks for if we have been started. IRIS_TASK_IMMUTABLE?
-		 */
+	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_STARTED)) {
 		g_warning ("IrisTask: callbacks cannot be added to a task once "
 		           "iris_task_run() has been called.");
 		return;
@@ -1634,8 +1636,8 @@ handle_remove_observer (IrisTask    *task,
 		 * were already canceled/completed so we just sent the
 		 * dep-canceled/finished message directly
 		 */
-		g_warn_if_fail (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED) ||
-		                FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELED));
+		g_warn_if_fail (FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELED) ||
+		                FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED));
 	}
 }
 
@@ -1822,7 +1824,7 @@ iris_task_execute_real (IrisTask *task)
 	g_value_unset (&params);
 
 	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELED)) {
-		/* Cancel will have been held off until work function notices */
+		/* Cancel will have been deferred until work function notices */
 		message = iris_message_new (IRIS_TASK_MESSAGE_FINISH_CANCEL);
 		iris_port_post (task->priv->port, message);
 	} else
