@@ -136,7 +136,7 @@ default_title (ProgressFixture *fixture,
 	iris_process_enqueue (process, work_item);
 	work_item = iris_message_new (1001);
 	iris_process_enqueue (process, work_item);
-	iris_process_no_more_work (process);
+	iris_process_close (process);
 
 	main_loop_iteration_times (100);
 
@@ -193,7 +193,7 @@ custom_static_title (ProgressFixture *fixture,
 	iris_process_enqueue (process, work_item);
 	work_item = iris_message_new (2001);
 	iris_process_enqueue (process, work_item);
-	iris_process_no_more_work (process);
+	iris_process_close (process);
 
 	main_loop_iteration_times (100);
 
@@ -235,7 +235,7 @@ custom_dynamic_title (ProgressFixture *fixture,
 	iris_process_enqueue (process, work_item);
 	work_item = iris_message_new (0);
 	iris_process_enqueue (process, work_item);
-	iris_process_no_more_work (process);
+	iris_process_close (process);
 
 	iris_process_run (process);
 
@@ -295,7 +295,7 @@ test_groups (ProgressFixture *fixture,
 	iris_process_enqueue (process_head, work_item);
 	work_item = iris_message_new (0);
 	iris_process_enqueue (process_head, work_item);
-	iris_process_no_more_work (process_head);
+	iris_process_close (process_head);
 
 	iris_process_run (process_head);
 

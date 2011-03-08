@@ -254,7 +254,7 @@ simple (ProgressFixture *fixture,
 	iris_process_run (process);
 
 	counter_enqueue (process, &counter, 50);
-	iris_process_no_more_work (process);
+	iris_process_close (process);
 
 	while (!iris_process_is_finished (process)) {
 		g_thread_yield ();
@@ -284,7 +284,7 @@ process_titles_1 (ProgressFixture *fixture,
 
 	/* Check the title change message doesn't crash anything */
 	iris_process_set_title (process, "Test title");
-	iris_process_no_more_work (process);
+	iris_process_close (process);
 
 	while (!iris_process_is_finished (process)) {
 		g_thread_yield ();
@@ -339,10 +339,10 @@ process_titles_2 (ProgressFixture *fixture,
 	iris_process_run (process_2);
 
 	iris_process_set_title (process_1, "New Title");
-	iris_process_no_more_work (process_1);
+	iris_process_close (process_1);
 
 	iris_process_set_title (process_2, "New Title");
-	iris_process_no_more_work (process_2);
+	iris_process_close (process_2);
 
 	while (!iris_process_is_finished (process_2)) {
 		g_thread_yield ();
@@ -381,7 +381,7 @@ process_titles_3 (ProgressFixture *fixture,
 	iris_process_set_title (process, "tseT");
 	iris_progress_monitor_watch_process (fixture->monitor, process, 0);
 	iris_process_run (process);
-	iris_process_no_more_work (process);
+	iris_process_close (process);
 
 	while (!iris_process_is_finished (process)) {
 		g_thread_yield ();
@@ -421,7 +421,7 @@ recurse_1 (ProgressFixture *fixture,
 	iris_message_set_pointer (work_item, "counter", &counter);
 	iris_process_enqueue (recursive_process, work_item);
 
-	iris_process_no_more_work (recursive_process);
+	iris_process_close (recursive_process);
 
 	while (!iris_process_is_finished (recursive_process)) {
 		g_thread_yield ();
@@ -462,7 +462,7 @@ chaining_1 (ProgressFixture *fixture,
 		IrisMessage *work_item = iris_message_new_data (0, G_TYPE_POINTER, &counter);
 		iris_process_enqueue (head_process, work_item);
 	}
-	iris_process_no_more_work (head_process);
+	iris_process_close (head_process);
 
 	while (!iris_process_is_finished (tail_process)) {
 		g_thread_yield ();
@@ -484,7 +484,7 @@ test_cancel_chain (ProgressFixture *fixture,
 	IrisProcess *tail_process = iris_process_new_with_func
 	                              (NULL, NULL, NULL);
 	iris_process_connect (head_process, tail_process);
-	iris_process_no_more_work (head_process);
+	iris_process_close (head_process);
 	g_object_ref (tail_process);
 
 	group = iris_progress_monitor_add_group (fixture->monitor, "Test Group", NULL);
@@ -540,7 +540,7 @@ finished_1 (ProgressFixture *fixture,
 
 		for (j=0; j<10; j++)
 			iris_process_enqueue (process, iris_message_new (0));
-		iris_process_no_more_work (process);
+		iris_process_close (process);
 
 		iris_process_run (process);
 	}
@@ -569,7 +569,7 @@ finalize (ProgressFixture *fixture,
 
 		for (j=0; j<100; j++)
 			iris_process_enqueue (process, iris_message_new (0));
-		iris_process_no_more_work (process);
+		iris_process_close (process);
 
 		iris_process_run (process);
 	}
@@ -617,7 +617,7 @@ recurse_2 (ProgressFixture *fixture,
 	tail_process = iris_process_new_with_func (count_sheep_func, NULL, NULL);
 
 	iris_process_connect (head_process, tail_process);
-	iris_process_no_more_work (head_process);
+	iris_process_close (head_process);
 	iris_process_run (head_process);
 
 	iris_progress_monitor_watch_process_chain (IRIS_PROGRESS_MONITOR(fixture->monitor),

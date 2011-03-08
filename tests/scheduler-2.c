@@ -35,7 +35,7 @@ test_load_spread ()
 	for (i=0; i<4; i++) {
 		process[i] = iris_process_new_with_func (wait_func, &wait_state[i], NULL);
 		iris_process_enqueue (process[i], iris_message_new (0));
-		iris_process_no_more_work (process[i]);
+		iris_process_close (process[i]);
 		iris_process_run (process[i]);
 	}
 

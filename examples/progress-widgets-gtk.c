@@ -89,7 +89,7 @@ trigger_process (GtkButton *trigger,
 		count = g_random_int_range (5, 5000);
 	for (i=0; i<count; i++)
 		iris_process_enqueue (process, iris_message_new (0));
-	iris_process_no_more_work (process);
+	iris_process_close (process);
 
 	iris_process_run (process);
 }

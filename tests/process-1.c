@@ -144,7 +144,7 @@ enqueue_counter_work (IrisProcess   *process,
 		iris_message_set_pointer (work_item, "counter", (gpointer)p_counter);
 		iris_process_enqueue (process, work_item);
 	}
-	iris_process_no_more_work (process);
+	iris_process_close (process);
 }
 
 
@@ -158,7 +158,7 @@ test_lifecycle (void)
 
 	g_assert_cmpint (G_OBJECT (process)->ref_count, ==, 1);
 
-	iris_process_no_more_work (process);
+	iris_process_close (process);
 	iris_process_run (process);
 
 	while (process != NULL)
@@ -201,7 +201,7 @@ test_cancel_creation (void)
 	process = iris_process_new_with_func (counter_callback, NULL, NULL);
 	g_object_ref (process);
 
-	iris_process_no_more_work (process);
+	iris_process_close (process);
 	iris_process_cancel (process);
 
 	while (! iris_process_is_finished (process)) {
@@ -237,7 +237,7 @@ test_cancel_preparation (void)
 	g_assert (iris_process_is_finished (process) == FALSE);
 
 	/* Enqueuing work is still allowed, process will not be freed until
-	 * iris_process_no_more_work() is called
+	 * iris_process_close() is called
 	 */
 	counter = 0;
 	enqueue_counter_work (process, &counter, 50);
@@ -279,7 +279,7 @@ cancel_execution_cb (IrisProcess *progress,
 }
 
 /* cancel in execution 1: Test for cancel on a normal run where
- * iris_process_no_more_work() was called before iris_process_run()
+ * iris_process_close() was called before iris_process_run()
  */
 static void
 test_cancel_execution_1 (void)
@@ -320,7 +320,7 @@ test_cancel_execution_1 (void)
 }
 
 /* cancel in execution 2: call iris_cancel() on a running process before
- * iris_process_no_more_work() has been called
+ * iris_process_close() has been called
  */
 static void
 test_cancel_execution_2 (void)
@@ -373,7 +373,7 @@ test_cancel_execution_3 (void) {
 		iris_message_ref (message[i]);
 		iris_process_enqueue (process, message[i]);
 	}
-	iris_process_no_more_work (process);
+	iris_process_close (process);
 
 	iris_process_run (process);
 	while (! iris_process_is_executing (process))
@@ -424,7 +424,7 @@ titles (void)
 	title = (char *)iris_process_get_title (process);
 	g_assert_cmpstr (title, ==, NULL);
 
-	iris_process_no_more_work (process);
+	iris_process_close (process);
 
 	while (process != NULL)
 		g_thread_yield ();
@@ -449,7 +449,7 @@ recurse_1 (void)
 	IrisMessage *work_item = iris_message_new (0);
 	iris_message_set_pointer (work_item, "counter", &counter);
 	iris_process_enqueue (recursive_process, work_item);
-	iris_process_no_more_work (recursive_process);
+	iris_process_close (recursive_process);
 
 	while (recursive_process != NULL)
 		g_thread_yield ();
@@ -485,7 +485,7 @@ chaining_1 (void)
 	g_assert (iris_process_has_source (tail_process) == TRUE);
 
 	/* Chain will finish now */
-	iris_process_no_more_work (head_process);
+	iris_process_close (head_process);
 
 	while (head_process != NULL || tail_process != NULL)
 		g_thread_yield ();
@@ -516,7 +516,7 @@ chaining_2 (void)
 		iris_message_ref (message[i]);
 		iris_process_enqueue (head_process, message[i]);
 	}
-	iris_process_no_more_work (head_process);
+	iris_process_close (head_process);
 
 	while (! iris_process_is_finished (tail_process))
 		wait_control_messages (tail_process);
@@ -554,7 +554,7 @@ test_chaining_3 (void) {
 		            (1, "counter", G_TYPE_POINTER, &counter, NULL);
 		iris_process_enqueue (process[0], message);
 	}
-	iris_process_no_more_work (process[0]);
+	iris_process_close (process[0]);
 
 	while (g_atomic_int_get (&counter) < 50)
 		g_thread_yield ();
@@ -583,7 +583,7 @@ test_cancelling_chained (gconstpointer user_data) {
 		message[i] = iris_message_ref (iris_message_new (i));
 		iris_process_enqueue (head_process, message[i]);
 	}
-	iris_process_no_more_work (head_process);
+	iris_process_close (head_process);
 
 	/* Deliberately don't wait for the connect messages to be processed before
 	 * we send the cancel.
@@ -626,7 +626,7 @@ test_cancel_before_chained (void) {
 	iris_process_connect (head_process, tail_process);
 
 	iris_process_run (head_process);
-	iris_process_no_more_work (head_process);
+	iris_process_close (head_process);
 
 	while (! iris_process_is_finished (tail_process))
 		wait_control_messages (tail_process);
@@ -655,7 +655,7 @@ test_canceled_chain_is_finished (void) {
 
 	wait_state = 0;
 	iris_process_enqueue (head_process, iris_message_new(0));
-	iris_process_no_more_work (head_process);
+	iris_process_close (head_process);
 	iris_process_run (head_process);
 
 	while (g_atomic_int_get (&wait_state) != 1)
@@ -698,7 +698,7 @@ test_output_estimates_basic (void)
 
 	for (j=0; j<100; j++)
 		iris_process_enqueue (process[0], iris_message_new (0));
-	iris_process_no_more_work (process[0]);
+	iris_process_close (process[0]);
 	iris_process_run (process[0]);
 
 	do
@@ -743,7 +743,7 @@ test_output_estimates_low (void)
 		iris_process_enqueue (process_1,
 		                      iris_message_new_data (0, G_TYPE_POINTER, &counter));
 	iris_process_run (process_1);
-	iris_process_no_more_work (process_1);
+	iris_process_close (process_1);
 
 	do
 		iris_process_get_status (process_1, &processed_items, &total_items);
@@ -790,7 +790,7 @@ test_output_estimates_cancel (void)
 	wait_state = 0;
 	for (j=0; j<100; j++)
 		iris_process_enqueue (process_1, iris_message_new (0));
-	iris_process_no_more_work (process_1);
+	iris_process_close (process_1);
 
 	/* Cancel the progress when it has more than 10 items queued (so it will
 	 * estimate at least 1000 outputs) but before it completes.

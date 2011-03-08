@@ -435,7 +435,8 @@ iris_process_connect
 iris_process_enqueue
 iris_process_forward
 iris_process_recurse
-iris_process_no_more_work
+iris_process_close
+iris_process_is_open
 iris_process_is_executing
 iris_process_is_finished
 iris_process_has_succeeded

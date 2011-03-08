@@ -34,52 +34,24 @@
  * items. A good example is the reading of information from each file in a
  * directory, or applying a transform function to a set of images.
  *
- * Once the #IrisProcess is created, you can give it work to do with
- * iris_process_enqueue(). The order in which the work items are executed is
- * unspecified. You can begin processing the work at any point with
- * iris_process_run(), and cancel at any point with iris_process_cancel().
+ * Once the #IrisProcess is created, it is an <firstterm>open</firstterm> state
+ * and you can give it work to do with iris_process_enqueue(). The order in
+ * which the work items are executed is unspecified. You can begin processing
+ * the work at any point with iris_process_run(), and cancel at any point with
+ * iris_process_cancel(). The process will not finish until it is <firstterm>
+ * closed</firstterm> using iris_process_close(), at which point it will not
+ * accept any more work items. By default the process will destroy itself once
+ * it has completed all of the remaining work items by freeing its execution
+ * reference, but it will remain alive if there are other references still held
+ * on it.
  *
- * The process will be destroyed automatically by default (see #IrisTask for
- * more information on how this works). However, a process will
- * <emphasis>never</emphasis> finish before iris_process_no_more_work() has
- * been called. If running, it will spin waiting for more work until you call
- * iris_process_no_more_work(). If canceled, the process will cease execution,
- * but calls to iris_process_enqueue() and iris_process_run() will still
- * succeed (but not actually do anything). It is an error to call any other
- * methods of #IrisProcess after calling iris_process_cancel().
+ * It is recommended that you enqueue all work items and then call
+ * iris_process_close() before you call iris_process_run(), but it is perfectly
+ * possible to run the process while it is still open. Note that the process
+ * will never finish while open, even if it is canceled - in this case the
+ * process will remain alive, accepting (but ignoring) new work items until
+ * iris_process_close() is called, at which point it will be destroyed.
  *
- * The reason for this feature is to ensure synchronisation. For example, the
- * following code is flawed:
- * |[
- *   if (! iris_process_was_canceled (process)
- *     iris_process_enqueue (process, work_item);
- * ]|
- * You guessed it - the process might be canceled from another thread, after
- * you checked but before you tried to push some work. There is normally no need
- * to enqueue work after calling iris_process_run(), but if you do require this
- * and the process may be canceled from another thread, this is the correct way
- * to implement it:
- *
- * <example>
- * <title>Enqueuing work in an IrisProcess while the process is executing</title>
- * <programlisting>
- *   gboolean enqueue_some_work (IrisProcess *process,
- *                               GList      *work_items) {
- *       GList *node;
- *
- *       if (iris_process_was_canceled (process))
- *           /&ast; Allow process to finalize. Caller must not enqueue any more work &ast;/
- *           iris_process_no_more_work (process);
- *           return FALSE;
- *       }
- *
- *       for (node=work_items; node; node=node->next)
- *           iris_process_enqueue (process, node->data);
- *
- *       return TRUE;
- *   }
- * </programlisting>
- * </example>
  * The progress of an #IrisProcess, or a chained group of them, can be monitored
  * using some kind of #IrisProgressMonitor, such as an #GtkIrisProgressDialog.
  * If you want to do this you may want to call iris_process_set_title() to give
@@ -95,7 +67,7 @@
  * iris_process_forward().
  *
  * You should enqueue work in the process at the head of the chain, calling
- * iris_process_no_more_work() as normal, and should start the chain by calling
+ * iris_process_close() as normal, and should start the chain by calling
  * iris_process_run() <emphasis>on the head process</emphasis>. The later
  * processes will each run until their source process completes work, so the
  * work will flow down the chain automatically.
@@ -120,21 +92,34 @@
  * <refsect2 id="synchronisation">
  * <title>Synchronisation</title>
  * <para>
- * Because processes run asynchronously in their own threads,
- * the controlling functions communicate through messages and will return
- * before the message has been received by the process. This means, for
- * example, that the following code has undefined behaviour:
+ * Because processes run asynchronously in their own threads, the control
+ * methods communicate through messages and will normally return before the
+ * message has been received by the process and been carried out. You must be
+ * very careful to avoid expecting synchronisation where there is none:
  * |[
- *   IrisProcess *process;
  *   process = iris_process_new_with_func (callback, NULL, NULL);
+ *   iris_progress_monitor_watch_process (progress_monitor, process, NULL);
  *
  *   iris_process_run (process);
+ *
+ *   /&ast; BAD: This will still be FALSE if the 'run' message has not yet been delivered &ast;/
  *   g_assert (iris_process_is_executing (process));
+ *
+ *   if (! iris_process_was_canceled (process))
+ *     /&ast; BAD: The process could be canceled from the progress monitor widget
+ *      &ast; at any time.
+ *      &ast;/
+ *     iris_process_enqueue (process, work_item);
  * ]|
- * The assert may fail or pass, depending on whether @process has received the
- * 'run' message. Messages are executed in order, so given that
- * iris_process_connect() can only be called before iris_process_run(), the
- * following code is valid:
+ * The assert might fail or pass, because the actual run happens in another
+ * thread. Similarly, checking for cancel is normally pointless because the
+ * cancel could take place after you have checked - and it is for this reason
+ * that a process will still accept work items until you call
+ * iris_process_close(), even if it has been canceled.
+ *
+ * Messages <emphasis>are</emphasis> executed in the order they are sent, so
+ * given that iris_process_connect() can only be called before
+ * iris_process_run(), the following code would be valid:
  * |[
  *   IrisProcess *head, *tail;
  *   head = iris_process_new_with_func (callback_1, NULL, NULL);
@@ -247,11 +232,10 @@ iris_process_new_with_closure (GClosure *closure)
  * @process: An #IrisProcess
  *
  * Starts the #IrisProcess executing work items. Its thread will run until it
- * runs out of work AND iris_process_no_more_work() is called. You can abort
- * execution by calling iris_process_cancel(), but you must still call
- * iris_process_no_more_work() for the cancel to take effect.
- *
- * If @process has already been canceled, this function will do nothing.
+ * runs out of work AND iris_process_close() is called. You can abort execution
+ * by calling iris_process_cancel(), but you must still call
+ * iris_process_close() before the process will be freed. If @process has
+ * already been canceled, this function will do nothing.
  *
  * If @process has any successors, they will also start. For more information,
  * see iris_process_connect().
@@ -269,22 +253,26 @@ iris_process_run (IrisProcess *process)
  * @process: An #IrisProcess
  *
  * Cancels a process. The process work function will not be called again, and
- * if iris_process_no_more_work() was called @process will be freed (unless
- * someone holds a reference on it). Otherwise, @process will be freed once
- * that function is called.
- *
- * It is allowed to call iris_process_enqueue() after calling
- * iris_process_cancel(), if iris_process_no_more_work() was not yet called.
- * You may also call iris_process_run(), which will do nothing on a canceled
- * process. It is <emphasis>not</emphasis> permitted to call most other
- * functions. See individual docs for details.
- *
- * If the work function is slow, it should periodically check
- * iris_task_was_canceled() while working and quit execution if it returns
- * %TRUE.
+ * if iris_process_close() was already called @process will finish and release
+ * its execution reference. It will then be freed, unless someone else holds a
+ * reference on it.
+ * 
+ * If @process is still open to work items it will carry on
+ * accepting them, but will not do any more processing and will be freed once
+ * iris_process_close() is called. 
+ * Specifically, it is permitted to call iris_process_enqueue() and
+ * iris_process_run() after calling iris_process_cancel()
+ * <emphasis>if</emphasis> iris_process_close() was not yet called. It is not
+ * permitted to call any other #IrisTask or #IrisProcess methods on a canceled
+ * process.
  *
  * If @process is part of a chain of processes, this function will cancel the
  * whole chain.
+ *
+ * If the work function is slow, it should periodically check
+ * iris_task_was_canceled() while working and quit execution if it returns
+ * %TRUE to ensure the process is responsive to cancelation.
+ *
  */
 void
 iris_process_cancel (IrisProcess *process)
@@ -360,7 +348,7 @@ iris_process_connect (IrisProcess *head,
 
 /**
  * iris_process_enqueue:
- * @process: An #IrisProcess
+ * @process: An open #IrisProcess
  * @work_item: An #IrisMessage. The process will sink the floating reference or
  *             add a new reference.
  *
@@ -370,16 +358,15 @@ iris_process_connect (IrisProcess *head,
  * execution - if this is a problem, you should create individual #IrisTask
  * objects which will allow you to specify dependencies.
  *
- * The caller does not need to unref @work_item once it has been enqueued, in
- * normal cases. The message and its data will be freed after the work item is
- * processed or cancelled. Note that you should not free data associated with
- * the work items in the process work function because of the possibility of
- * cancelling; using iris_message_set_pointer_full() allows any type of data to
- * be implicitly freed when no longer needed.
+ * The caller does not need to unref @work_item once it has been enqueued. The
+ * message and its data will be freed after the work item is processed or
+ * cancelled. You should not free data associated with the work items in the
+ * process work function because the data also needs to be freed if the process
+ * was canceled - using iris_message_set_pointer_full() allows any type of data
+ * attached to an #IrisMessage to be implicitly freed when no longer needed.
  *
- * If @process has been cancelled, this function will do nothing. It is an
- * error to call this function once iris_process_no_more_work() has been
- * called.
+ * @process must still be open to work items, but may be cancelled - in this
+ * case, @work_item will simply be discarded.
  */
 void
 iris_process_enqueue (IrisProcess *process,
@@ -392,12 +379,15 @@ iris_process_enqueue (IrisProcess *process,
 
 	priv = process->priv;
 
-	if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_NO_MORE_WORK) &&
-	    !FLAG_IS_ON (process, IRIS_TASK_FLAG_CANCELED)) {
-		g_warning ("process %lx: cannot enqueue more work items, "
-		           "because iris_process_no_more_work() has been called "
-		           "(or there is a bug in process connections)",
-		           (gulong)process);
+	if (! iris_process_is_open (process)) {
+		if (iris_process_has_source (process) &&
+		    iris_process_was_canceled (process));
+			/* Processes connected to a source are closed on cancel so the work
+			 * function quits, so this might not be an error
+			 */
+		else
+			g_warning ("iris_process_enqueue: process %lx is closed to further "
+			           "work items.", (gulong)process);
 		return;
 	};
 
@@ -475,22 +465,20 @@ iris_process_forward (IrisProcess *process,
  * @process: An #IrisProcess that is currently executing
  * @work_item: An #IrisMessage
  *
- * This function is for use during the process' work function. When called, it
- * enqueues @work_item in @process, which must be running and not canceled.
- *
- * You might want to do this if you have a process which operates on
- * directories and their subdirectories recursively, for example. In this
- * situation, iris_process_enqueue() would fail if you had called
- * iris_process_no_more_work() already.
+ * This function is for use during the process' work function. It functions as
+ * iris_process_enqueue() except that @process is allowed to be closed. The
+ * open/close API exists so that a running process will not think it has
+ * finished before the user has had time to enqueue all of its work. When the
+ * work items come from the process itself there is no danger of this.
  */
 void
 iris_process_recurse (IrisProcess *process,
                       IrisMessage *work_item)
 {
 	/* This function behaves the same as iris_process_enqueue but without
-	 * checking for IRIS_PROCESS_FLAG_NO_MORE_WORK (because it's called from
-	 * inside the process). It's useful having it as a separate function for
-	 * safety.
+	 * checking for iris_process_is_open() (because it's called from inside the
+	 * process so the process cannot complete before the enqueue goes through).
+	 * It's useful having it as a separate function for safety.
 	 */
 	IrisProcessPrivate *priv;
 
@@ -500,38 +488,54 @@ iris_process_recurse (IrisProcess *process,
 
 	priv = process->priv;
 
+	/* 'process' cannot now finish until this new item is completed */
 	g_atomic_int_inc (&priv->total_items);
 
 	iris_port_post (priv->work_port, work_item);
 }
 
 /**
- * iris_process_no_more_work:
+ * iris_process_close:
  * @process: An #IrisProcess
  *
- * Causes @process to finish up its remaining work and then destroy itself. Or,
- * if @process has been canceled, to finish immediately. If this function is
- * never called, @process will stay around idling and using a substantial
- * amount of CPU cycles forever.
+ * Causes @process to stop accepting new work items. It will finish up its
+ * remaining work and then destroy itself, unless it was canceled in which case
+ * it will finish immediately. If this function is never called, @process will
+ * stay around idling and using a substantial amount of CPU cycles forever.
  *
- * Any processes chained to the output of @process will also stop once they run
- * out of work and @process has completed, as they expect to obtain all of
- * their work items from @process.
- *
- * iris_process_no_more_work() cannot be called on processes that are connected
- * to a source process. These will run for as long as their source processes
- * have work to do.
+ * If @process has a sink process connected, closure will be propagated down so
+ * that the sink will complete once @process has done so. iris_process_close()
+ * cannot be called on processes that are connected to a source process.
  */
 void
-iris_process_no_more_work (IrisProcess *process)
+iris_process_close (IrisProcess *process)
 {
-	IrisTaskPrivate *task_priv = IRIS_TASK(process)->priv;
+	IrisMessage *message;
 
+	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (! iris_process_has_source (process));
+	g_return_if_fail (iris_process_is_open (process));
 
-	IrisMessage *message = iris_message_new (IRIS_PROCESS_MESSAGE_NO_MORE_WORK);
-	iris_port_post (task_priv->port, message);
+	message = iris_message_new (IRIS_PROCESS_MESSAGE_CLOSE);
+	iris_port_post (IRIS_TASK (process)->priv->port, message);
 };
+
+/**
+ * iris_process_is_open:
+ * @process: An #IrisProcess
+ * 
+ * Checks if a process is still accepting work items.
+ *
+ * Return value: %TRUE if iris_process_enqueue() can still be called for
+ *               @process
+ */
+gboolean
+iris_process_is_open (IrisProcess *process)
+{
+	g_return_val_if_fail (IRIS_IS_PROCESS (process), FALSE);
+
+	return FLAG_IS_ON (process, IRIS_PROCESS_FLAG_OPEN);
+}
 
 /**
  * iris_process_is_executing:
@@ -551,14 +555,15 @@ iris_process_is_executing (IrisProcess *process)
  * iris_process_is_finished:
  * @process: An #IrisProcess
  *
- * Checks if a process has succeeded, thrown a fatal error or been
- * canceled. If @process has been canceled but iris_process_no_more_work()
- * has not yet been called, this function will return %FALSE.
+ * Checks if a process has succeeded, thrown a fatal error or been canceled.
+ * If @process has been canceled but has not yet been closed, this function
+ * will return %FALSE.
  *
- * If @process has a source process connected, this function will never return
- * %TRUE unless the source is also finished (this is significant when the sink
- * process is canceled - it will wait for the source to process the cancel
- * before it finishes itself).
+ * If @process has a source process connected, this function will not return
+ * %TRUE unless the source is also finished. This means calling
+ * iris_process_is_finished() on the last process in a chain will only return
+ * %TRUE once the whole chain has finished, even if the last process was the
+ * first to be canceled.
  *
  * Return value: %TRUE if the process will not process any more work
  */
@@ -576,8 +581,8 @@ iris_process_is_finished (IrisProcess *process)
  * cancel and chose to ignore it, %FALSE will be returned (this can only be
  * done by subclasses of #IrisProcess).
  *
- * If @process has been canceled but iris_process_no_more_work() was not yet
- * called, this function will still return %TRUE.
+ * If @process has been canceled but iris_process_close() was not yet called,
+ * this function will still return %TRUE.
  *
  * Return value: %TRUE if the process was canceled.
  */
@@ -592,7 +597,7 @@ iris_process_was_canceled (IrisProcess *process)
  * @process: An #IrisProcess
  *
  * Checks to see if the process has completed all of its work, and had
- * iris_process_no_more_work() called on it.
+ * iris_process_close() called on it.
  *
  * If @process is chained to a source process, it has completed when it has
  * finished all of its work and the first process in the chain has completed.
@@ -1117,7 +1122,7 @@ handle_callbacks_finished (IrisProcess *process,
 }
 
 /* We have to totally replace task's cancel handlers to avoid it posting the
- * FINISH_CANCEL message when no_more_work() has not yet been called.
+ * FINISH_CANCEL message when iris_process_close() has not yet been called.
  */
 static void
 handle_start_cancel (IrisProcess *process,
@@ -1156,11 +1161,11 @@ handle_start_cancel (IrisProcess *process,
 		/* Signal to the work function to quit (if it's running), because this
 		 * doesn't get set by the user on chained processes.
 		 */
-		ENABLE_FLAG (process, IRIS_PROCESS_FLAG_NO_MORE_WORK);
+		DISABLE_FLAG (process, IRIS_PROCESS_FLAG_OPEN);
 	}
 	else {
-		if (FLAG_IS_OFF (process, IRIS_PROCESS_FLAG_NO_MORE_WORK));
-			/* FINISH_CANCEL message will be sent when no_more_work is received */
+		if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_OPEN));
+			/* FINISH_CANCEL message will be sent when CLOSE is received */
 		else
 		if (FLAG_IS_ON (process, IRIS_TASK_FLAG_WORK_ACTIVE));
 			/* FINISH_CANCEL message will be sent when work function exits. */
@@ -1206,8 +1211,8 @@ handle_finish_cancel (IrisProcess *process,
 		return;
 
 	/* Clean up work item queue, which should not have been done until now
-	 * (enqueues etc. are allowed until iris_progress_no_more_work() is called,
-	 * even after a cancel)
+	 * (enqueues etc. are allowed until iris_progress_close() is called, even
+	 * after a cancel)
 	 */
 	g_return_if_fail (priv->work_port != NULL);
 	g_return_if_fail (priv->work_receiver != NULL);
@@ -1270,7 +1275,7 @@ handle_dep_finished (IrisProcess *process,
 	if (priv->source != NULL && IRIS_TASK (priv->source) == observed) {
 		g_warn_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_FINISHED));
 
-		ENABLE_FLAG (process, IRIS_PROCESS_FLAG_NO_MORE_WORK);
+		DISABLE_FLAG (process, IRIS_PROCESS_FLAG_OPEN);
 	}
 }
 
@@ -1319,17 +1324,16 @@ handle_dep_canceled (IrisProcess *process,
 }
 
 static void
-handle_no_more_work (IrisProcess *process,
-                     IrisMessage *message)
+handle_close (IrisProcess *process,
+              IrisMessage *message)
 {
 	g_return_if_fail (IRIS_IS_PROCESS (process));
 	g_return_if_fail (message != NULL);
 
-	g_return_if_fail (FLAG_IS_OFF (process, IRIS_PROCESS_FLAG_NO_MORE_WORK));
-
+	g_return_if_fail (iris_process_is_open (process));
 	g_return_if_fail (FLAG_IS_OFF (process, IRIS_PROCESS_FLAG_HAS_SOURCE));
 
-	ENABLE_FLAG (process, IRIS_PROCESS_FLAG_NO_MORE_WORK);
+	DISABLE_FLAG (process, IRIS_PROCESS_FLAG_OPEN);
 
 	if (iris_process_was_canceled (process)) {
 		if (FLAG_IS_ON (process, IRIS_TASK_FLAG_WORK_ACTIVE));
@@ -1507,7 +1511,7 @@ handle_chain_estimate (IrisProcess *process,
 
 #ifdef IRIS_TRACE_TASK
 static const char *process_message_name[] =
-  { "no-more-work",
+  { "close",
     "add-source",
     "add-sink",
     "chain-cancel",
@@ -1528,10 +1532,10 @@ iris_process_handle_message_real (IrisTask    *task,
 	priv = process->priv;
 
 	#ifdef IRIS_TRACE_TASK
-	if (message->what >= IRIS_PROCESS_MESSAGE_NO_MORE_WORK &&
+	if (message->what >= IRIS_PROCESS_MESSAGE_CLOSE &&
 	    message->what <= IRIS_PROCESS_MESSAGE_CHAIN_ESTIMATE)
 		g_print ("process %lx: got message %s\n",
-		         (gulong)process, process_message_name [message->what - IRIS_PROCESS_MESSAGE_NO_MORE_WORK]);
+		         (gulong)process, process_message_name [message->what - IRIS_PROCESS_MESSAGE_CLOSE]);
 	#endif
 
 	switch (message->what) {
@@ -1559,8 +1563,8 @@ iris_process_handle_message_real (IrisTask    *task,
 		handle_dep_canceled (process, message);
 		break;
 
-	case IRIS_PROCESS_MESSAGE_NO_MORE_WORK:
-		handle_no_more_work (process, message);
+	case IRIS_PROCESS_MESSAGE_CLOSE:
+		handle_close (process, message);
 		break;
 
 	case IRIS_PROCESS_MESSAGE_ADD_SOURCE:
@@ -1632,13 +1636,13 @@ iris_process_post_work_item (IrisMessage *work_item,
 static gboolean
 work_function_can_finish (IrisProcess *process)
 {
-	if (FLAG_IS_OFF (process, IRIS_PROCESS_FLAG_NO_MORE_WORK))
+	if (iris_process_is_open (process))
 		return FALSE;
 
 	/* No races possible: only recursive work items can post more work if
-	 * NO_MORE_WORK is set, and they must do so before that item completes.
-	 * Therefore 'processed' can never reach 'total' before the last work
-	 * item completes.
+	 * OPEN is no longer set, and they must do so before that item completes.
+	 * Therefore 'processed' can never reach 'total' before the last work item
+	 * completes.
 	 */
 	if (iris_process_get_queue_length (process) > 0)
 		return FALSE;
@@ -1734,15 +1738,15 @@ _yield:
 			post_progress_message (process, message);
 		}
 
-		/* FINISH_CANCEL is sent on no-more-work or chain-cancel. If those
-		 * already happened we need to send it ourselves
+		/* FINISH_CANCEL is sent on close or chain-cancel. If those already
+		 * happened we need to send it ourselves
 		 */
 		send_finish_cancel = FALSE;
 		if (iris_process_has_source (process)) {
 			if (iris_process_is_finished (priv->source))
 				send_finish_cancel = TRUE;
 		} else
-		if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_NO_MORE_WORK))
+		if (! iris_process_is_open (process))
 			send_finish_cancel = TRUE;
 
 		if (send_finish_cancel) {
@@ -1925,6 +1929,8 @@ iris_process_init (IrisProcess *process)
 
 	priv->watch_port_list = NULL;
 	priv->watch_timer = g_timer_new ();
+
+	ENABLE_FLAG (process, IRIS_PROCESS_FLAG_OPEN);
 
 	iris_task_set_progress_mode (IRIS_TASK (process), IRIS_PROGRESS_DISCRETE);
 }

@@ -93,8 +93,9 @@ void          iris_process_forward               (IrisProcess            *proces
                                                   IrisMessage            *work_item);
 void          iris_process_recurse               (IrisProcess            *process,
                                                   IrisMessage            *work_item);
-void          iris_process_no_more_work          (IrisProcess            *process);
+void          iris_process_close                 (IrisProcess            *process);
 
+gboolean      iris_process_is_open               (IrisProcess            *process);
 gboolean      iris_process_is_executing          (IrisProcess            *process);
 gboolean      iris_process_is_finished           (IrisProcess            *process);
 gboolean      iris_process_has_succeeded         (IrisProcess            *process);
