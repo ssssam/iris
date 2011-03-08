@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA
  * 02110-1301 USA
  */
 
@@ -100,6 +100,12 @@
 
 G_DEFINE_TYPE (IrisTask, iris_task, G_TYPE_INITIALLY_UNOWNED);
 
+enum {
+	PROP_0,
+	PROP_CONTROL_SCHEDULER,
+	PROP_WORK_SCHEDULER
+};
+
 static void             iris_task_dummy         (IrisTask *task, gpointer user_data);
 static void             iris_task_handler_free  (IrisTaskHandler *handler);
 static IrisTaskHandler* iris_task_next_handler  (IrisTask *task);
@@ -145,65 +151,7 @@ iris_task_new_with_func (IrisTaskFunc   func,
                          gpointer       user_data,
                          GDestroyNotify notify)
 {
-	IrisTask *task;
-	GClosure *closure;
-
-	if (!func)
-		func = iris_task_dummy;
-
-	closure = g_cclosure_new (G_CALLBACK (func),
-	                          user_data,
-	                          (GClosureNotify)notify);
-	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__VOID);
-	task = iris_task_new_with_closure (closure);
-	g_closure_unref (closure);
-
-	return task;
-}
-
-/**
- * iris_task_new_full:
- * @func: An #IrisTaskFunc
- * @user_data: data for @func
- * @notify: A destroy notify after execution of the task
- * @async: Will the task complete during the execution of @func
- * @work_scheduler: An #IrisScheduler or %NULL
- * @context: A #GMainContext or %NULL
- *
- * Creates a new instance of #IrisTask.  This method allows for setting
- * if the task is asynchronous with @async.  An asynchronous task has the
- * ability to not complete during the execution of the task's execution
- * method (in this case @func).  To mark the task's execution as completed,
- * iris_task_work_finished() must be called for the task.
- *
- * If you want errbacks and callbacks to complete within a #GMainContext,
- * you may specify @context or %NULL for the callbacks to happen within
- * the worker thread.
- *
- * @work_scheduler allows you to set a specific #IrisScheduler to perform
- * execution of the task within.  All message passing associated with the
- * task's internal #IrisPort<!-- -->'s will still happen on the default
- * #IrisScheduler, but you may change this with the function
- * iris_task_set_control_scheduler().
- *
- * Return value: The newly created #IrisTask instance.
- */
-IrisTask*
-iris_task_new_full (IrisTaskFunc   func,
-                    gpointer       user_data,
-                    GDestroyNotify notify,
-                    gboolean       async,
-                    IrisScheduler *work_scheduler,
-                    GMainContext  *context)
-{
-	IrisTask *task = iris_task_new_with_func (func, user_data, notify);
-	if (work_scheduler)
-		iris_task_set_work_scheduler (task, work_scheduler);
-	if (async)
-		task->priv->flags |= IRIS_TASK_FLAG_ASYNC;
-	if (context)
-		iris_task_set_main_context (task, context);
-	return task;
+	return iris_task_new_full (func, user_data, notify, FALSE, NULL, NULL, NULL);
 }
 
 /**
@@ -217,17 +165,102 @@ iris_task_new_full (IrisTaskFunc   func,
 IrisTask*
 iris_task_new_with_closure (GClosure *closure)
 {
+	return iris_task_new_with_closure_full (closure, FALSE, NULL, NULL, NULL);
+}
+
+/**
+ * iris_task_new_full:
+ * @func: An #IrisTaskFunc
+ * @user_data: data for @func
+ * @notify: A destroy notify after execution of the task
+ * @async: %FALSE unless the task will not complete during the execution of
+ *         @func, and will call iris_task_work_complete() later.
+ * @control_scheduler: An #IrisScheduler, or %NULL to use the default
+ * @work_scheduler: An #IrisScheduler or %NULL to use the default
+ * @context: A #GMainContext or %NULL
+ *
+ * Creates a new instance of #IrisTask.  This method allows for setting
+ * if the task is asynchronous with @async.  An asynchronous task has the
+ * ability to not complete during the execution of the task's execution
+ * method (in this case @func).  To mark the task's execution as completed,
+ * iris_task_work_finished() must be called for the task.
+ *
+ * If you want errbacks and callbacks to complete within a #GMainContext,
+ * you may specify @context or %NULL for the callbacks to happen within
+ * the worker thread.
+ *
+ * @work_scheduler allows you to set a specific #IrisScheduler to perform
+ * the task's work.  All message passing associated with the task's internal
+ * #IrisPort will still happen on @control_scheduler. Passing %NULL for either
+ * of these will use the defaults returned by iris_get_default_work_scheduler()
+ * and iris_get_default_control_scheduler() respectively.
+ *
+ * Return value: The newly created #IrisTask instance.
+ */
+IrisTask*
+iris_task_new_full (IrisTaskFunc   func,
+                    gpointer       user_data,
+                    GDestroyNotify notify,
+                    gboolean       async,
+                    IrisScheduler *control_scheduler,
+                    IrisScheduler *work_scheduler,
+                    GMainContext  *context)
+{
+	GClosure *closure;
 	IrisTask *task;
 
-	g_return_val_if_fail (closure != NULL, NULL);
+	if (!func)
+		func = iris_task_dummy;
 
-	task = g_object_new (IRIS_TYPE_TASK, NULL);
+	closure = g_cclosure_new (G_CALLBACK (func),
+	                          user_data,
+	                          (GClosureNotify)notify);
+	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__VOID);
+	task = iris_task_new_with_closure_full (closure,
+	                                        async,
+	                                        control_scheduler,
+	                                        work_scheduler,
+	                                        context);
+	g_closure_unref (closure);
 
-	if (G_LIKELY (task->priv->closure))
-		g_closure_unref (task->priv->closure);
+	return task;
+}
 
-	/* The closure is NOT leaked, it is unreferenced in iris_task_execute_real() */
+/**
+ * iris_task_new_with_closure_full
+ * @closure: A #GClosure
+ * @async: %FALSE unless the task will not complete during the execution of
+ *         @closure, and will call iris_task_work_complete() later.
+ * @control_scheduler: An #IrisScheduler, or %NULL
+ * @work_scheduler: An #IrisScheduler, or %NULL
+ * @context: A #GMainContext, or %NULL
+ *
+ * A version of iris_task_new_full() that takes a #GClosure.
+ *
+ * Return value: a newly-allocated #IrisTask object.
+ */
+IrisTask *
+iris_task_new_with_closure_full (GClosure      *closure,
+                                 gboolean       async,
+                                 IrisScheduler *control_scheduler,
+                                 IrisScheduler *work_scheduler,
+                                 GMainContext  *context)
+{
+	IrisTask *task;
+
+	task = g_object_new (IRIS_TYPE_TASK,
+	                     "control-scheduler", control_scheduler,
+	                     "work-scheduler", work_scheduler,
+	                     NULL);
+
+	/* The closure is unreferenced in iris_task_execute_real() after being run */
 	task->priv->closure = g_closure_ref (closure);
+
+	if (async)
+		task->priv->flags |= IRIS_TASK_FLAG_ASYNC;
+
+	if (context)
+		iris_task_set_main_context (task, context);
 
 	return task;
 }
@@ -300,7 +333,7 @@ iris_task_run_with_async_result (IrisTask            *task,
  * task to periodically check the canceled state with iris_task_was_canceled()
  * and quit execution. If the work function has already completed the cancel
  * will be ignored.
- * 
+ *
  * When @task has fully canceled it will be destroyed, unless still referenced
  * elsewhere. Because an #IrisTask has a floating reference until it runs, if
  * the task has not yet executed this reference will be sunk and then released.
@@ -944,11 +977,11 @@ iris_task_set_result_gtype (IrisTask *task,
  * the context.
  *
  * This function will <emphasis>not</emphasis> cause the actual task to execute
- * in the GMainContext; if you do want to achieve this you should pass an
- * #IrisGMainScheduler to iris_task_set_work_scheduler(). However, consider if
- * you actually need #IrisTask, if you don't need the task to run in parallel -
- * it might be sufficient to simply enqueue your function for execution using
- * g_idle_add().
+ * in the GMainContext; if you do want to achieve this you should use
+ * iris_task_new_full() and pass an #IrisGMainScheduler as the work scheduler.
+ * However, consider if you actually need #IrisTask if you don't need the task to
+ * run in parallel - it might be sufficient to simply enqueue your function for
+ * execution using g_idle_add().
  */
 void
 iris_task_set_main_context (IrisTask     *task,
@@ -985,63 +1018,6 @@ iris_task_get_main_context (IrisTask *task)
 
 	return priv->context;
 }
-
-/**
- * iris_task_set_control_scheduler:
- * @task: An #IrisTask
- * @control_scheduler: An #IrisScheduler
- *
- * Sets the scheduler used for internal communication inside @task. It is
- * usually best to leave messages running in the default scheduler, and move
- * the slow work that may interfere with them into its own scheduler.
- */
-void
-iris_task_set_control_scheduler (IrisTask      *task,
-                                 IrisScheduler *control_scheduler)
-{
-	IrisTaskPrivate *priv;
-
-	g_return_if_fail (IRIS_IS_TASK (task));
-	g_return_if_fail (IRIS_IS_SCHEDULER (control_scheduler));
-
-	priv = task->priv;
-
-	iris_receiver_set_scheduler (priv->receiver, control_scheduler);
-}
-
-/**
- * iris_task_set_work_scheduler:
- * @task: An #IrisTask
- * @work_scheduler: An #IrisScheduler
- *
- * Sets the scheduler used to execute the task's work function.
- */
-void
-iris_task_set_work_scheduler (IrisTask      *task,
-                              IrisScheduler *work_scheduler)
-{
-	IrisTaskPrivate *priv;
-	IrisScheduler   *old_sched;
-
-	g_return_if_fail (IRIS_IS_TASK (task));
-	g_return_if_fail (IRIS_IS_SCHEDULER (work_scheduler));
-
-	priv = task->priv;
-
-	if (work_scheduler == NULL)
-		work_scheduler = g_object_ref (iris_get_default_work_scheduler ());
-
-	/* Like in iris-receiver, changing scheduler while executing is a bad idea
-	 * but hopefully will not cause crashes
-	 */
-	do {
-		old_sched = g_atomic_pointer_get (&priv->work_scheduler);
-	} while (!g_atomic_pointer_compare_and_exchange (
-	          (gpointer*)&priv->work_scheduler, old_sched, work_scheduler));
-
-	g_object_unref (old_sched);
-}
-
 
 /**************************************************************************
  *                      IrisTask Private Implementation                   *
@@ -1864,11 +1840,107 @@ iris_task_execute_real (IrisTask *task)
 }
 
 static void
+iris_task_constructed (GObject *object)
+{
+	IrisTask        *task;
+	IrisTaskPrivate *priv;
+
+	/* Chaining up to GObject was broken until GObject 2.27.93 */
+	/*G_OBJECT_CLASS (iris_task_parent_class)->constructed (object); */
+
+	task = IRIS_TASK (object);
+	priv = task->priv;
+
+	/* These are construct-only properties and will have been set to the default
+	 * value by set_property() by now if they were not explicity set
+	 */
+	g_warn_if_fail (priv->control_scheduler != NULL);
+	g_warn_if_fail (priv->work_scheduler != NULL);
+
+	priv->port = iris_port_new ();
+	priv->receiver = iris_arbiter_receive (priv->control_scheduler,
+	                                       priv->port,
+	                                       iris_task_handle_message,
+	                                       task,
+	                                       NULL);
+
+	iris_arbiter_coordinate (priv->receiver, NULL, NULL);
+}
+
+static void
+iris_task_set_property (GObject      *object,
+                        guint         prop_id,
+                        const GValue *value,
+                        GParamSpec   *pspec)
+{
+	IrisTask        *task;
+	IrisTaskPrivate *priv;
+	IrisScheduler   *scheduler;
+
+	task = IRIS_TASK (object);
+	priv = task->priv;
+
+	switch (prop_id) {
+		case PROP_CONTROL_SCHEDULER:
+			g_warn_if_fail (priv->control_scheduler == NULL);
+
+			scheduler = g_value_get_object (value);
+			if (scheduler == NULL)
+				scheduler = iris_get_default_control_scheduler ();
+
+			priv->control_scheduler = g_object_ref (scheduler);
+			break;
+
+		case PROP_WORK_SCHEDULER:
+			g_warn_if_fail (priv->work_scheduler == NULL);
+
+			scheduler = g_value_get_object (value);
+			if (scheduler == NULL)
+				scheduler = iris_get_default_work_scheduler ();
+
+			priv->work_scheduler = g_object_ref (scheduler);
+			break;
+
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
+}
+
+static void
+iris_task_get_property (GObject    *object,
+                        guint       prop_id,
+                        GValue     *value,
+                        GParamSpec *pspec)
+{
+	IrisTask        *task;
+	IrisTaskPrivate *priv;
+
+	task = IRIS_TASK (object);
+	priv = task->priv;
+
+	switch (prop_id) {
+		case PROP_CONTROL_SCHEDULER:
+			g_value_set_object (value, priv->control_scheduler);
+			break;
+		case PROP_WORK_SCHEDULER:
+			g_value_set_object (value, priv->work_scheduler);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
+}
+
+static void
 iris_task_finalize (GObject *object)
 {
 	IrisTaskPrivate *priv;
 
 	priv = IRIS_TASK(object)->priv;
+
+	g_object_unref (priv->control_scheduler);
+	g_object_unref (priv->work_scheduler);
 
 	iris_receiver_destroy (priv->receiver, priv->in_message_handler);
 	g_object_unref (priv->port);
@@ -1888,7 +1960,6 @@ iris_task_finalize (GObject *object)
 		g_closure_unref (priv->closure);
 		priv->closure = NULL;
 	}
-
 
 	if (priv->dependencies != NULL) {
 		/* Free deps (if we were cancelled, otherwise they must be completed) */
@@ -1912,7 +1983,40 @@ iris_task_class_init (IrisTaskClass *task_class)
 	task_class->dependency_canceled = iris_task_dependency_canceled_real;
 
 	object_class = G_OBJECT_CLASS (task_class);
+	object_class->constructed = iris_task_constructed;
+	object_class->set_property = iris_task_set_property;
+	object_class->get_property = iris_task_get_property;
 	object_class->finalize = iris_task_finalize;
+
+	/**
+	 * IrisTask:control-scheduler:
+	 *
+	 * The #IrisScheduler used for internal control messages.
+	 */
+	g_object_class_install_property
+	  (object_class,
+	   PROP_CONTROL_SCHEDULER,
+	   g_param_spec_object ("control-scheduler",
+	                        "Control Scheduler",
+	                        "Scheduler used to process control messages",
+	                        IRIS_TYPE_SCHEDULER,
+	                        G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME |
+	                        G_PARAM_READWRITE));
+
+	/**
+	 * IrisTask:work-scheduler:
+	 *
+	 * The #IrisScheduler used for executing the task's work function.
+	 */
+	g_object_class_install_property
+	  (object_class,
+	   PROP_WORK_SCHEDULER,
+	   g_param_spec_object ("work-scheduler",
+	                        "Work Scheduler",
+	                        "Scheduler used to run task's work function",
+	                        IRIS_TYPE_SCHEDULER,
+	                        G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME |
+	                        G_PARAM_READWRITE));
 
 	g_type_class_add_private (object_class, sizeof(IrisTaskPrivate));
 }
@@ -1925,20 +2029,19 @@ iris_task_init (IrisTask *task)
 
 	priv = task->priv = IRIS_TASK_GET_PRIVATE (task);
 
-	priv->port = iris_port_new ();
-	priv->receiver = iris_arbiter_receive (iris_get_default_control_scheduler (),
-	                                       priv->port,
-	                                       iris_task_handle_message,
-	                                       task,
-	                                       NULL);
-
-	priv->work_scheduler = g_object_ref (iris_get_default_work_scheduler ());
+	priv->control_scheduler = NULL;
+	priv->work_scheduler = NULL;
 
 	priv->progress_mode = IRIS_PROGRESS_ACTIVITY_ONLY;
 
 	priv->mutex = g_mutex_new ();
 
 	priv->error = NULL;
+
+	closure = g_cclosure_new (G_CALLBACK (iris_task_dummy), NULL, NULL);
+	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__VOID);
+	task->priv->closure = closure;
+
 	priv->handlers = NULL;
 
 	priv->dependencies = NULL;
@@ -1949,14 +2052,6 @@ iris_task_init (IrisTask *task)
 	priv->in_message_handler = FALSE;
 
 	priv->context = NULL;
-
-	/* FIXME: We should have a teardown port for dispose */
-	iris_arbiter_coordinate (priv->receiver, NULL, NULL);
-
-	/* default closure so we can conform to new style constructors */
-	closure = g_cclosure_new (G_CALLBACK (iris_task_dummy), NULL, NULL);
-	g_closure_set_marshal (closure, g_cclosure_marshal_VOID__VOID);
-	task->priv->closure = closure;
 }
 
 static void

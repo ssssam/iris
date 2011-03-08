@@ -82,7 +82,7 @@ struct _IrisTaskPrivate
 	IrisPort      *port;          /* Message delivery port */
 	IrisReceiver  *receiver;      /* Receiver for port */
 
-	volatile IrisScheduler
+	IrisScheduler *control_scheduler,
 	              *work_scheduler;
 
 	IrisProgressMode progress_mode;

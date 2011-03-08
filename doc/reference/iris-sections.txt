@@ -49,8 +49,9 @@ IrisTaskFunc
 IrisTask
 iris_task_new
 iris_task_new_with_func
-iris_task_new_with_closure
 iris_task_new_full
+iris_task_new_with_closure
+iris_task_new_with_closure_full
 iris_task_run
 iris_task_run_with_async_result
 iris_task_cancel
@@ -80,8 +81,6 @@ iris_task_set_result
 iris_task_set_result_gtype
 iris_task_set_main_context
 iris_task_get_main_context
-iris_task_set_control_scheduler
-iris_task_set_work_scheduler
 iris_task_vall_of
 iris_task_all_of
 iris_task_vany_of

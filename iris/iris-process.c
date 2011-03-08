@@ -1761,42 +1761,25 @@ _yield:
 }
 
 static void
-iris_process_finalize (GObject *object)
+iris_process_constructed (GObject       *object)
 {
-	IrisProcess        *process = IRIS_PROCESS (object);
-	IrisProcessPrivate *priv    = process->priv;
-	GList              *node;
+	IrisProcess        *process;
+	IrisProcessPrivate *priv;
+	IrisScheduler      *control_scheduler;
 
-	if (priv->work_port != NULL) {
-		iris_receiver_destroy (priv->work_receiver, FALSE);
-		g_object_unref (priv->work_port);
+	G_OBJECT_CLASS (iris_process_parent_class)->constructed (object);
 
-		priv->work_receiver = NULL;
-		priv->work_port = NULL;
-	}
+	process = IRIS_PROCESS (object);
+	priv = process->priv;
 
-	#ifdef IRIS_TRACE_TASK
-	g_print ("process %lx: finalize()\n", (gulong)process);
-	#endif
+	control_scheduler = IRIS_TASK (process)->priv->control_scheduler;
 
-	/* Work items left over from a cancel should have been freed in cancel() */
-	g_warn_if_fail (iris_queue_get_length (priv->work_queue) == 0);
-	g_object_unref (priv->work_queue);
-
-	if (priv->source != NULL)
-		g_object_unref (priv->source);
-
-	g_slice_free (gfloat, (gfloat *)priv->output_estimate_factor);
-
-	g_free ((gpointer)priv->title);
-
-	for (node=priv->watch_port_list; node; node=node->next)
-		g_object_unref (IRIS_PORT (node->data));
-	g_list_free (priv->watch_port_list);
-
-	g_timer_destroy (priv->watch_timer);
-
-	G_OBJECT_CLASS (iris_process_parent_class)->finalize (object);
+	priv->work_port = iris_port_new ();
+	priv->work_receiver = iris_arbiter_receive (control_scheduler,
+	                                            priv->work_port,
+	                                            iris_process_post_work_item,
+	                                            process, NULL);
+	iris_arbiter_coordinate (priv->work_receiver, NULL, NULL);
 }
 
 static void
@@ -1840,6 +1823,45 @@ iris_process_get_property (GObject    *object,
 }
 
 static void
+iris_process_finalize (GObject *object)
+{
+	IrisProcess        *process = IRIS_PROCESS (object);
+	IrisProcessPrivate *priv    = process->priv;
+	GList              *node;
+
+	if (priv->work_port != NULL) {
+		iris_receiver_destroy (priv->work_receiver, FALSE);
+		g_object_unref (priv->work_port);
+
+		priv->work_receiver = NULL;
+		priv->work_port = NULL;
+	}
+
+	#ifdef IRIS_TRACE_TASK
+	g_print ("process %lx: finalize()\n", (gulong)process);
+	#endif
+
+	/* Work items left over from a cancel should have been freed in cancel() */
+	g_warn_if_fail (iris_queue_get_length (priv->work_queue) == 0);
+	g_object_unref (priv->work_queue);
+
+	if (priv->source != NULL)
+		g_object_unref (priv->source);
+
+	g_slice_free (gfloat, (gfloat *)priv->output_estimate_factor);
+
+	g_free ((gpointer)priv->title);
+
+	for (node=priv->watch_port_list; node; node=node->next)
+		g_object_unref (IRIS_PORT (node->data));
+	g_list_free (priv->watch_port_list);
+
+	g_timer_destroy (priv->watch_timer);
+
+	G_OBJECT_CLASS (iris_process_parent_class)->finalize (object);
+}
+
+static void
 iris_process_class_init (IrisProcessClass *process_class)
 {
 	IrisTaskClass *task_class;
@@ -1852,9 +1874,10 @@ iris_process_class_init (IrisProcessClass *process_class)
 	task_class->handle_message = iris_process_handle_message_real;
 
 	object_class = G_OBJECT_CLASS (process_class);
-	object_class->finalize = iris_process_finalize;
+	object_class->constructed = iris_process_constructed;
 	object_class->set_property = iris_process_set_property;
 	object_class->get_property = iris_process_get_property;
+	object_class->finalize = iris_process_finalize;
 
 	/**
 	 * IrisProcess:title:
@@ -1881,21 +1904,8 @@ iris_process_init (IrisProcess *process)
 
 	priv = process->priv = IRIS_PROCESS_GET_PRIVATE (process);
 
-	/* FIXME: Leaked? "We should have a teardown port for dispose" */
-
-	/* Default scheduler is used to pass work items, the only real reason is
-	 * maybe one work item will take a lot longer than the others, and if that
-	 * item blocks the quicker ones being received it prevents them being
-	 * processed by other cores ...
-	 * FIXME: not sure even this is a compelling rationale ..
-	 */
-	priv->work_port = iris_port_new ();
-	priv->work_receiver = iris_arbiter_receive (iris_get_default_control_scheduler (),
-	                                            priv->work_port,
-	                                            iris_process_post_work_item,
-	                                            process, NULL);
-	iris_arbiter_coordinate (priv->work_receiver, NULL, NULL);
-
+	priv->work_port = NULL;
+	priv->work_receiver = NULL;
 	priv->work_queue = iris_queue_new ();
 
 	priv->source = NULL;

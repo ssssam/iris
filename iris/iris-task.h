@@ -181,6 +181,12 @@ IrisTask*     iris_task_new_full              (IrisTaskFunc         func,
                                                gpointer             user_data,
                                                GDestroyNotify       notify,
                                                gboolean             async,
+                                               IrisScheduler       *control_scheduler,
+                                               IrisScheduler       *work_scheduler,
+                                               GMainContext        *context);
+IrisTask*     iris_task_new_with_closure_full (GClosure            *closure,
+                                               gboolean             async,
+                                               IrisScheduler       *control_scheduler,
                                                IrisScheduler       *work_scheduler,
                                                GMainContext        *context);
 
@@ -250,10 +256,6 @@ void          iris_task_set_result_gtype      (IrisTask            *task,
 void          iris_task_set_main_context      (IrisTask            *task,
                                                GMainContext        *context);
 GMainContext* iris_task_get_main_context      (IrisTask            *task);
-void          iris_task_set_work_scheduler    (IrisTask            *task,
-                                               IrisScheduler       *work_scheduler);
-void          iris_task_set_control_scheduler (IrisTask            *task,
-                                               IrisScheduler       *control_scheduler);
 
 IrisTask*     iris_task_vall_of               (IrisTask            *first_task, ...) __attribute__ ((__sentinel__));
 IrisTask*     iris_task_all_of                (GList *tasks);
