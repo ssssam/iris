@@ -435,7 +435,7 @@ iris_receiver_resume (IrisReceiver *receiver)
 	/* We have been destroyed, shouldn't have got here! */
 	g_return_if_fail (priv->port != NULL);
 
-	iris_port_flush (priv->port);
+	iris_port_resume (priv->port);
 }
 
 

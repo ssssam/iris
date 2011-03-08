@@ -62,7 +62,7 @@ GType         iris_port_get_type        (void) G_GNUC_CONST;
 IrisPort*     iris_port_new             (void);
 
 void          iris_port_post            (IrisPort *port, IrisMessage *message);
-void          iris_port_flush           (IrisPort *port);
+void          iris_port_resume          (IrisPort *port);
 gboolean      iris_port_is_paused       (IrisPort *port);
 
 gboolean      iris_port_has_receiver    (IrisPort *port);

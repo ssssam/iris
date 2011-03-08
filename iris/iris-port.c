@@ -80,7 +80,7 @@ iris_port_set_receiver_real (IrisPort     *port,
 	g_mutex_unlock (priv->mutex);
 
 	if (flush)
-		iris_port_flush (port);
+		iris_port_resume (port);
 }
 
 static void
@@ -182,7 +182,7 @@ store_message_at_tail_ul (IrisPort    *port,
 }
 
 /* Default way to post a message, inside the port lock so no races can occur
- * with iris_port_flush(). (These are dangerous because when a receiver's
+ * with iris_port_resume(). (These are dangerous because when a receiver's
  * last message completes the port must be flushed so it doesn't freeze up).
  */
 static IrisDeliveryStatus
@@ -419,16 +419,14 @@ iris_port_get_queue_length (IrisPort *port)
 }
 
 /**
- * iris_port_flush:
+ * iris_port_resume:
  * @port: An #IrisPort
  *
- * Flushes the port by trying to redeliver messages to a listening
- * #IrisReceiver.
+ * Redeliver messages to a listening #IrisReceiver until the port becomes
+ * paused again.
  */
-/* FIXME: would this function be better called iris_port_resume() ? There's never a reason
- * to actually flush the port, unless you are closing it ... */
 void
-iris_port_flush (IrisPort    *port)
+iris_port_resume (IrisPort *port)
 {
 	IrisPortPrivate    *priv;
 	IrisMessage        *message;

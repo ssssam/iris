@@ -240,7 +240,7 @@ IrisThreadWork
 IrisPort
 iris_port_new
 iris_port_post
-iris_port_flush
+iris_port_resume
 iris_port_is_paused
 iris_port_has_receiver
 iris_port_get_receiver
