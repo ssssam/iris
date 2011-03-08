@@ -1703,20 +1703,11 @@ _yield:
 			g_value_unset (&params[0]);
 			g_timer_destroy (timer);
 
-			/* Yield, by reposting this function to the scheduler and returning.
-			 * FIXME: would be nice if we could tell the scheduler "don't execute this for at least
-			 * 20ms" or something so we don't waste quite as much power waiting for work.
-			 */
-			/* Also, we currently give this a ref on the process so that it
-			 * won't be destroyed if there's still an execution cycle queued. A
-			 * slightly more efficient way would be to remove the cycle from the
-			 * scheduler's queue, perhaps.
-			 */
+			/* Yield, by reposting this function to the scheduler and returning. */
 			work_scheduler = g_atomic_pointer_get (&IRIS_TASK (process)->priv->work_scheduler);
 			iris_scheduler_queue (work_scheduler,
 			                      (IrisCallback)iris_process_execute_real,
-			                      g_object_ref (process),
-			                      g_object_unref);
+			                      process, NULL);
 			return;
 		}
 
