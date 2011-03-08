@@ -256,9 +256,6 @@ iris_process_new_with_closure (GClosure *closure)
  * If @process has any successors, they will also start. For more information,
  * see iris_process_connect().
  */
-/* FIXME: part of me thinks this should only start the process in question,
- * and iris_process_run_all() should start the chain ...
- */
 void
 iris_process_run (IrisProcess *process)
 {
@@ -486,14 +483,14 @@ iris_process_forward (IrisProcess *process,
  * situation, iris_process_enqueue() would fail if you had called
  * iris_process_no_more_work() already.
  */
-/* FIXME: same applies as iris_process_forward() */
 void
 iris_process_recurse (IrisProcess *process,
                       IrisMessage *work_item)
 {
 	/* This function behaves the same as iris_process_enqueue but without
-	 * checking for IRIS_PROCESS_FLAG_NO_MORE_WORK. It's useful having it as a
-	 * separate function for safety.
+	 * checking for IRIS_PROCESS_FLAG_NO_MORE_WORK (because it's called from
+	 * inside the process). It's useful having it as a separate function for
+	 * safety.
 	 */
 	IrisProcessPrivate *priv;
 
@@ -883,9 +880,6 @@ iris_process_set_title (IrisProcess *process,
  * is the first process, or its estimated total work if it is further down the
  * chain. You may alter the calculation using @factor. For example, if each input
  * normally generates two output work items, set it to 2.0.
- */
-/* FIXME: when processes track their own progress display mode, should we force
- * chains that don't do estimation to IRIS_PROGRESS_ACTIVITY_ONLY ??
  */
 /* A quick API design note: I considered much more powerful ways of estimation,
  * but decided it was needless. You could have a hook/signal called from
@@ -1606,6 +1600,11 @@ iris_task_post_work_item_real (IrisProcess *process,
 
 	priv = process->priv;
 
+	/* FIXME: currently the work receiver is exclusive. We could remove the
+	 * arbiter if this queue was MT-safe - but would it be faster having the
+	 * lock on an async queue level rather than the receiver? Or, would it
+	 * make sense having the work queue a lock-free queue?
+	 */
 	if (! iris_process_was_canceled (process)) {
 		iris_message_ref (work_item);
 		iris_queue_push (priv->work_queue, work_item);

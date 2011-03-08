@@ -2,16 +2,55 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-* Valgrind tasks-1 and process-1 a  bit
+* On canceled/cancelled - should we be consistent with GLib?
 
-* I think rename was_canceled back to is_canceled ...
+* What to do about gtk2/gtk3?
+  -> seems like the approach is to require gtk3; other projects eg. clutter-gtk I guess you have
+     to use an appropriately old version to run with gtk2, or peas-gtk which allows an "experimental"
+     gtk2 version only.
 
-* iris_receiver_destroy() shouldn't take those parameters. Message processing
-  should be quick; maybe put a note to that effect in the docs. A scheduler
-  can provide an 'iterate' function which would iterate the gmain context, or
-  nothing in other cases.
+* Why did chergert not use gsignal for callbacks/errbacks?
 
-* Grep FIXME
+..........
+
+* Do you want iris_task_new() at all? Why not make that iris_task_new_with_func()?
+  Different things you want to do:
+    -> make a task to run a func
+    -> make that with a func and a callback
+    -> do the same with a closure (bindings)
+  Essentially, I don't see why it should be okay to create a task with no work
+  function, when that's the whole point of a task ... okay, for things like
+  vall_of ...
+  still not sure of the value of encouraging the user to create them with no
+  function though .. I still think iris_task_new() should take a func parameter
+
+* This is really bikeshedding, but I still don't like 'finished' to mean
+  'no longer executing'. A task has three finishing states: failed, succeeded
+  and canceled. I feel like I solved the problem in part describing them as
+  finishing states. canceled is a finishing state. It's not completion nor
+  success, nor failure really. I just really want to clean up use of this
+  terminology, and it would be really useful to have a word that meant 
+  non-cancelled, ie. succeeded or failed. There's "completed" but that kind
+  of implies non-failure - completed = succeeded in my head. What's the
+  opposite of canceled, or than finished? Damn you english language!
+  I now in fact think that the solution is to have completed/canceled. The
+  work *function* completed or was canceled, even if the work *itself* was not
+  completed due to a fatal error. Maybe if you stress that point things will be
+  a lot cleaner.
+
+* Raising a fatal error in a task should imply iris_task_work_finished().
+  This would mean renaming that function to iris_task_work_succeeded() too.
+
+* I want a nice diagram drawn of how all this stuff works.
+.......
+
+=> Rename no-more-work stuff to OPEN and CLOSED states for processes - this seems
+a lot cleaner. And change the chaining method to passing CLOSE down the chain
+rather than querying the source to see if no-more-work is set or not.
+
+* progress-dialog/progress-monitor tests: use wait-func ..
+
+* I think rename was_canceled back to is_canceled ... ?
 
 * Finish docs - README and gtk-doc tutorials :(
 
@@ -20,9 +59,12 @@ Iris 0.3.0
 * Stress the point that all of libiris is MT-safe and all of libiris-gtk is not
   We need a constistent story on thread safety ..
 
-* I think shared library build with make is broken .
-
 * Fix progress-chains disappearing dialog bug ... :(
+  .. this happened:
+  /progress-monitor/info-bar/recurse 1:                                
+GLib-GObject-WARNING **: invalid cast from `(null)' to `GtkBin'
+
+  maybe repeat that test to try to track down the issue?
 
 * Prevent arbiters from being connected to receivers that have already processed
   messages.
@@ -33,6 +75,7 @@ Iris 0.3.0
   -> in task & process, add to both function and message handler, for easier
   debugging (better if we catch it right when the function was called, but the
   vagaries of message passing means it won't always work)
+  -> make sure this is reflected in the docs
 
 Should anything be allowed to happen after execution begins? Currently on tasks
 you can add callbacks/errbacks and dependencies, add watches, and it even seems
@@ -46,11 +89,6 @@ until iris_tasks_run() is called. Need to update:
 
 What about chaining together processes that are being cancelled, is this possible?
 The tests could be cancelled before they run; add a testcase for this.
-
-* What to do about gtk2/gtk3?
-  -> seems like the approach is to require gtk3; other projects eg. clutter-gtk I guess you have
-     to use an appropriately old version to run with gtk2, or peas-gtk which allows an "experimental"
-     gtk2 version only.
 
 * Check all examples and tests!
 
@@ -75,7 +113,7 @@ Known bugs
   gtk_widget_show (priv->box) in show_group() in gtk-iris-progress-dialog.c ...
   I doubt that will fix it.
 
-* The scheduling is very dumb.
+* The scheduling is very dumb, especially for processes.
 
 * Tests /process/cancel chain - head/tail run very slowly at the moment. This
   is due to dumb process scheduling: the tail process runs
@@ -86,19 +124,15 @@ Known bugs
   much faster.
 
 ---------------------------------------------------------------------------
-Things for next version
----------------------------------------------------------------------------
-
-* I think tasks & processes should gain a state system. The flags are really
-  doing this anyway, it would make atomic changes a lot easier and remove
-  some flags, and make the internals easier to understand. I see tasks having
-  4 phases: creation, work execution, callbacks, finished. Processes have the
-  preparation stage where work is enqueued, but this must be separate because
-  it can be going on while the process is actually executing.
-
----------------------------------------------------------------------------
 Missing or Incompleteness
 ---------------------------------------------------------------------------
+
+I think tasks & processes should gain a state system. The flags are really
+doing this anyway, it would make atomic changes a lot easier and remove
+some flags, and make the internals easier to understand. I see tasks having
+4 phases: creation, work execution, callbacks, finished. Processes have the
+preparation stage where work is enqueued, but this must be separate because
+it can be going on while the process is actually executing.
 
 Why do the recursion tests take so long?
 
@@ -112,7 +146,7 @@ General test improvements needed:
     where possible and spy on the message channel for what we want when not .. even
     wait_messages in process-1.c is way better than g_usleep()
 
-waf should build the gtk-docs
+Bring wscript up to the same standard as the autotools build system
 
 What about errors in processes? There are two possibilites -
   1. a fatal error prevents further work and can be handled as an iristask error
@@ -142,14 +176,16 @@ We are not currently destroying threads ever. After they are created they
 stay created until the end of the process. We need to find a way to
 periodically walk the free-list to shutdown old threads.
 
-GIO has some async primitives of its own. Other than in
-iris_task_run_with_async_result() we don't really take advantage of them. Could
-we replace bits of Iris with the glib code?
+IrisPort
 
-Also, what's this? http://repnop.org/ck/  - a possible source of existing
-concurrency primitives to save having to manage our own in Iris. However
-some of the stuff is duplicated in GLib.
-
+	It would be cool to add a 'closed' state to ports. On
+	iris_receiver_destroy() the owner would know not to send any more messages.
+	In particular, in _iris_progress_watch_disconnect(), the task/process has no
+	way of knowing the watch is no longer watching currently. That said, we
+	could send a REMOVE_WATCH message to the task/process which would have the
+	same effect. An alternative approach would be to make it an error to post to
+	a port once its receiver has been destroyed (this is probably too strict
+	though).
 
 IrisScheduler
 
@@ -285,9 +321,6 @@ Tests
 Alex added warnings for GSimpleAsyncResult when not used from main thread.
 We need to implement our own now since this isn't reusable.
 
-How does Iris relate to GThreadPool? Have we reinvented things we could
-actually pull in from GLib?
-
 Introspection. See:
   http://live.gnome.org/GObjectIntrospection/WritingBindingableAPIs
 
@@ -385,17 +418,47 @@ some sort of size-request hack but is probably too rare a case to worry about.)
 The Future
 ---------------------------------------------------------------------------
 
+Another vision of how process chaining could work: add a process container
+object. This would make chaining seem a bit less of a messy hack, but it kind
+of seems like overkill while we don't actually need it.
+
 If this project ever gets more adoption:
 	http://ssickert.wordpress.com/2010/11/22/taskview-release/
 it might be worth creating an IrisProgressMonitor that could send task status
 over dbus according to the spec.
 
-It's also worth looking at how Nautilus does things. A few differences are:
-  - a progress dialog can be closed, and it will then become a resident
-    notification or status icon and will stay that way if further watches are
-    added. This something it would be quite easy to implement outside of Iris,
-    so whether it should be added depends on if there are other uses/if it's
-    generally considered a good design feature.
+IrisProcess has some similarities with GstPipeline/GstElement. It would make
+sense to ensure we agree on terminology/API where things match up, although
+there would never really be a case for actually merging these things.
+
+Other GNOME projects that use something like this: Nautilus, GIMP (image
+processing tasks), Marlin (audio editing operations), file-roller? ardour?
+other audio/video editing programs .. 
+
+It would be cool to animate watches disappearing from the progress dialog. This
+is pie in the sky :)
+
+---------------------------------------------------------------------------
+Related art
+---------------------------------------------------------------------------
+
+How does Iris relate to GThreadPool? Have we reinvented things we could
+actually pull in from GLib?
+
+GIO has some async primitives of its own. Other than in
+iris_task_run_with_async_result() we don't really take advantage of them. Could
+we replace bits of Iris with the glib code?
+
+Also, what's this? http://repnop.org/ck/  - a possible source of existing
+concurrency primitives to save having to manage our own in Iris. However
+some of the stuff is duplicated in GLib.
+
+Nautilus has FileOperations etc. Main differences from Iris:
+  - ProgressInfo (our equivalent of progresswatches I think) have a
+    GCancellable. IrisTask takes a totally different approach to cancelling, I
+    don't know enough about GCancellable to see which makes more sense ...
+  - ProgressInfo has a started signals, these could go on IrisTask if
+    necessary
   - rather than a custom object for the overall progress monitor, there are
     NautilusProgressInfoWidget and NautilusProgressUIManager classes ... it's
     hard to see which is the better design, but I think the only real advantage
@@ -403,12 +466,9 @@ It's also worth looking at how Nautilus does things. A few differences are:
     still using the widget display code. I'm not sure why you would want to do
     that though unless you were making a change big enough that you'd probably
     want to display the watch in a different way anyway ..
-  - ProgressInfo (our equivalent of progresswatches I think) have a
-    GCancellable. IrisTask takes a totally different approach to cancelling, I
-    don't know enough about GCancellable to see which makes more sense ...
-  - ProgressInfo has a started signals, these could go on IrisTask if
-    necessary
+  - a progress dialog can be closed, and it will then become a resident
+    notification or status icon and will stay that way if further watches are
+    added. This something it would be quite easy to implement outside of Iris,
+    so whether it should be added depends on if there are other uses/if it's
+    generally considered a good design feature.
 
-
-It would be cool to animate watches disappearing from the progress dialog. This
-is pie in the sky :)

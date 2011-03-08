@@ -103,7 +103,6 @@ trigger_process (GtkButton *trigger,
 	n = GPOINTER_TO_INT (user_data);
 
 	if (n==1) {
-		/* FIXME: need to be able to set just this process to activity mode ... */
 		process[0] = iris_process_new_with_func (find_socks_func, NULL, NULL);
 		process[1] = iris_process_new_with_func (pair_socks_func, NULL, NULL);
 		process[2] = iris_process_new_with_func (push_forward_func, NULL, NULL);

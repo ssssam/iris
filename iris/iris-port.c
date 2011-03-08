@@ -486,7 +486,17 @@ iris_port_resume (IrisPort *port)
 		}
 
 		/* Unlock while we can so we don't block threads that want to post to
-		 * the port. FIXME: is there a more effecient way?
+		 * the port.
+		 *
+		 * FIXME: could we do this in a more efficient way than lots of mutex
+		 * locks and blocks? It would involve:
+		 *   * making the queue lock-free, or 
+		 *   * using two queues, so that calls to iris_port_post() can go in one
+		 *     queue while we are flushing the other and then we stick them
+		 *     together.
+		 * However, consider the actual use case for ports being paused: an
+		 * exclusive receiver which will probably only accept one message before
+		 * pausing again. Maybe it would be better to optimise for that pattern?
 		 */
 		g_mutex_unlock (priv->mutex);
 

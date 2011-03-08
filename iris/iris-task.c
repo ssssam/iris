@@ -174,7 +174,7 @@ iris_task_new_with_closure (GClosure *closure)
  * @user_data: data for @func
  * @notify: A destroy notify after execution of the task
  * @async: %FALSE unless the task will not complete during the execution of
- *         @func, and will call iris_task_work_complete() later.
+ *         @func, and will call iris_task_work_finished() later.
  * @control_scheduler: An #IrisScheduler, or %NULL to use the default
  * @work_scheduler: An #IrisScheduler or %NULL to use the default
  * @context: A #GMainContext or %NULL
@@ -230,7 +230,7 @@ iris_task_new_full (IrisTaskFunc   func,
  * iris_task_new_with_closure_full
  * @closure: A #GClosure
  * @async: %FALSE unless the task will not complete during the execution of
- *         @closure, and will call iris_task_work_complete() later.
+ *         @closure, and will call iris_task_work_finished() later.
  * @control_scheduler: An #IrisScheduler, or %NULL
  * @work_scheduler: An #IrisScheduler, or %NULL
  * @context: A #GMainContext, or %NULL
