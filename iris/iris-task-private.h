@@ -114,8 +114,9 @@ struct _IrisTaskPrivate
 	                               */
 };
 
+/* Internals exposed for IrisProcess etc. */
 void iris_task_remove_dependency_sync (IrisTask *task, IrisTask *dep);
-
+void iris_task_progress_callbacks (IrisTask *task);
 void iris_task_notify_observers (IrisTask *task);
 
 #endif /* __IRIS_TASK_PRIVATE_H__ */

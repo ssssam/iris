@@ -1090,6 +1090,47 @@ handle_start_work (IrisProcess *process,
 }
 
 static void
+handle_work_finished (IrisProcess *process,
+                      IrisMessage *in_message)
+{
+	IrisMessage *out_message;
+
+	g_return_if_fail (IRIS_IS_PROCESS (process));
+
+	if (FLAG_IS_OFF (process, IRIS_PROCESS_FLAG_HAS_SINK) &&
+	    FLAG_IS_OFF (process, IRIS_PROCESS_FLAG_HAS_SOURCE)) {
+		/* Unchained process works like a task */
+		IRIS_TASK_CLASS (iris_process_parent_class)->handle_message
+		  (IRIS_TASK (process), in_message);
+		return;
+	}
+
+	#ifdef IRIS_TRACE_TASK
+	g_print ("process %lx: work-finished, process has sink\n",
+			 (gulong)process);
+	#endif
+
+	/* When chained, we behave differently to normal tasks: tasks will
+	 * remove the 'cancelled' flag if it was set after the work was
+	 * completed; if the cancel came from a sink or source though we
+	 * can't do that. Our sink will be waiting for us to send chain-cancel
+	 * before it finishes the cancel so we have to send that. And if the
+	 * cancel came from a source it makes no sense to have completed while
+	 * the rest of the chain was cancelled.
+	 */
+	DISABLE_FLAG (process, IRIS_TASK_FLAG_WORK_ACTIVE);
+	ENABLE_FLAG (process, IRIS_TASK_FLAG_CALLBACKS_ACTIVE);
+
+	if (FLAG_IS_ON (process, IRIS_TASK_FLAG_CANCELED)) {
+		DISABLE_FLAG (process, IRIS_TASK_FLAG_CALLBACKS_ACTIVE);
+
+		out_message = iris_message_new (IRIS_TASK_MESSAGE_FINISH_CANCEL);
+		iris_port_post (IRIS_TASK (process)->priv->port, out_message);
+	} else
+		iris_task_progress_callbacks (IRIS_TASK (process));
+}
+
+static void
 handle_callbacks_finished (IrisProcess *process,
                            IrisMessage *in_message)
 {
@@ -1144,15 +1185,17 @@ handle_start_cancel (IrisProcess *process,
 	g_print ("process %lx: got start-cancel\n", (gulong)process);
 	#endif
 
-	if (FLAG_IS_ON (process, IRIS_TASK_FLAG_CALLBACKS_ACTIVE))
+	ENABLE_FLAG (process, IRIS_TASK_FLAG_CANCELED);
+	DISABLE_FLAG (process, IRIS_TASK_FLAG_NEED_EXECUTE);
+
+	if (FLAG_IS_ON (process, IRIS_TASK_FLAG_CALLBACKS_ACTIVE)) {
 		/* Too late to cancel, callbacks have started */
+		DISABLE_FLAG (process, IRIS_TASK_FLAG_CANCELED);
 		return;
+	}
 
 	if (! IRIS_TASK_GET_CLASS (process)->can_cancel (IRIS_TASK (process)))
 		return;
-
-	ENABLE_FLAG (process, IRIS_TASK_FLAG_CANCELED);
-	DISABLE_FLAG (process, IRIS_TASK_FLAG_NEED_EXECUTE);
 
 	if (FLAG_IS_ON (process, IRIS_PROCESS_FLAG_HAS_SOURCE)) {
 		/* If we have a source, FINISH_CANCEL is not sent until we receive
@@ -1244,13 +1287,14 @@ handle_finish_cancel (IrisProcess *process,
 
 static void
 handle_dep_finished (IrisProcess *process,
-                     IrisMessage *message)
+                     IrisMessage *in_message)
 {
 	IrisProcessPrivate *priv;
 	IrisTask           *observed;
+	IrisMessage        *out_message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
-	g_return_if_fail (message != NULL);
+	g_return_if_fail (in_message != NULL);
 
 	if (FLAG_IS_ON (process, IRIS_TASK_FLAG_FINISHED))
 		/* This is possible when for example our source completes while we get
@@ -1259,13 +1303,13 @@ handle_dep_finished (IrisProcess *process,
 		return;
 
 	priv = process->priv;
-	observed = g_value_get_object (iris_message_get_data (message));
+	observed = g_value_get_object (iris_message_get_data (in_message));
 
 	if ((priv->source == NULL || IRIS_TASK (priv->source) != observed) &&
 	    (priv->sink == NULL || IRIS_TASK (priv->sink) != observed)) {
 		/* Must be a task dependency */
 		IRIS_TASK_CLASS (iris_process_parent_class)->handle_message
-		  (IRIS_TASK (process), message);
+		  (IRIS_TASK (process), in_message);
 		return;
 	}
 
@@ -1278,6 +1322,16 @@ handle_dep_finished (IrisProcess *process,
 		g_warn_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_FINISHED));
 
 		DISABLE_FLAG (process, IRIS_PROCESS_FLAG_OPEN);
+
+		if (FLAG_IS_ON (process, IRIS_TASK_FLAG_CANCELED) &&
+		    FLAG_IS_OFF (process, IRIS_TASK_FLAG_WORK_ACTIVE)) {
+			/* Our work function should send finish-cancel when it finishes and
+			 * the source has finished, but it may have finished right before
+			 * flag was set. It's safe to send multiple finish-cancel messages.
+			 */
+			out_message = iris_message_new (IRIS_TASK_MESSAGE_FINISH_CANCEL);
+			iris_port_post (IRIS_TASK (process)->priv->port, out_message);
+		}
 	}
 }
 
@@ -1545,6 +1599,10 @@ iris_process_handle_message_real (IrisTask    *task,
 		handle_start_work (process, message);
 		break;
 
+	case IRIS_TASK_MESSAGE_WORK_FINISHED:
+		handle_work_finished (process, message);
+		break;
+
 	case IRIS_TASK_MESSAGE_CALLBACKS_FINISHED:
 		handle_callbacks_finished (process, message);
 		break;
@@ -1732,6 +1790,11 @@ _yield:
 		update_status (process, TRUE);
 
 	if (FLAG_IS_ON (process, IRIS_TASK_FLAG_CANCELED)) {
+		#ifdef IRIS_TRACE_TASK
+		g_print ("process %lx: work function finished in canceled state\n",
+		         (gulong)process);
+		#endif
+
 		DISABLE_FLAG (process, IRIS_TASK_FLAG_WORK_ACTIVE);
 
 		if (priv->watch_port_list != NULL) {
@@ -1756,6 +1819,11 @@ _yield:
 			iris_port_post (IRIS_TASK (process)->priv->port, message);
 		}
 	} else {
+		#ifdef IRIS_TRACE_TASK
+		g_print ("process %lx: work function finished in completed state\n",
+		         (gulong)process);
+		#endif
+
 		/* Execute callbacks, mark finished and unref. */
 		iris_task_work_finished (IRIS_TASK (process));
 

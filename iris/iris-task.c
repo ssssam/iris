@@ -1057,7 +1057,7 @@ iris_task_progress_callbacks_main (IrisTask *task)
 	iris_task_progress_callbacks_tick (task);
 }
 
-static void
+void
 iris_task_progress_callbacks (IrisTask *task)
 {
 	IrisScheduler *scheduler;
@@ -1237,14 +1237,14 @@ handle_work_finished (IrisTask    *task,
 	g_return_if_fail (FLAG_IS_ON (task, IRIS_TASK_FLAG_WORK_ACTIVE));
 	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_CALLBACKS_ACTIVE));
 
+	DISABLE_FLAG (task, IRIS_TASK_FLAG_WORK_ACTIVE);
+	ENABLE_FLAG (task, IRIS_TASK_FLAG_CALLBACKS_ACTIVE);
+
 	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELED)) {
 		/* Cancel happened after work function completed. So let's ignore
 		 * it. */
 		DISABLE_FLAG (task, IRIS_TASK_FLAG_CANCELED);
 	}
-
-	DISABLE_FLAG (task, IRIS_TASK_FLAG_WORK_ACTIVE);
-	ENABLE_FLAG (task, IRIS_TASK_FLAG_CALLBACKS_ACTIVE);
 
 	if (!PROGRESS_BLOCKED (task))
 		iris_task_progress_callbacks (task);

@@ -560,9 +560,9 @@ test_chaining_3 (void) {
 		g_thread_yield ();
 };
 
-/* Cancel a chain and make sure they all exit */
+/* cancel/chain: Cancel a chain and make sure they all exit */
 static void
-test_cancelling_chained (gconstpointer user_data) {
+test_cancel_chain (gconstpointer user_data) {
 	IrisProcess *head_process, *mid_process, *tail_process;
 	IrisMessage *message[50];
 	gboolean     cancel_tail = GPOINTER_TO_INT (user_data);
@@ -609,7 +609,7 @@ test_cancelling_chained (gconstpointer user_data) {
 	}
 };
 
-/* cancel before chained: cancel a process before chaining it to another.
+/* cancel/chain 2: cancel a process before chaining it to another.
  * This isn't encouraged but can happen in normal cases due to message delays.
  */
 static void
@@ -636,12 +636,48 @@ test_cancel_before_chained (void) {
 	g_object_unref (tail_process);
 };
 
-/* canceled chain is_finished(): the tail process should not return TRUE for
+/* cancel/chain 3: try to trigger a race between work function completing and
+ * cancel message being processed. There's a danger that FINISH_CANCEL might
+ * not be sent if the race isn't handled properly.
+ */
+static void
+test_cancel_chain_delayed_finish (void)
+{
+	IrisProcess  *head_process, *mid_process, *tail_process;
+	volatile gint wait_state = 0;
+
+	head_process = iris_process_new_with_func (wait_process_func,
+	                                           (gpointer)&wait_state,
+	                                           NULL);
+	mid_process  = iris_process_new_with_func (NULL, NULL, NULL);
+	tail_process = iris_process_new_with_func (NULL, NULL, NULL);
+	g_object_ref (tail_process);
+
+	iris_process_connect (head_process, mid_process);
+	iris_process_connect (mid_process, tail_process);
+
+	iris_process_enqueue (head_process, iris_message_new (0));
+	iris_process_close (head_process);
+	iris_process_run (head_process);
+
+	while (g_atomic_int_get (&wait_state) != 1)
+		g_thread_yield ();
+
+	iris_process_cancel (tail_process);
+	g_atomic_int_set (&wait_state, 2);
+
+	while (! iris_process_is_finished (tail_process))
+		g_thread_yield ();
+
+	g_object_unref (tail_process);
+}
+
+/* cancel/chain is_finished(): the tail process should not return TRUE for
  * is_finished() until the whole chain has finished, even if the tail process
  * was explicitly canceled first.
  */
 static void
-test_canceled_chain_is_finished (void) {
+test_cancel_chain_is_finished (void) {
 	IrisProcess   *head_process, *tail_process;
 	volatile gint  wait_state;
 
@@ -833,10 +869,10 @@ int main(int argc, char *argv[]) {
 
 	g_test_add_func ("/process/lifecycle", test_lifecycle);
 	g_test_add_func ("/process/simple", test_simple);
-	g_test_add_func_repeated ("/process/cancel - creation", 50, test_cancel_creation);
-	g_test_add_func_repeated ("/process/cancel - preparation", 50, test_cancel_preparation);
-	g_test_add_func_repeated ("/process/cancel - execution 1", 50, test_cancel_execution_1);
-	g_test_add_func_repeated ("/process/cancel - execution 2", 50, test_cancel_execution_2);
+	g_test_add_func_repeated ("/process/cancel/creation", 50, test_cancel_creation);
+	g_test_add_func_repeated ("/process/cancel/preparation", 50, test_cancel_preparation);
+	g_test_add_func_repeated ("/process/cancel/execution 1", 50, test_cancel_execution_1);
+	g_test_add_func_repeated ("/process/cancel/execution 2", 50, test_cancel_execution_2);
 	g_test_add_func ("/process/cancel - execution 3", test_cancel_execution_3);
 
 	g_test_add_func ("/process/titles", titles);
@@ -845,18 +881,21 @@ int main(int argc, char *argv[]) {
 	g_test_add_func_repeated ("/process/chaining 1", 50, chaining_1);
 	g_test_add_func ("/process/chaining 2", chaining_2);
 	g_test_add_func ("/process/chaining 3", test_chaining_3);
-	g_test_add_data_func_repeated ("/process/cancel chain - head",
-	                               5,
+	g_test_add_data_func_repeated ("/process/cancel/chained - head",
+	                               50,
 	                               GINT_TO_POINTER (FALSE),
-	                               test_cancelling_chained);
-	g_test_add_data_func_repeated ("/process/cancel chain - tail",
-	                               5,
+	                               test_cancel_chain);
+	g_test_add_data_func_repeated ("/process/cancel/chained - tail 1",
+	                               50,
 	                               GINT_TO_POINTER (TRUE),
-	                               test_cancelling_chained);
-	g_test_add_func ("/process/canceling chained 2", test_cancel_before_chained);
-	g_test_add_func_repeated ("/process/canceled chain is_finished()",
+	                               test_cancel_chain);
+	g_test_add_func ("/process/cancel/chained - tail 2", test_cancel_before_chained);
+	g_test_add_func_repeated ("/process/cancel/chained - tail 3",
 	                          50,
-	                          test_canceled_chain_is_finished);
+	                          test_cancel_chain_delayed_finish);
+	g_test_add_func_repeated ("/process/cancel/chain is_finished()",
+	                          50,
+	                          test_cancel_chain_is_finished);
 
 	g_test_add_func ("/process/output estimates basic", test_output_estimates_basic);
 	g_test_add_func ("/process/output estimates low", test_output_estimates_low);
