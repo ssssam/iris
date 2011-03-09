@@ -1225,9 +1225,9 @@ handle_progress_callbacks (IrisTask    *task,
 
 	g_return_if_fail (FLAG_IS_ON (task, IRIS_TASK_FLAG_WORK_ACTIVE) ||
 	                  FLAG_IS_ON (task, IRIS_TASK_FLAG_CALLBACKS_ACTIVE));
+	g_return_if_fail (task->priv->dependencies == NULL);
 
-	if (!PROGRESS_BLOCKED (task))
-		iris_task_progress_callbacks_or_finish (task);
+	iris_task_progress_callbacks_or_finish (task);
 }
 
 static void
@@ -1236,6 +1236,7 @@ handle_work_finished (IrisTask    *task,
 {
 	g_return_if_fail (FLAG_IS_ON (task, IRIS_TASK_FLAG_WORK_ACTIVE));
 	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_CALLBACKS_ACTIVE));
+	g_return_if_fail (task->priv->dependencies == NULL);
 
 	DISABLE_FLAG (task, IRIS_TASK_FLAG_WORK_ACTIVE);
 	ENABLE_FLAG (task, IRIS_TASK_FLAG_CALLBACKS_ACTIVE);
