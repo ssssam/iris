@@ -46,6 +46,7 @@ static void     iris_progress_monitor_interface_init          (IrisProgressMonit
 static GObject *gtk_iris_progress_dialog_constructor          (GType type,
                                                                guint n_construct_properties,
                                                                GObjectConstructParam *construct_params);
+static void     gtk_iris_progress_dialog_dispose              (GObject *object);
 static void     gtk_iris_progress_dialog_finalize             (GObject *object);
 
 static void     gtk_iris_progress_dialog_add_group              (IrisProgressMonitor *progress_monitor,
@@ -106,6 +107,7 @@ gtk_iris_progress_dialog_class_init (GtkIrisProgressDialogClass *progress_dialog
 	GObjectClass   *object_class = G_OBJECT_CLASS  (dialog_class);
 
 	object_class->constructor = gtk_iris_progress_dialog_constructor;
+	object_class->dispose     = gtk_iris_progress_dialog_dispose;
 	object_class->finalize    = gtk_iris_progress_dialog_finalize;
 
 	gtk_iris_progress_dialog_parent_class = g_type_class_peek_parent (dialog_class);
@@ -142,6 +144,17 @@ gtk_iris_progress_dialog_init (GtkIrisProgressDialog *progress_dialog)
 
 	/* A window with no title is never allowed! */
 	update_dialog_title (GTK_IRIS_PROGRESS_DIALOG (progress_dialog), NULL);
+}
+
+static void
+gtk_iris_progress_dialog_dispose (GObject *object)
+{
+	GtkIrisProgressDialogPrivate *priv;
+
+	priv = GTK_IRIS_PROGRESS_DIALOG (object)->priv;
+
+	priv->in_destruction = TRUE;
+	G_OBJECT_CLASS (gtk_iris_progress_dialog_parent_class)->dispose (object);
 }
 
 static void
@@ -752,6 +765,14 @@ handle_stopped (IrisProgressMonitor *progress_monitor,
 	g_return_if_fail (GTK_IRIS_IS_PROGRESS_DIALOG (progress_monitor));
 
 	priv = GTK_IRIS_PROGRESS_DIALOG (progress_monitor)->priv;
+
+	/* Finalize handler disconnects and frees all the watches; if this races
+	 * with the watch completing/being canceled, ignore the message to avoid
+	 * confusing the dispose handler. Plus, all the widgets will already be gone
+	 * due to the container widget being in dispose.
+	 */
+	if (priv->in_destruction)
+		return;
 
 	/* Set cancel button insensitive */
 	if (watch->group == NULL)

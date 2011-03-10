@@ -43,6 +43,7 @@ struct _GtkIrisProgressInfoBarPrivate
 	gint       watch_hide_delay;
 
 	guint      in_finished : 1;
+	guint      in_destruction : 1;
 	guint      permanent_mode : 1;
 };
 

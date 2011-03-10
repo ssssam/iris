@@ -25,6 +25,8 @@
 #include <iris.h>
 #include <iris-gtk.h>
 
+#include "g-repeated-test.h"
+
 #include "iris/iris-process-private.h"
 #include "iris-gtk/gtk-iris-progress-dialog-private.h"
 #include "iris-gtk/gtk-iris-progress-info-bar-private.h"

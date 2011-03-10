@@ -45,6 +45,7 @@ struct _GtkIrisProgressDialogPrivate
 	guint          permanent_mode : 1;
 
 	guint          in_finished : 1;     /* TRUE when emitting ::finished */
+	guint          in_destruction : 1;  /* TRUE from dispose or finalize handlers */
 	guint          title_is_static : 1; /* TRUE if title_format does not include '%s' */
 };
 

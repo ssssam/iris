@@ -53,6 +53,7 @@ static void     iris_progress_monitor_interface_init           (IrisProgressMoni
 static GObject *gtk_iris_progress_info_bar_constructor         (GType type,
                                                                 guint n_construct_properties,
                                                                 GObjectConstructParam *construct_params);
+static void     gtk_iris_progress_info_bar_dispose             (GObject *object);
 static void     gtk_iris_progress_info_bar_finalize            (GObject *object);
 
 static void     gtk_iris_progress_info_bar_add_group              (IrisProgressMonitor *progress_monitor,
@@ -110,6 +111,7 @@ gtk_iris_progress_info_bar_class_init (GtkIrisProgressInfoBarClass *progress_inf
 	GObjectClass   *object_class = G_OBJECT_CLASS  (info_bar_class);
 
 	object_class->constructor = gtk_iris_progress_info_bar_constructor;
+	object_class->dispose     = gtk_iris_progress_info_bar_dispose;
 	object_class->finalize    = gtk_iris_progress_info_bar_finalize;
 
 	gtk_iris_progress_info_bar_parent_class = g_type_class_peek_parent (info_bar_class);
@@ -134,6 +136,17 @@ gtk_iris_progress_info_bar_init (GtkIrisProgressInfoBar *progress_info_bar)
 
 	priv->in_finished = FALSE;
 	priv->permanent_mode = FALSE;
+}
+
+static void
+gtk_iris_progress_info_bar_dispose (GObject *object)
+{
+	GtkIrisProgressInfoBarPrivate *priv;
+
+	priv = GTK_IRIS_PROGRESS_INFO_BAR (object)->priv;
+
+	priv->in_destruction = TRUE;
+	G_OBJECT_CLASS (gtk_iris_progress_info_bar_parent_class)->dispose (object);
 }
 
 static void
@@ -664,6 +677,9 @@ handle_stopped (IrisProgressMonitor *progress_monitor,
 	g_return_if_fail (GTK_IRIS_IS_PROGRESS_INFO_BAR (progress_monitor));
 
 	priv = GTK_IRIS_PROGRESS_INFO_BAR (progress_monitor)->priv;
+
+	if (priv->in_destruction)
+		return;
 
 	if (watch->group == NULL) {
 		cancel_button = gtk_bin_get_child (GTK_BIN (watch->cancel_widget));
