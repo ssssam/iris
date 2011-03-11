@@ -48,7 +48,7 @@ typedef enum
 /**
  * IrisProgressMessageType:
  * @IRIS_PROGRESS_MESSAGE_COMPLETE: the task has completed.
- * @IRIS_PROGRESS_MESSAGE_CANCELED: the task was canceled.
+ * @IRIS_PROGRESS_MESSAGE_CANCELLED: the task was cancelled.
  * @IRIS_PROGRESS_MESSAGE_PULSE: sent for tasks in
  *                               %IRIS_PROGRESS_ACTIVITY_ONLY progress mode.
  * @IRIS_PROGRESS_MESSAGE_FRACTION: should contain a float between 0 and 1.
@@ -64,7 +64,7 @@ typedef enum
  * recommended you don't send status messages more than once every 200ms or so;
  * there's no point.
  *
- * Only one of %IRIS_PROGRESS_MESSAGE_CANCELED or
+ * Only one of %IRIS_PROGRESS_MESSAGE_CANCELLED or
  * %IRIS_PROGRESS_MESSAGE_COMPLETE should ever be sent, and no more messages can
  * be sent after them.
  **/
@@ -72,7 +72,7 @@ typedef enum
 {
 	/* Control */
 	IRIS_PROGRESS_MESSAGE_COMPLETE = 1,
-	IRIS_PROGRESS_MESSAGE_CANCELED,
+	IRIS_PROGRESS_MESSAGE_CANCELLED,
 
 	/* Progress */
 	IRIS_PROGRESS_MESSAGE_PULSE,

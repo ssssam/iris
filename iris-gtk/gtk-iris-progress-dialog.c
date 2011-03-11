@@ -486,7 +486,7 @@ gtk_iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 		vbox = watch->group->watch_box;
 		gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, TRUE, WATCH_V_SPACING);
 
-		/* Ensure visible and non-canceled */
+		/* Ensure visible and non-cancelled */
 		if (!watch->group->visible)
 			show_group (progress_dialog, watch->group);
 
@@ -518,7 +518,7 @@ gtk_iris_progress_dialog_add_watch (IrisProgressMonitor *progress_monitor,
 /* remove_watch:
  *
  * Note that this function does not stop the watch pushing status messages. If
- * the watch is not canceled or complete, caller must handle this.
+ * the watch is not cancelled or complete, caller must handle this.
  */
 static void
 gtk_iris_progress_dialog_remove_watch (IrisProgressMonitor *progress_monitor,
@@ -546,7 +546,7 @@ gtk_iris_progress_dialog_remove_watch (IrisProgressMonitor *progress_monitor,
 			 * removed from the list by the interface so there must be at least 1)
 			 */
 			hide_group (progress_dialog, watch->group);
-		else if (!watch->canceled)
+		else if (!watch->cancelled)
 			/* If watch completed properly, add to count so it is still
 			 * counted towards the total group progress
 			 */
@@ -767,7 +767,7 @@ handle_stopped (IrisProgressMonitor *progress_monitor,
 	priv = GTK_IRIS_PROGRESS_DIALOG (progress_monitor)->priv;
 
 	/* Finalize handler disconnects and frees all the watches; if this races
-	 * with the watch completing/being canceled, ignore the message to avoid
+	 * with the watch completing/being cancelled, ignore the message to avoid
 	 * confusing the dispose handler. Plus, all the widgets will already be gone
 	 * due to the container widget being in dispose.
 	 */
@@ -854,7 +854,7 @@ gtk_iris_progress_dialog_handle_message (IrisProgressMonitor *progress_monitor,
 
 	switch (message->what) {
 		case IRIS_PROGRESS_MESSAGE_COMPLETE:
-		case IRIS_PROGRESS_MESSAGE_CANCELED:
+		case IRIS_PROGRESS_MESSAGE_CANCELLED:
 			handle_stopped (progress_monitor, watch);
 			break;
 		case IRIS_PROGRESS_MESSAGE_PULSE:

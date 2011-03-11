@@ -8,7 +8,7 @@
  * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * but WITHOUT ANY  WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Library General Public License for more details.
  *
@@ -49,7 +49,7 @@ IrisAnyTask* iris_any_task_new      (void);
 G_DEFINE_TYPE (IrisAnyTask, iris_any_task, IRIS_TYPE_TASK);
 
 static void
-iris_any_task_dependency_canceled_real (IrisTask *task,
+iris_any_task_dependency_cancelled_real (IrisTask *task,
                                         IrisTask *dep)
 {
 	IrisTaskPrivate *priv;
@@ -60,7 +60,7 @@ iris_any_task_dependency_canceled_real (IrisTask *task,
 		g_list_foreach (priv->dependencies, (GFunc)g_object_unref, NULL);
 		g_list_free (priv->dependencies);
 		priv->dependencies = NULL;
-		/* cancel if this is our last option and it was canceled */
+		/* cancel if this is our last option and it was cancelled */
 		iris_task_cancel (task);
 		return;
 	}
@@ -94,7 +94,7 @@ iris_any_task_class_init (IrisAnyTaskClass *any_task_class)
 
 	task_class = IRIS_TASK_CLASS (any_task_class);
 	task_class->dependency_finished = iris_any_task_dependency_finished_real;
-	task_class->dependency_canceled = iris_any_task_dependency_canceled_real;
+	task_class->dependency_cancelled = iris_any_task_dependency_cancelled_real;
 }
 
 static void

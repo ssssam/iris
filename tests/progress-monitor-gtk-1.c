@@ -114,7 +114,7 @@ thinking_task_func (IrisTask *task,
 	for (i=0; i<count; i++) {
 		g_usleep (1000);
 
-		if (iris_task_was_canceled (task)) {
+		if (iris_task_was_cancelled (task)) {
 			cancelled = TRUE;
 			break;
 		}
@@ -126,7 +126,7 @@ thinking_task_func (IrisTask *task,
 	}
 
 	if (cancelled) {
-		status_message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELED);
+		status_message = iris_message_new (IRIS_PROGRESS_MESSAGE_CANCELLED);
 	} else {
 		status_message = iris_message_new_data (IRIS_PROGRESS_MESSAGE_FRACTION,
 		                                        G_TYPE_FLOAT, 1.0);
@@ -501,7 +501,7 @@ test_cancel_chain (ProgressFixture *fixture,
 		g_main_context_iteration (NULL, FALSE);
 	}
 
-	g_assert (iris_process_was_canceled (tail_process) == TRUE);
+	g_assert (iris_process_was_cancelled (tail_process) == TRUE);
 
 	g_object_unref (tail_process);
 }

@@ -44,7 +44,7 @@ typedef enum
 	IRIS_TASK_FLAG_NEED_EXECUTE       = 1 << 2,
 	IRIS_TASK_FLAG_WORK_ACTIVE        = 1 << 3,
 	IRIS_TASK_FLAG_CALLBACKS_ACTIVE   = 1 << 4,
-	IRIS_TASK_FLAG_CANCELED           = 1 << 5,
+	IRIS_TASK_FLAG_CANCELLED           = 1 << 5,
 
 	/* A couple of other flags are currently volatile gint, but they can be
 	 * moved here once we make all flag access atomic ... */
@@ -66,7 +66,7 @@ typedef enum
 	IRIS_TASK_MESSAGE_REMOVE_DEPENDENCY,   /* 10 */
 	IRIS_TASK_MESSAGE_SET_MAIN_CONTEXT,
 	IRIS_TASK_MESSAGE_DEP_FINISHED,
-	IRIS_TASK_MESSAGE_DEP_CANCELED,
+	IRIS_TASK_MESSAGE_DEP_CANCELLED,
 	IRIS_TASK_MESSAGE_ADD_OBSERVER,
 	IRIS_TASK_MESSAGE_REMOVE_OBSERVER
 } IrisTaskMessageType;

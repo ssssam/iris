@@ -162,7 +162,7 @@ struct _IrisTaskClass
 	void     (*execute)             (IrisTask *task);
 	gboolean (*can_cancel)          (IrisTask *task);
 
-	void     (*dependency_canceled) (IrisTask *task, IrisTask *dep);
+	void     (*dependency_cancelled) (IrisTask *task, IrisTask *dep);
 	void     (*dependency_finished) (IrisTask *task, IrisTask *dep);
 
 	void     (*reserved1)           (void);
@@ -237,7 +237,7 @@ gboolean      iris_task_is_executing          (IrisTask            *task);
 gboolean      iris_task_is_finished           (IrisTask            *task);
 gboolean      iris_task_has_succeeded         (IrisTask            *task);
 gboolean      iris_task_has_failed            (IrisTask            *task);
-gboolean      iris_task_was_canceled          (IrisTask            *task);
+gboolean      iris_task_was_cancelled          (IrisTask            *task);
 
 gboolean      iris_task_get_fatal_error       (IrisTask            *task,
                                                GError             **error);

@@ -41,7 +41,7 @@ struct _IrisProgressGroup
 	gint   completed_watches;
 
 	guint  visible : 1;
-	guint  canceled : 1;
+	guint  cancelled : 1;
 
 	/* User data */
 	gpointer toplevel,
@@ -60,7 +60,7 @@ struct _IrisProgressWatch
 
 	IrisReceiver        *receiver;
 
-	guint canceled: 1;
+	guint cancelled: 1;
 	guint complete: 1;
 
 	/* Until the process is running, its connections can change. Rather than

@@ -72,7 +72,7 @@ iris_task_is_executing
 iris_task_is_finished
 iris_task_has_succeeded
 iris_task_has_failed
-iris_task_was_canceled
+iris_task_was_cancelled
 iris_task_get_fatal_error
 iris_task_set_fatal_error
 iris_task_take_fatal_error
@@ -440,7 +440,7 @@ iris_process_is_open
 iris_process_is_executing
 iris_process_is_finished
 iris_process_has_succeeded
-iris_process_was_canceled
+iris_process_was_cancelled
 iris_process_has_source
 iris_process_has_sink
 iris_process_get_source

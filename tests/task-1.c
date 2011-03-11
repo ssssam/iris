@@ -83,9 +83,9 @@ test_cancel_creation (void)
 	IrisTask *task = test_task_new();
 	g_object_ref (task);
 
-	g_assert (iris_task_was_canceled (task) == FALSE);
+	g_assert (iris_task_was_cancelled (task) == FALSE);
 	iris_task_cancel (task);
-	g_assert (iris_task_was_canceled (task) == TRUE);
+	g_assert (iris_task_was_cancelled (task) == TRUE);
 
 	/* Test cancel frees floating reference */
 	g_assert (! g_object_is_floating (task));
@@ -493,7 +493,7 @@ cancel_test_cb (IrisTask *task,
 		g_thread_yield ();
 
 	/* Check the task didn't get freed while we are still executing */
-	g_assert (iris_task_was_canceled (task) == TRUE);
+	g_assert (iris_task_was_cancelled (task) == TRUE);
 	g_assert_cmpint (G_OBJECT (task)->ref_count, >, 0);
 
 	g_atomic_int_set (p_wait_state, 3);
@@ -580,13 +580,13 @@ test_cancel_finished (void)
 	g_assert_cmpint (G_OBJECT (task)->ref_count, ==, 1);
 	g_assert (iris_task_is_finished (task) == TRUE);
 	g_assert (iris_task_has_succeeded (task) == TRUE);
-	g_assert (iris_task_was_canceled (task) == FALSE);
+	g_assert (iris_task_was_cancelled (task) == FALSE);
 
 	iris_task_cancel (task);
 	g_assert_cmpint (G_OBJECT (task)->ref_count, ==, 1);
 	g_assert (iris_task_is_finished (task) == TRUE);
 	g_assert (iris_task_has_succeeded (task) == TRUE);
-	g_assert (iris_task_was_canceled (task) == FALSE);
+	g_assert (iris_task_was_cancelled (task) == FALSE);
 
 	g_object_unref (task);
 }
@@ -626,8 +626,8 @@ test22 (void)
 
 	iris_task_add_dependency (task2, task);
 	iris_task_cancel (task);
-	g_assert (iris_task_was_canceled (task));
-	g_assert (iris_task_was_canceled (task2));
+	g_assert (iris_task_was_cancelled (task));
+	g_assert (iris_task_was_cancelled (task2));
 
 	g_object_unref (task2);
 	g_object_unref (task);
@@ -698,7 +698,7 @@ test26 (void)
 
 	iris_task_add_dependency (task_after, task);
 	iris_task_cancel (task);
-	g_assert (iris_task_was_canceled (task_after));
+	g_assert (iris_task_was_cancelled (task_after));
 
 	g_assert_cmpint (G_OBJECT (task_after)->ref_count, ==, 1);
 
@@ -716,7 +716,7 @@ test27 (void)
 
 	iris_task_add_dependency (task, task2);
 	iris_task_cancel (task);
-	g_assert (!iris_task_was_canceled (task2));
+	g_assert (!iris_task_was_cancelled (task2));
 
 	g_assert_cmpint (G_OBJECT (task)->ref_count, ==, 1);
 	g_assert_cmpint (G_OBJECT (task2)->ref_count, ==, 2);

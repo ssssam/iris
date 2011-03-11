@@ -58,7 +58,7 @@ struct _IrisProcessPrivate
 	IrisReceiver *work_receiver;
 	IrisQueue    *work_queue;
 
-	/* Connections. These will be set to NULL if we get a DEP_CANCELED or
+	/* Connections. These will be set to NULL if we get a DEP_CANCELLED or
 	 * DEP_FINISHED message from them (because we release our reference on them
 	 * at that point)
 	 */
