@@ -125,7 +125,7 @@ default_title (ProgressFixture *fixture,
 	title = gtk_window_get_title (GTK_WINDOW (fixture->monitor));
 	g_assert_cmpstr (title, ==, "Progress Monitor");
 
-	process = iris_process_new_with_func (wait_func, &wait_state, NULL);
+	process = iris_process_new (wait_func, &wait_state, NULL);
 	g_object_ref (process);
 	iris_task_set_progress_mode (IRIS_TASK (process), IRIS_PROGRESS_CONTINUOUS);
 	iris_progress_monitor_watch_process (fixture->monitor, process, 0);
@@ -183,7 +183,7 @@ custom_static_title (ProgressFixture *fixture,
 	title = gtk_window_get_title (GTK_WINDOW (fixture->monitor));
 	g_assert_cmpstr (title, ==, "Test");
 
-	process = iris_process_new_with_func (wait_func, &wait_state, NULL);
+	process = iris_process_new (wait_func, &wait_state, NULL);
 	g_object_ref (process);
 	iris_progress_monitor_watch_process (fixture->monitor, process, 0);
 	iris_progress_monitor_set_watch_hide_delay (fixture->monitor, 0);
@@ -225,7 +225,7 @@ custom_dynamic_title (ProgressFixture *fixture,
 	title = gtk_window_get_title (GTK_WINDOW (fixture->monitor));
 	g_assert_cmpstr (title, ==, "Test Progress Monitor Test");
 
-	process = iris_process_new_with_func (wait_func, &wait_state, NULL);
+	process = iris_process_new (wait_func, &wait_state, NULL);
 	g_object_ref (process);
 	iris_task_set_progress_mode (IRIS_TASK (process), IRIS_PROGRESS_CONTINUOUS);
 	iris_progress_monitor_watch_process (fixture->monitor, process, 0);
@@ -279,8 +279,8 @@ test_groups (ProgressFixture *fixture,
 
 	IrisProcess *process_head, *process_tail;
 
-	process_head = iris_process_new_with_func (push_next_func, NULL, NULL);
-	process_tail = iris_process_new_with_func (wait_func, &wait_state, NULL);
+	process_head = iris_process_new (push_next_func, NULL, NULL);
+	process_tail = iris_process_new (wait_func, &wait_state, NULL);
 	g_object_ref (process_tail);
 
 	iris_process_connect (process_head, process_tail);

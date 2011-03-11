@@ -125,31 +125,18 @@ static GList* main_schedulers = NULL;
 
 /**
  * iris_task_new:
- *
- * Creates a new instance of #IrisTask.
- *
- * Return value: the newly created instance of #IrisTask
- */
-IrisTask*
-iris_task_new (void)
-{
-	return g_object_new (IRIS_TYPE_TASK, NULL);
-}
-
-/**
- * iris_task_new_with_func:
  * @func: An #IrisTaskFunc to execute
  * @user_data: user data for @func
  * @notify: An optional #GDestroyNotify or %NULL
  *
- * Create a new #IrisTask instance.
+ * Creates a new #IrisTask instance.
  *
  * Return value: the newly created #IrisTask instance
  */
 IrisTask*
-iris_task_new_with_func (IrisTaskFunc   func,
-                         gpointer       user_data,
-                         GDestroyNotify notify)
+iris_task_new (IrisTaskFunc   func,
+               gpointer       user_data,
+               GDestroyNotify notify)
 {
 	return iris_task_new_full (func, user_data, notify, FALSE, NULL, NULL, NULL);
 }

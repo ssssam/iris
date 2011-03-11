@@ -75,8 +75,7 @@ struct _IrisProcessClass
 
 GType         iris_process_get_type              (void) G_GNUC_CONST;
 
-IrisProcess*  iris_process_new                   (void);
-IrisProcess*  iris_process_new_with_func         (IrisProcessFunc      func,
+IrisProcess*  iris_process_new                   (IrisProcessFunc      func,
                                                   gpointer             user_data,
                                                   GDestroyNotify       notify);
 IrisProcess*  iris_process_new_with_closure      (GClosure            *closure);

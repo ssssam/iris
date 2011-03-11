@@ -67,7 +67,7 @@ trigger_process (GtkButton *trigger,
 	             group_n;
 	GList       *node;
 
-	process = iris_process_new_with_func (count_sheep_func, NULL, NULL);
+	process = iris_process_new (count_sheep_func, NULL, NULL);
 	iris_task_set_progress_mode (IRIS_TASK (process), IRIS_PROGRESS_CONTINUOUS);
 
 	i = g_random_int_range (0, 10);

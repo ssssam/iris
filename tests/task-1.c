@@ -42,7 +42,7 @@ wait_task_messages (IrisTask *task)
 static void
 test_lifecycle (void)
 {
-	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
 	g_assert (task != NULL);
 
 	/* Preferred way is iris_task_cancel() */
@@ -282,7 +282,7 @@ test_run (void)
 {
 	SETUP ();
 	gboolean success = FALSE;
-	IrisTask *task = iris_task_new_with_func (run_cb, &success, NULL);
+	IrisTask *task = iris_task_new (run_cb, &success, NULL);
 	g_object_ref (task);
 
 	/* run should complete synchronously because of our scheduler */
@@ -557,7 +557,7 @@ test_cancel_callbacks (void)
 	gboolean cb_2_executed = FALSE;
 
 	SETUP();
-	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
 	iris_task_add_callback (task, cancel_callbacks_cb_1, NULL, NULL);
 	iris_task_add_callback (task, cancel_callbacks_cb_2, &cb_2_executed, NULL);
 
@@ -573,7 +573,7 @@ test_cancel_finished (void)
 
 	SETUP ();
 
-	task = iris_task_new_with_func (NULL, NULL, NULL);
+	task = iris_task_new (NULL, NULL, NULL);
 	g_object_ref (task);
 
 	iris_task_run (task);
@@ -595,8 +595,8 @@ static void
 test21 (void)
 {
 	SETUP();
-	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL),
-	         *task_after = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new (NULL, NULL, NULL),
+	         *task_after = iris_task_new (NULL, NULL, NULL);
 	g_object_ref (task);
 	g_object_ref (task_after);
 
@@ -619,8 +619,8 @@ static void
 test22 (void)
 {
 	SETUP();
-	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	IrisTask *task2 = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
 	g_object_ref (task);
 	g_object_ref (task2);
 
@@ -638,9 +638,9 @@ test25 (void)
 {
 	SETUP();
 
-	IrisTask *t1 = iris_task_new_with_func (NULL, NULL, NULL);
-	IrisTask *t2 = iris_task_new_with_func (NULL, NULL, NULL);
-	IrisTask *t3 = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *t1 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *t2 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *t3 = iris_task_new (NULL, NULL, NULL);
 	IrisTask *t4 = iris_task_vall_of (t1, t2, t3, NULL);
 
 	g_object_ref (t4);
@@ -667,8 +667,8 @@ test_dep_ownership (void)
 {
 	SETUP();
 
-	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL),
-	         *task_before = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new (NULL, NULL, NULL),
+	         *task_before = iris_task_new (NULL, NULL, NULL);
 	g_object_ref (task);
 	g_object_ref (task_before);
 
@@ -692,8 +692,8 @@ test26 (void)
 {
 	SETUP();
 
-	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	IrisTask *task_after = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task_after = iris_task_new (NULL, NULL, NULL);
 	g_object_ref (task_after);
 
 	iris_task_add_dependency (task_after, task);
@@ -710,8 +710,8 @@ test27 (void)
 {
 	SETUP();
 
-	IrisTask *task = iris_task_new_with_func (NULL, NULL, NULL);
-	IrisTask *task2 = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *task = iris_task_new (NULL, NULL, NULL);
+	IrisTask *task2 = iris_task_new (NULL, NULL, NULL);
 	g_object_ref (task);
 
 	iris_task_add_dependency (task, task2);
@@ -730,9 +730,9 @@ test27 (void)
 static void
 test28 (void)
 {
-	IrisTask *t1 = iris_task_new_with_func (NULL, NULL, NULL);
-	IrisTask *t2 = iris_task_new_with_func (NULL, NULL, NULL);
-	IrisTask *t3 = iris_task_new_with_func (NULL, NULL, NULL);
+	IrisTask *t1 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *t2 = iris_task_new (NULL, NULL, NULL);
+	IrisTask *t3 = iris_task_new (NULL, NULL, NULL);
 	IrisTask *t4 = iris_task_vany_of (t1, t2, t3, NULL);
 
 	g_object_ref (t1);

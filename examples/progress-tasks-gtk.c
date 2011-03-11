@@ -88,7 +88,7 @@ trigger_task (GtkButton *trigger,
 	IrisTask *task;
 	IrisPort *watch_port;
 
-	task = iris_task_new_with_func (thinking_task_func, user_data, NULL);
+	task = iris_task_new (thinking_task_func, user_data, NULL);
 
 	if (watch_group == NULL)
 		watch_group = iris_progress_monitor_add_group

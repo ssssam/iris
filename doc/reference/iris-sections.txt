@@ -48,7 +48,6 @@ IRIS_TASK_RETURN_TASK_NEW
 IrisTaskFunc
 IrisTask
 iris_task_new
-iris_task_new_with_func
 iris_task_new_full
 iris_task_new_with_closure
 iris_task_new_with_closure_full
@@ -427,7 +426,6 @@ IRIS_TYPE_STACK
 IrisProcess
 IrisProcessFunc
 iris_process_new
-iris_process_new_with_func
 iris_process_new_with_closure
 iris_process_run
 iris_process_cancel

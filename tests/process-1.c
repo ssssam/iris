@@ -153,7 +153,7 @@ test_lifecycle (void)
 {
 	IrisProcess *process;
 
-	process = iris_process_new_with_func (NULL, NULL, NULL);
+	process = iris_process_new (NULL, NULL, NULL);
 	g_object_add_weak_pointer (G_OBJECT (process), (gpointer *)&process);
 
 	g_assert_cmpint (G_OBJECT (process)->ref_count, ==, 1);
@@ -171,7 +171,7 @@ test_simple (void)
 	gint counter = 0;
 	IrisProcess *process;
 
-	process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	process = iris_process_new (counter_callback, NULL, NULL);
 	/*iris_task_set_control_scheduler (IRIS_TASK (process), mock_scheduler_new ());
 	iris_task_set_work_scheduler (IRIS_TASK (process), mock_scheduler_new ());*/
 
@@ -198,7 +198,7 @@ test_cancel_creation (void)
 {
 	IrisProcess *process;
 
-	process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	process = iris_process_new (counter_callback, NULL, NULL);
 	g_object_ref (process);
 
 	iris_process_close (process);
@@ -227,7 +227,7 @@ test_cancel_preparation (void)
 	gint         counter;
 	IrisProcess *process;
 
-	process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	process = iris_process_new (counter_callback, NULL, NULL);
 	g_object_ref (process);
 
 	iris_process_cancel (process);
@@ -288,7 +288,7 @@ test_cancel_execution_1 (void)
 	               wait_state = 0;
 	IrisProcess   *process;
 
-	process = iris_process_new_with_func (cancel_execution_cb, (gpointer)&wait_state, NULL);
+	process = iris_process_new (cancel_execution_cb, (gpointer)&wait_state, NULL);
 	g_object_ref (process);
 
 	counter = 0;
@@ -328,7 +328,7 @@ test_cancel_execution_2 (void)
 	volatile gint  counter;
 	IrisProcess   *process;
 
-	process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	process = iris_process_new (counter_callback, NULL, NULL);
 	g_object_ref (process);
 
 	iris_process_run (process);
@@ -365,7 +365,7 @@ test_cancel_execution_3 (void) {
 	IrisMessage *message[50];
 	int          i;
 
-	process = iris_process_new_with_func (time_waster_callback, NULL, NULL);
+	process = iris_process_new (time_waster_callback, NULL, NULL);
 	g_object_ref (process);
 
 	for (i=0; i<50; i++) {
@@ -404,7 +404,7 @@ titles (void)
 	      i;
 	char *title;
 
-	process = iris_process_new_with_func (counter_callback, NULL, NULL);
+	process = iris_process_new (counter_callback, NULL, NULL);
 	g_object_add_weak_pointer (G_OBJECT (process), (gpointer *)&process);
 	iris_process_set_title (process, "Title 1");
 	iris_process_run (process);
@@ -439,7 +439,7 @@ recurse_1 (void)
 	IrisProcess *recursive_process;
 	int counter = 0;
 
-	recursive_process = iris_process_new_with_func
+	recursive_process = iris_process_new
 	                      (recursive_counter_callback, NULL, NULL);
 	g_object_add_weak_pointer (G_OBJECT (recursive_process),
 	                           (gpointer *)&recursive_process);
@@ -461,9 +461,9 @@ recurse_1 (void)
 static void
 chaining_1 (void)
 {
-	IrisProcess *head_process = iris_process_new_with_func
+	IrisProcess *head_process = iris_process_new
 	                              (push_next_func, NULL, NULL);
-	IrisProcess *tail_process = iris_process_new_with_func
+	IrisProcess *tail_process = iris_process_new
 	                              (dummy_func, NULL, NULL);
 	g_object_add_weak_pointer (G_OBJECT (head_process),
 	                           (gpointer *)&head_process);
@@ -499,9 +499,9 @@ chaining_2 (void)
 	int          counter = 0,
 	             i;
 	
-	IrisProcess *head_process = iris_process_new_with_func
+	IrisProcess *head_process = iris_process_new
 	                              (pre_counter_callback, NULL, NULL);
-	IrisProcess *tail_process = iris_process_new_with_func
+	IrisProcess *tail_process = iris_process_new
 	                              (counter_callback, NULL, NULL);
 	g_object_ref (tail_process);
 
@@ -541,7 +541,7 @@ test_chaining_3 (void) {
 	volatile int counter = 0;
 
 	for (i=0; i<5; i++) {
-		process[i] = iris_process_new_with_func (push_next_func, NULL, NULL);
+		process[i] = iris_process_new (push_next_func, NULL, NULL);
 		if (i > 0)
 			iris_process_connect (process[i-1], process[i]);
 	}
@@ -568,9 +568,9 @@ test_cancel_chain (gconstpointer user_data) {
 	gboolean     cancel_tail = GPOINTER_TO_INT (user_data);
 	int i;
 
-	head_process = iris_process_new_with_func (push_next_func, NULL, NULL);
-	mid_process  = iris_process_new_with_func (push_next_func, NULL, NULL);
-	tail_process = iris_process_new_with_func (time_waster_callback, NULL, NULL);
+	head_process = iris_process_new (push_next_func, NULL, NULL);
+	mid_process  = iris_process_new (push_next_func, NULL, NULL);
+	tail_process = iris_process_new (time_waster_callback, NULL, NULL);
 	g_object_ref (head_process);
 	g_object_ref (tail_process);
 
@@ -616,9 +616,9 @@ static void
 test_cancel_before_chained (void) {
 	IrisProcess *head_process, *tail_process;
 
-	head_process = iris_process_new_with_func (time_waster_callback, NULL,
+	head_process = iris_process_new (time_waster_callback, NULL,
 	                                           NULL);
-	tail_process = iris_process_new_with_func (time_waster_callback, NULL,
+	tail_process = iris_process_new (time_waster_callback, NULL,
 	                                           NULL);
 	g_object_ref (tail_process);
 
@@ -646,11 +646,11 @@ test_cancel_chain_delayed_finish (void)
 	IrisProcess  *head_process, *mid_process, *tail_process;
 	volatile gint wait_state = 0;
 
-	head_process = iris_process_new_with_func (wait_process_func,
+	head_process = iris_process_new (wait_process_func,
 	                                           (gpointer)&wait_state,
 	                                           NULL);
-	mid_process  = iris_process_new_with_func (NULL, NULL, NULL);
-	tail_process = iris_process_new_with_func (NULL, NULL, NULL);
+	mid_process  = iris_process_new (NULL, NULL, NULL);
+	tail_process = iris_process_new (NULL, NULL, NULL);
 	g_object_ref (tail_process);
 
 	iris_process_connect (head_process, mid_process);
@@ -681,9 +681,9 @@ test_cancel_chain_is_finished (void) {
 	IrisProcess   *head_process, *tail_process;
 	volatile gint  wait_state;
 
-	head_process = iris_process_new_with_func (wait_process_func,
+	head_process = iris_process_new (wait_process_func,
 	                                           (gpointer)&wait_state, NULL);
-	tail_process = iris_process_new_with_func (time_waster_callback,
+	tail_process = iris_process_new (time_waster_callback,
 	                                           NULL, NULL);
 	iris_process_connect (head_process, tail_process);
 
@@ -726,7 +726,7 @@ test_output_estimates_basic (void)
 	             processed_items, total_items;
 
 	for (i=0; i<3; i++) {
-		process[i] = iris_process_new_with_func (time_waster_callback, NULL, NULL);
+		process[i] = iris_process_new (time_waster_callback, NULL, NULL);
 		g_object_ref (process[i]);
 		if (i > 0)
 			iris_process_connect (process[i-1], process[i]);
@@ -767,8 +767,8 @@ test_output_estimates_low (void)
 	gint         j, counter,
 	             processed_items, total_items;
 
-	process_1 = iris_process_new_with_func (pre_counter_callback, NULL, NULL);
-	process_2 = iris_process_new_with_func (counter_callback, NULL, NULL);
+	process_1 = iris_process_new (pre_counter_callback, NULL, NULL);
+	process_2 = iris_process_new (counter_callback, NULL, NULL);
 	iris_process_connect (process_1, process_2);
 	g_object_ref (process_2);
 
@@ -808,9 +808,9 @@ test_output_estimates_cancel (void)
 	gint         j, wait_state = 0,
 	             processed_items, total_items;
 
-	process_1 = iris_process_new_with_func (push_next_func,
+	process_1 = iris_process_new (push_next_func,
 	                                        GINT_TO_POINTER (100000), NULL);
-	process_2 = iris_process_new_with_func (wait_process_func,
+	process_2 = iris_process_new (wait_process_func,
 	                                        &wait_state, NULL);
 	iris_process_connect (process_1, process_2);
 	g_object_ref (process_1);

@@ -97,7 +97,7 @@
  * message has been received by the process and been carried out. You must be
  * very careful to avoid expecting synchronisation where there is none:
  * |[
- *   process = iris_process_new_with_func (callback, NULL, NULL);
+ *   process = iris_process_new (callback, NULL, NULL);
  *   iris_progress_monitor_watch_process (progress_monitor, process, NULL);
  *
  *   iris_process_run (process);
@@ -122,8 +122,8 @@
  * iris_process_run(), the following code would be valid:
  * |[
  *   IrisProcess *head, *tail;
- *   head = iris_process_new_with_func (callback_1, NULL, NULL);
- *   tail = iris_process_new_with_func (callback_1, NULL, NULL); *
+ *   head = iris_process_new (callback_1, NULL, NULL);
+ *   tail = iris_process_new (callback_1, NULL, NULL); *
  *
  *   iris_process_connect (head, tail);
  *   iris_process_run (head);
@@ -170,19 +170,6 @@ static void             iris_process_dummy           (IrisProcess *task,
 
 /**
  * iris_process_new:
- *
- * Creates a new instance of #IrisProcess.
- *
- * Return value: the newly created instance of #IrisProcess
- */
-IrisProcess*
-iris_process_new (void)
-{
-	return g_object_new (IRIS_TYPE_PROCESS, NULL);
-}
-
-/**
- * iris_process_new_with_func:
  * @func: An #IrisProcessFunc to call for each work item.
  * @user_data: user data for @func
  * @notify: An optional #GDestroyNotify or %NULL
@@ -192,9 +179,9 @@ iris_process_new (void)
  * Return value: the newly created #IrisTask instance
  */
 IrisProcess*
-iris_process_new_with_func (IrisProcessFunc   func,
-                            gpointer          user_data,
-                            GDestroyNotify    notify)
+iris_process_new (IrisProcessFunc   func,
+                  gpointer          user_data,
+                  GDestroyNotify    notify)
 {
 	IrisProcess *process;
 

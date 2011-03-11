@@ -103,9 +103,9 @@ trigger_process (GtkButton *trigger,
 	n = GPOINTER_TO_INT (user_data);
 
 	if (n==1) {
-		process[0] = iris_process_new_with_func (find_socks_func, NULL, NULL);
-		process[1] = iris_process_new_with_func (pair_socks_func, NULL, NULL);
-		process[2] = iris_process_new_with_func (push_forward_func, NULL, NULL);
+		process[0] = iris_process_new (find_socks_func, NULL, NULL);
+		process[1] = iris_process_new (pair_socks_func, NULL, NULL);
+		process[2] = iris_process_new (push_forward_func, NULL, NULL);
 
 		iris_task_set_progress_mode (IRIS_TASK (process[0]),
 		                             IRIS_PROGRESS_ACTIVITY_ONLY);
@@ -115,7 +115,7 @@ trigger_process (GtkButton *trigger,
 
 	for (i=0; i<chain_size; i++) {
 		if (n==0) {
-			process[i] = iris_process_new_with_func (push_forward_func, NULL, NULL);
+			process[i] = iris_process_new (push_forward_func, NULL, NULL);
 			iris_task_set_progress_mode (IRIS_TASK (process[i]),
 			                             IRIS_PROGRESS_CONTINUOUS);
 		}

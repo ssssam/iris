@@ -41,7 +41,7 @@ iris_task_vall_of (IrisTask *first_task, ...)
 	if (!first_task)
 		return NULL;
 
-	task = iris_task_new ();
+	task = iris_task_new (NULL, NULL, NULL);
 	iter = first_task;
 	va_start (args, first_task);
 
@@ -72,7 +72,7 @@ iris_task_all_of (GList *tasks)
 
 	g_return_val_if_fail (tasks != NULL, NULL);
 
-	task = iris_task_new ();
+	task = iris_task_new (NULL, NULL, NULL);
 	for (; tasks; tasks = tasks->next)
 		iris_task_add_dependency (task, tasks->data);
 

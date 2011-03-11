@@ -62,7 +62,7 @@ trigger_process (GtkButton *trigger,
 	GList       *node;
 	gint         count = GPOINTER_TO_INT (user_data);
 
-	process = iris_process_new_with_func (count_sheep_func, NULL, NULL);
+	process = iris_process_new (count_sheep_func, NULL, NULL);
 	iris_process_set_title (process, gtk_entry_get_text (GTK_ENTRY (title_entry)));
 
 	iris_task_set_main_context (IRIS_TASK (process),
