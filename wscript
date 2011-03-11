@@ -16,9 +16,7 @@ cflags_maintainer = ['-g', '-O0', '-Werror', '-Wall', '-Wshadow', '-Wcast-align'
                      '-Wno-uninitialized', '-Wformat-security', '-Winit-self']
 
 glib_req_version = '2.16.0'
-
-# 2.18 for GtkInfoBar
-gtk_req_version = '2.18.0'
+gtk_req_version = '3.0.0'
 
 
 test_execution_order = \
@@ -106,8 +104,8 @@ def configure (conf):
 	                args = '--cflags --libs',
 	                mandatory = True)
 
-	# FIXME: make optional when libiris-gtk is split off
-	conf.check_cfg (package = 'gtk+-2.0',
+	# FIXME: make optional, now libiris-gtk is split off
+	conf.check_cfg (package = 'gtk+-3.0',
 	                uselib_store = 'GTK',
 	                atleast_version = gtk_req_version,
 	                args = '--cflags --libs',

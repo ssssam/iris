@@ -137,7 +137,7 @@ create_demo_dialog (void)
 	vbox = gtk_dialog_get_content_area (GTK_DIALOG (demo_window));
 
 	triggers_box = gtk_hbutton_box_new ();
-	gtk_button_box_set_spacing (triggers_box, 8);
+	gtk_box_set_spacing (GTK_BOX (triggers_box), 8);
 
 	button = gtk_button_new_with_label ("Count 10 sheep");
 	g_signal_connect (button, "clicked", G_CALLBACK (trigger_process),

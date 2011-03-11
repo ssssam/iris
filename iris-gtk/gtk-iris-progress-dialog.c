@@ -49,6 +49,10 @@ static GObject *gtk_iris_progress_dialog_constructor          (GType type,
 static void     gtk_iris_progress_dialog_dispose              (GObject *object);
 static void     gtk_iris_progress_dialog_finalize             (GObject *object);
 
+static void     gtk_iris_progress_dialog_get_preferred_width  (GtkWidget *widget,
+                                                               gint      *minimum_width,
+                                                               gint      *natural_width);
+
 static void     gtk_iris_progress_dialog_add_group              (IrisProgressMonitor *progress_monitor,
                                                                  IrisProgressGroup   *group);
 static void     gtk_iris_progress_dialog_remove_group           (IrisProgressMonitor *progress_monitor,
@@ -103,14 +107,14 @@ G_DEFINE_TYPE_WITH_CODE (GtkIrisProgressDialog, gtk_iris_progress_dialog, GTK_TY
 static void
 gtk_iris_progress_dialog_class_init (GtkIrisProgressDialogClass *progress_dialog_class)
 {
-	GtkDialogClass *dialog_class = GTK_DIALOG_CLASS(progress_dialog_class);
-	GObjectClass   *object_class = G_OBJECT_CLASS  (dialog_class);
+	GObjectClass   *object_class = G_OBJECT_CLASS  (progress_dialog_class);
+	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (progress_dialog_class);
 
 	object_class->constructor = gtk_iris_progress_dialog_constructor;
 	object_class->dispose     = gtk_iris_progress_dialog_dispose;
 	object_class->finalize    = gtk_iris_progress_dialog_finalize;
 
-	gtk_iris_progress_dialog_parent_class = g_type_class_peek_parent (dialog_class);
+	widget_class->get_preferred_width = gtk_iris_progress_dialog_get_preferred_width;
 
 	g_type_class_add_private (object_class, sizeof(GtkIrisProgressDialogPrivate));
 }
@@ -194,27 +198,6 @@ iris_progress_monitor_interface_init (IrisProgressMonitorInterface *interface)
 	interface->get_watch              = gtk_iris_progress_dialog_get_watch;
 }
 
-/* Prevent dialog from shrinking width-ways when watches are removed */
-static void
-dialog_size_request_cb (GtkWidget *widget,
-                        GtkRequisition *req,
-                        gpointer        data)
-{
-	GtkIrisProgressDialog        *dialog;
-	GtkIrisProgressDialogPrivate *priv;
-
-	g_return_if_fail (GTK_IRIS_IS_PROGRESS_DIALOG (widget));
-
-	dialog = GTK_IRIS_PROGRESS_DIALOG (widget);
-	priv = dialog->priv;
-
-	if (req->width > priv->max_width)
-		priv->max_width = req->width;
-	else {
-		req->width = priv->max_width;
-	}
-}
-
 static GObject *
 gtk_iris_progress_dialog_constructor (GType type,
                                       guint n_construct_properties,
@@ -228,17 +211,43 @@ gtk_iris_progress_dialog_constructor (GType type,
 
 	/* Construction of outer dialog UI */
 
-	gtk_dialog_set_has_separator (dialog, FALSE);
 	gtk_window_set_resizable (GTK_WINDOW (dialog), FALSE);
 	gtk_window_set_deletable (GTK_WINDOW (dialog), FALSE);
 	gtk_container_set_border_width (GTK_CONTAINER (dialog), OUTER_PADDING);
-	g_signal_connect (dialog, "size-request",
-	                  G_CALLBACK (dialog_size_request_cb), NULL);
 
 	gtk_box_set_spacing (GTK_BOX (gtk_dialog_get_content_area (dialog)),
 	                     GROUP_V_SPACING);
 
 	return object;
+}
+
+/* Prevent dialog from shrinking width-ways when watches with long titles are removed */
+static void
+gtk_iris_progress_dialog_get_preferred_width (GtkWidget *widget,
+                                              gint      *minimum_width,
+                                              gint      *natural_width)
+{
+	GtkIrisProgressDialog        *dialog;
+	GtkIrisProgressDialogPrivate *priv;
+	GtkWidgetClass               *widget_class;
+
+	g_return_if_fail (GTK_IRIS_IS_PROGRESS_DIALOG (widget));
+
+	dialog = GTK_IRIS_PROGRESS_DIALOG (widget);
+	priv = dialog->priv;
+
+	widget_class = GTK_WIDGET_CLASS (gtk_iris_progress_dialog_parent_class);
+	widget_class->get_preferred_width (widget, minimum_width, natural_width);
+
+	/* It seems logical to only set the natural width, but in practice the
+	 * dialog seems to always get its minimum width.
+	 */
+	if (*minimum_width > priv->max_width)
+		priv->max_width = *minimum_width;
+	else {
+		*minimum_width = priv->max_width;
+		*natural_width = priv->max_width;
+	}
 }
 
 

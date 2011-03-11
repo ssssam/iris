@@ -9,7 +9,7 @@ m4_define([lt_revision], [iris_interface_age])
 m4_define([lt_age], [m4_eval(iris_binary_age - iris_interface_age)])
 
 m4_define([glib_req_version], [2.16])
-m4_define([gtk_req_version], [2.18])
+m4_define([gtk_req_version], [3.0.0])
 
 AC_PREREQ([2.59])
 
@@ -93,7 +93,7 @@ AC_ARG_ENABLE([gtk],
               [enable_gtk=yes])
     
 if test "x$enable_gtk" = "xyes"; then
-	PKG_CHECK_MODULES(GTK, gtk+-2.0 >= $gtk_req_version)
+	PKG_CHECK_MODULES(GTK, gtk+-3.0 >= $gtk_req_version)
 fi
 
 AC_DEFINE([ENABLE_GTK],[1],[Define to compile with GTK+ support])
