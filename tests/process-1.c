@@ -126,7 +126,7 @@ time_waster_callback (IrisProcess *process,
                       IrisMessage *work_item,
                       gpointer     user_data)
 {
-	if (iris_process_was_cancelled (process))
+	if (iris_process_is_cancelled (process))
 		return;
 
 	g_usleep (100000);
@@ -187,7 +187,7 @@ test_simple (void)
 	g_assert_cmpint (counter, ==, 50);
 
 	g_assert (iris_process_is_finished (process) == TRUE);
-	g_assert (iris_process_was_cancelled (process) == FALSE);
+	g_assert (iris_process_is_cancelled (process) == FALSE);
 	g_assert (iris_process_has_succeeded (process) == TRUE);
 
 	g_object_unref (process);
@@ -215,7 +215,7 @@ test_cancel_creation (void)
 	 */
 	g_assert_cmpint (G_OBJECT (process)->ref_count, <=, 2);
 
-	g_assert (iris_process_was_cancelled (process) == TRUE);
+	g_assert (iris_process_is_cancelled (process) == TRUE);
 	g_assert (iris_process_has_succeeded (process) == FALSE);
 
 	g_object_unref (process);
@@ -233,7 +233,7 @@ test_cancel_preparation (void)
 	iris_process_cancel (process);
 	wait_control_messages (process);
 
-	g_assert (iris_process_was_cancelled (process) == TRUE);
+	g_assert (iris_process_is_cancelled (process) == TRUE);
 	g_assert (iris_process_is_finished (process) == FALSE);
 
 	/* Enqueuing work is still allowed, process will not be freed until
@@ -248,7 +248,7 @@ test_cancel_preparation (void)
 	}
 
 	g_assert_cmpint (G_OBJECT (process)->ref_count, <=, 2);
-	g_assert (iris_process_was_cancelled (process) == TRUE);
+	g_assert (iris_process_is_cancelled (process) == TRUE);
 	g_assert (iris_process_has_succeeded (process) == FALSE);
 
 	/* You can even still run the process, if it's not been destroyed,
@@ -258,7 +258,7 @@ test_cancel_preparation (void)
 	wait_control_messages (process);
 
 	g_assert_cmpint (G_OBJECT (process)->ref_count, ==, 1);
-	g_assert (iris_process_was_cancelled (process) == TRUE);
+	g_assert (iris_process_is_cancelled (process) == TRUE);
 	g_assert (iris_process_is_finished (process) == TRUE);
 	g_assert (iris_process_has_succeeded (process) == FALSE);
 
@@ -299,7 +299,7 @@ test_cancel_execution_1 (void)
 		g_thread_yield();
 
 	iris_process_cancel (process);
-	while (! iris_process_was_cancelled (process))
+	while (! iris_process_is_cancelled (process))
 		wait_control_messages (process);
 
 	/* Still in process work function at this point */
@@ -313,7 +313,7 @@ test_cancel_execution_1 (void)
 
 	g_assert_cmpint (G_OBJECT (process)->ref_count, <=, 2);
 	g_assert (iris_process_is_executing (process) == FALSE);
-	g_assert (iris_process_was_cancelled (process) == TRUE);
+	g_assert (iris_process_is_cancelled (process) == TRUE);
 	g_assert (iris_process_has_succeeded (process) == FALSE);
 
 	g_object_unref (process);
@@ -336,7 +336,7 @@ test_cancel_execution_2 (void)
 		wait_control_messages (process);
 
 	iris_process_cancel (process);
-	while (! iris_process_was_cancelled (process))
+	while (! iris_process_is_cancelled (process))
 		wait_control_messages (process);
 
 	/* The result of 'is_executing' is undefined in practice, because the
@@ -350,7 +350,7 @@ test_cancel_execution_2 (void)
 	while (! iris_process_is_finished (process))
 		wait_control_messages (process);
 
-	g_assert (iris_process_was_cancelled (process) == TRUE);
+	g_assert (iris_process_is_cancelled (process) == TRUE);
 	g_assert (iris_process_has_succeeded (process) == FALSE);
 
 	g_assert_cmpint (G_OBJECT (process)->ref_count, <=, 2);
@@ -631,7 +631,7 @@ test_cancel_before_chained (void) {
 	while (! iris_process_is_finished (tail_process))
 		wait_control_messages (tail_process);
 
-	g_assert (iris_process_was_cancelled (tail_process));
+	g_assert (iris_process_is_cancelled (tail_process));
 
 	g_object_unref (tail_process);
 };
@@ -700,7 +700,7 @@ test_cancel_chain_is_finished (void) {
 	/* Head process is blocking now */
 	iris_process_cancel (tail_process);
 
-	while (! iris_process_was_cancelled (tail_process))
+	while (! iris_process_is_cancelled (tail_process))
 		wait_control_messages (tail_process);
 
 	/* Tail process is cancelled, but the CHAIN cannot finish until head_process
@@ -843,7 +843,7 @@ test_output_estimates_cancel (void)
 	 * much point in the test */
 	g_assert (iris_process_get_queue_length (process_1) > 0);
 	g_assert (! iris_process_has_succeeded (process_1));
-	g_assert (iris_process_was_cancelled (process_1));
+	g_assert (iris_process_is_cancelled (process_1));
 
 	/* Wait for CHAIN_ESTIMATE messages to be processed */
 	wait_control_messages (process_2);

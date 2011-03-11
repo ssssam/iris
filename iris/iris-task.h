@@ -237,7 +237,7 @@ gboolean      iris_task_is_executing          (IrisTask            *task);
 gboolean      iris_task_is_finished           (IrisTask            *task);
 gboolean      iris_task_has_succeeded         (IrisTask            *task);
 gboolean      iris_task_has_failed            (IrisTask            *task);
-gboolean      iris_task_was_cancelled          (IrisTask            *task);
+gboolean      iris_task_is_cancelled          (IrisTask            *task);
 
 gboolean      iris_task_get_fatal_error       (IrisTask            *task,
                                                GError             **error);

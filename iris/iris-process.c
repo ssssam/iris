@@ -105,7 +105,7 @@
  *   /&ast; BAD: This will still be FALSE if the 'run' message has not yet been delivered &ast;/
  *   g_assert (iris_process_is_executing (process));
  *
- *   if (! iris_process_was_cancelled (process))
+ *   if (! iris_process_is_cancelled (process))
  *     /&ast; BAD: The process could be cancelled from the progress monitor widget
  *      &ast; at any time.
  *      &ast;/
@@ -270,7 +270,7 @@ iris_process_run (IrisProcess *process)
  * whole chain.
  *
  * If the work function is slow, it should periodically check
- * iris_task_was_cancelled() while working and quit execution if it returns
+ * iris_task_is_cancelled() while working and quit execution if it returns
  * %TRUE to ensure the process is responsive to cancelation.
  *
  */
@@ -576,7 +576,7 @@ iris_process_is_finished (IrisProcess *process)
 }
 
 /**
- * iris_process_was_cancelled:
+ * iris_process_is_cancelled:
  * @process: An #IrisProcess
  *
  * Checks if a process has been cancelled.  Note that if @process handled the
@@ -589,9 +589,9 @@ iris_process_is_finished (IrisProcess *process)
  * Return value: %TRUE if the process was cancelled.
  */
 gboolean
-iris_process_was_cancelled (IrisProcess *process)
+iris_process_is_cancelled (IrisProcess *process)
 {
-	return iris_task_was_cancelled (IRIS_TASK (process));
+	return iris_task_is_cancelled (IRIS_TASK (process));
 }
 
 /**

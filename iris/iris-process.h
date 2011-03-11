@@ -99,7 +99,7 @@ gboolean      iris_process_is_open               (IrisProcess            *proces
 gboolean      iris_process_is_executing          (IrisProcess            *process);
 gboolean      iris_process_is_finished           (IrisProcess            *process);
 gboolean      iris_process_has_succeeded         (IrisProcess            *process);
-gboolean      iris_process_was_cancelled          (IrisProcess            *process);
+gboolean      iris_process_is_cancelled          (IrisProcess            *process);
 
 gboolean      iris_process_has_source            (IrisProcess            *process);
 gboolean      iris_process_has_sink              (IrisProcess            *process);

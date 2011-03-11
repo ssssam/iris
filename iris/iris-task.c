@@ -765,7 +765,7 @@ iris_task_has_failed (IrisTask *task)
 }
 
 /**
- * iris_task_was_cancelled:
+ * iris_task_is_cancelled:
  * @task: An #IrisTask
  *
  * Checks if a task has been cancelled.  Note that if the task handles
@@ -776,7 +776,7 @@ iris_task_has_failed (IrisTask *task)
  * Return value: %TRUE if the task was cancelled.
  */
 gboolean
-iris_task_was_cancelled (IrisTask *task)
+iris_task_is_cancelled (IrisTask *task)
 {
 	g_return_val_if_fail (IRIS_IS_TASK (task), FALSE);
 	return FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELLED);
@@ -1088,7 +1088,7 @@ iris_task_notify_observers (IrisTask *task)
 
 	#ifdef IRIS_TRACE_TASK
 	g_print ("%lx: Sending %s to %i observers\n", (gulong)task,
-	         iris_task_was_cancelled (task)? "canceled": "completed",
+	         iris_task_is_cancelled (task)? "canceled": "completed",
 	         g_list_length (priv->observers));
 	#endif
 
@@ -1351,7 +1351,7 @@ handle_finish (IrisTask    *task,
 	/* FIXME: this test should be a function like iris_port_is_clear() ... */
 	if (iris_port_get_queue_length (task->priv->port) > 0 ||
 	    g_atomic_int_get (&task->priv->receiver->priv->active) > 0) {
-		if (iris_task_was_cancelled (task))
+		if (iris_task_is_cancelled (task))
 			g_warning ("Task %lx is entering finished state due to cancel, but "
 			           "there are more messages waiting to execute. Don't "
 			           "forget that IrisTasks are immutable once they have "
