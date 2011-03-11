@@ -720,15 +720,7 @@ iris_task_is_finished (IrisTask *task)
 gboolean
 iris_task_has_succeeded (IrisTask *task)
 {
-	IrisTaskPrivate *priv;
-
-	g_return_val_if_fail (IRIS_IS_TASK (task), FALSE);
-
-	priv = task->priv;
-
-	return (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED) &&
-	        FLAG_IS_OFF (task, IRIS_TASK_FLAG_CANCELLED) &&
-	        (priv->error == NULL));
+	return IRIS_TASK_GET_CLASS (task)->has_succeeded (task);
 }
 
 /**
@@ -740,15 +732,7 @@ iris_task_has_succeeded (IrisTask *task)
 gboolean
 iris_task_has_failed (IrisTask *task)
 {
-	IrisTaskPrivate *priv;
-
-	g_return_val_if_fail (IRIS_IS_TASK (task), FALSE);
-
-	priv = task->priv;
-
-	return (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED) &&
-	        FLAG_IS_OFF (task, IRIS_TASK_FLAG_CANCELLED) &&
-	        priv->error != NULL);
+	return IRIS_TASK_GET_CLASS (task)->has_failed (task);
 }
 
 /**
@@ -1820,6 +1804,34 @@ iris_task_execute_real (IrisTask *task)
 		iris_task_work_finished (task);
 }
 
+static gboolean
+iris_task_has_succeeded_real (IrisTask *task)
+{
+	IrisTaskPrivate *priv;
+
+	g_return_val_if_fail (IRIS_IS_TASK (task), FALSE);
+
+	priv = task->priv;
+
+	return (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED) &&
+	        FLAG_IS_OFF (task, IRIS_TASK_FLAG_CANCELLED) &&
+	        (priv->error == NULL));
+}
+
+static gboolean
+iris_task_has_failed_real (IrisTask *task)
+{
+	IrisTaskPrivate *priv;
+
+	g_return_val_if_fail (IRIS_IS_TASK (task), FALSE);
+
+	priv = task->priv;
+
+	return (FLAG_IS_ON (task, IRIS_TASK_FLAG_FINISHED) &&
+	        FLAG_IS_OFF (task, IRIS_TASK_FLAG_CANCELLED) &&
+	        priv->error != NULL);
+}
+
 static void
 iris_task_constructed (GObject *object)
 {
@@ -1960,6 +1972,8 @@ iris_task_class_init (IrisTaskClass *task_class)
 	task_class->handle_message = iris_task_handle_message_real;
 	task_class->can_cancel = iris_task_can_cancel_real;
 	task_class->execute = iris_task_execute_real;
+	task_class->has_succeeded = iris_task_has_succeeded_real;
+	task_class->has_failed = iris_task_has_failed_real;
 	task_class->dependency_finished = iris_task_dependency_finished_real;
 	task_class->dependency_cancelled = iris_task_dependency_cancelled_real;
 

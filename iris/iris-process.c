@@ -596,18 +596,22 @@ iris_process_is_cancelled (IrisProcess *process)
 gboolean
 iris_process_has_succeeded (IrisProcess *process)
 {
-	IrisProcessPrivate *priv;
-
-	g_return_val_if_fail (IRIS_IS_PROCESS (process), FALSE);
-
-	priv = process->priv;
-
-	if (FLAG_IS_OFF (process, IRIS_PROCESS_FLAG_HAS_SOURCE))
-		return iris_task_has_succeeded (IRIS_TASK (process));
-	else
-		return iris_process_has_succeeded (priv->source) &&
-		       iris_task_has_succeeded (IRIS_TASK (process));
+	return iris_task_has_succeeded (IRIS_TASK (process));
 };
+
+/**
+ * iris_process_has_failed:
+ * @process: An #IrisProcess
+ *
+ * Checks if @process failed with a fatal error.
+ *
+ * Return value: %TRUE if the process work function completed with an error.
+ */
+gboolean
+iris_process_has_failed (IrisProcess *process)
+{
+	return iris_task_has_failed (IRIS_TASK (process));
+}
 
 /**
  * iris_process_has_source:
@@ -1641,6 +1645,27 @@ iris_process_handle_message_real (IrisTask    *task,
 	}
 }
 
+static gboolean
+iris_process_has_succeeded_real (IrisTask *task) {
+	IrisProcess        *process;
+	IrisProcessPrivate *priv;
+	IrisTaskClass      *task_class;
+
+	g_return_val_if_fail (IRIS_IS_PROCESS (task), FALSE);
+
+	process = IRIS_PROCESS (task);
+	priv = process->priv;
+
+	task_class = IRIS_TASK_CLASS (iris_process_parent_class);
+
+	if (FLAG_IS_OFF (process, IRIS_PROCESS_FLAG_HAS_SOURCE))
+		return task_class->has_succeeded (IRIS_TASK (process));
+	else
+		/* Chained process has not succeeded until its source has done */
+		return task_class->has_succeeded (IRIS_TASK (priv->source)) &&
+		       task_class->has_succeeded (IRIS_TASK (process));
+}
+
 static void
 iris_task_post_work_item_real (IrisProcess *process,
                                IrisMessage *work_item)
@@ -1932,6 +1957,7 @@ iris_process_class_init (IrisProcessClass *process_class)
 	task_class = IRIS_TASK_CLASS (process_class);
 	task_class->execute = iris_process_execute_real;
 	task_class->handle_message = iris_process_handle_message_real;
+	task_class->has_succeeded = iris_process_has_succeeded_real;
 
 	object_class = G_OBJECT_CLASS (process_class);
 	object_class->constructed = iris_process_constructed;

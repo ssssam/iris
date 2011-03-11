@@ -157,18 +157,21 @@ struct _IrisTaskClass
 {
 	GObjectClass parent_class;
 
-	void     (*handle_message)      (IrisTask *task, IrisMessage *message);
+	void     (*handle_message)       (IrisTask *task, IrisMessage *message);
 
-	void     (*execute)             (IrisTask *task);
-	gboolean (*can_cancel)          (IrisTask *task);
+	void     (*execute)              (IrisTask *task);
+	gboolean (*can_cancel)           (IrisTask *task);
+
+	gboolean (*has_succeeded)        (IrisTask *task);
+	gboolean (*has_failed)           (IrisTask *task);
 
 	void     (*dependency_cancelled) (IrisTask *task, IrisTask *dep);
-	void     (*dependency_finished) (IrisTask *task, IrisTask *dep);
+	void     (*dependency_finished)  (IrisTask *task, IrisTask *dep);
 
-	void     (*reserved1)           (void);
-	void     (*reserved2)           (void);
-	void     (*reserved3)           (void);
-	void     (*reserved4)           (void);
+	void     (*reserved1)            (void);
+	void     (*reserved2)            (void);
+	void     (*reserved3)            (void);
+	void     (*reserved4)            (void);
 };
 
 GType         iris_task_get_type              (void) G_GNUC_CONST;
