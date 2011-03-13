@@ -59,6 +59,13 @@ typedef struct _IrisSchedulerClass   IrisSchedulerClass;
 typedef struct _IrisSchedulerPrivate IrisSchedulerPrivate;
 typedef struct _IrisThread           IrisThread;
 typedef struct _IrisThreadWork       IrisThreadWork;
+
+/**
+ * IrisCallback
+ * @data: user data passed to queue method
+ *
+ * Work callback for items queued in the scheduler.
+ */
 typedef void   (*IrisCallback)       (gpointer data);
 
 /**
