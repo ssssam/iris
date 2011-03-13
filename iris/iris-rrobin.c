@@ -34,8 +34,6 @@
  * #IrisRRobin is completely multithread-safe.
  */
 
-static void iris_rrobin_free (IrisRRobin *rrobin);
-
 GType
 iris_rrobin_get_type (void)
 {
@@ -75,6 +73,12 @@ iris_rrobin_new (gint size)
 	rrobin->ref_count = 1;
 
 	return rrobin;
+}
+
+static void
+iris_rrobin_free (IrisRRobin *rrobin)
+{
+	g_free (rrobin);
 }
 
 /**
@@ -242,18 +246,6 @@ _try_next_index:
 	}
 
 	return TRUE;
-}
-
-/**
- * iris_rrobin_free:
- * @rrobin: An #IrisRRobin
- *
- * Frees the memory associated with @rrobin.
- */
-void
-iris_rrobin_free (IrisRRobin *rrobin)
-{
-	g_free (rrobin);
 }
 
 /**
