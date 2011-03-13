@@ -1,6 +1,3 @@
-Here is my understanding of some of Iris' internals:
-
-
 Message passing
 ---------------
 
@@ -77,6 +74,72 @@ Schedulers
     exclusive mode is entered and the thread begins running through the work
     queue.
   - note that the message queue is thread->queue, work queue is thread->active.
+
+
+Tasks and Processes
+-------------------
+
+These are stateful objects. Currently there is no explicit state variable, but
+various flags represent different states of execution. I plan to introduce an
+explicit 'state' variable to make the code easier to follow. Below is a list of
+the states tasks and processes go through.
+
+The START_CANCEL and DEP_CANCELLED messages can be received at any time. A
+cancel completes when FINISH_CANCEL is processed, at which point the execution
+ref is released and the task may be finalized. In state diagram, 'normal
+behaviour' refers to the following:
+  * for IrisTask, the FINISH_CANCEL usually follows the START_CANCEL directly.
+  * for IrisProcess, there are two exceptions to this. Firstly, the process
+    will never send FINISH_CANCEL until iris_process_close() has been called, to
+    prevent it being freed while users expect to still be able to queue work.
+    Also, when the process is connected to a source, the process will expect to
+    receive CHAIN_CANCEL before sending FINISH_CANCEL to ensure the chain
+    cancels in order.
+
+Preparation:
+  - no flags set
+  - on START_CANCEL: normal behaviour
+
+  The object becomes largely immutable on leaving this state, eg. no more
+  callbacks or dependencies can be added.
+
+  START_WORK message => pre-execution
+
+Pre-execution:
+  - flags: NEED_EXECUTE, STARTED
+  - on START_CANCEL: normal behaviour, NEED_EXECUTE is unset
+                     
+
+  If there are no dependencies, or when all dependencies have sent DEP_FINISHED
+  message, task is enqueued and NEED_EXECUTE is unset => execution.
+
+Execution:
+  - flags: WORK_ACTIVE, STARTED
+  - on START_CANCEL: FINISH_CANCEL is not sent until the work function exits.
+
+  The main stage: work function executes.
+  
+  WORK_FINISHED message => callbacks
+
+Callbacks:
+  - flags: CALLBACKS_ACTIVE, STARTED
+  - on START_CANCEL: cancel is ignored because the work is already complete
+
+  PROGRESS_CALLBACKS message is used to trigger one callback and is then sent
+  again to trigger the next one.
+
+  CALLBACKS_FINISHED message => finished
+
+Finished:
+  - flags: FINISHED, STARTED
+  - on START_CANCEL: ignored
+
+  DEP_FINISHED message is sent to observers.
+
+Cancelled:
+  - flags: CANCELLED (and maybe STARTED)
+
+  DEP_CANCELLED message is sent to observers.
 
 
 Useful stuff
