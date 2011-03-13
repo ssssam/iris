@@ -107,7 +107,7 @@ iris_any_task_init (IrisAnyTask *task)
  * @tasks: A #GList of #IrisTask<!-- -->'s
  *
  * Creates a new task that will not complete until any one of the
- * #IrisTask<!-- -->'s completes.
+ * #IrisTask<!-- -->'s completes. None of the tasks can have started executing.
  *
  * Return value: the newly created #IrisTask instance.
  */
@@ -119,8 +119,13 @@ iris_task_any_of (GList *tasks)
 	g_return_val_if_fail (tasks != NULL, NULL);
 
 	task = g_object_new (IRIS_TYPE_ANY_TASK, NULL);
-	for (; tasks; tasks = tasks->next)
+	for (; tasks; tasks = tasks->next) {
+		if (IRIS_TASK (tasks->data)->priv->flags & IRIS_TASK_FLAG_STARTED)
+			g_warning ("iris_task_any_of(): task %lx has already started "
+			           "executing.\n", (gulong)tasks->data);
+
 		iris_task_add_dependency (task, tasks->data);
+	}
 	return task;
 }
 
@@ -130,7 +135,7 @@ iris_task_any_of (GList *tasks)
  * @Varargs: A %NULL-terminated list of further tasks to watch
  *
  * Creates a new task that will complete when one of the passed #IrisTask
- * instances completes.
+ * instances completes. None of the tasks can have started executing.
  *
  * Return value: An #IrisTask
  */
@@ -149,8 +154,13 @@ iris_task_vany_of (IrisTask *first_task, ...)
 	va_start (args, first_task);
 
 	while (iter) {
-		if (IRIS_IS_TASK (iter))
+		if (IRIS_IS_TASK (iter)) {
+			if (iter->priv->flags & IRIS_TASK_FLAG_STARTED)
+				g_warning ("iris_task_vall_of(): task %lx has already started "
+				           "executing.\n", (gulong)iter);
+
 			iris_task_add_dependency (task, iter);
+		}
 		iter = va_arg (args, IrisTask*);
 	}
 

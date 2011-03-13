@@ -48,15 +48,28 @@
  * completed or cancelled. If you want to keep it alive, you should add your own
  * reference with g_object_ref() before calling iris_task_run().
  *
+ * <refsect2 id="message-passing">
+ * <title>Message Passing</title>
+ * <para>
+ * #IrisTask's control methods do not perform actions directly. Instead, when for
+ * example iris_task_run() is called, a message is sent to the process asking it
+ * to start work and then the function returns. If you then call
+ * iris_task_is_executing(), it may return %TRUE or %FALSE depending on if the
+ * message has been processed. The advantage of this method is that you may call
+ * #IrisTask functions from any thread you like. Messages are always executed in
+ * the order that they are sent.
+ * </para></refsect2>
+ *
  * <refsect2 id="lifecycle">
  * <title>Lifecycle in detail</title>
  * <para>
- * The behaviour of #IrisTask is implemented using #GInitiallyUnowned. This is
- * essentially a utility feature for C programmers and is normally used for
- * objects which are consumed by another object, so they do not have to be
- * explicity freed by the user. A good example is #IrisMessage. In #IrisTask
- * the situation is slightly different; in a way the task consumes itself, by
- * calling g_object_ref_sink() when the task begins to execute.
+ * The execution reference of #IrisTask is implemented using #GInitiallyUnowned.
+ * This is essentially a utility feature for C programmers and is normally used
+ * for objects which are consumed by another object, so they do not have to be
+ * explicity freed by the user; a good example is #IrisMessage. In #IrisTask
+ * the situation is slightly different. The task effectively consumes itself, by
+ * calling g_object_ref_sink() when the task begins to execute and freeing the
+ * reference when finished.
  *
  * The main side-effect of this is that if for some reason you need to free a
  * task even before it has been executed, you should still call
@@ -258,12 +271,14 @@ iris_task_new_with_closure_full (GClosure      *closure,
  *
  * Asynchronously schedules the task for execution.
  *
- * This function calls g_object_ref_sink(), to sink or give a reference that
- * will last until task execution has completed or been cancelled.
+ * When the task runs, g_object_ref_sink() will be called to sink or give the
+ * task its <firstterm>execution reference</firstterm>. This is a reference that
+ * will persist until the task completes or is canceled, enabling the task to be
+ * automatically freed if and when it is no longer needed.
  *
- * If @task was already cancelled, this function will do nothing (unless the
- * caller doesn't still hold a reference on @task, in which case it will
- * probably crash because @task was freed when cancelled).
+ * If @task was already cancelled, this function will do nothing, unless the
+ * caller doesn't hold a reference on @task in which case there will probably
+ * be a segfault as @task would have been freed when it was cancelled.
  */
 void
 iris_task_run (IrisTask *task)
@@ -272,6 +287,7 @@ iris_task_run (IrisTask *task)
 	IrisMessage     *msg;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (! iris_task_is_executing (task));
 
 	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELLED))
 		return;
@@ -301,6 +317,10 @@ iris_task_run_with_async_result (IrisTask            *task,
 	GSimpleAsyncResult *res;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (! iris_task_is_executing (task));
+
+	if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CANCELLED))
+		return;
 
 	priv = task->priv;
 
@@ -316,10 +336,11 @@ iris_task_run_with_async_result (IrisTask            *task,
  * iris_task_cancel:
  * @task: An #IrisTask
  *
- * Cancels a task.  If the task is already executing, it is up to the executing
- * task to periodically check the cancelled state with iris_task_was_canceled()
- * and quit execution. If the work function has already completed the cancel
- * will be ignored.
+ * Requests a task to cancel. If the task is already executing, it is up to the
+ * executing task to periodically check the cancelled state with
+ * iris_task_was_canceled() and quit execution. If the work function has
+ * already completed the cancel will be ignored and the callbacks phase will
+ * complete in full.
  *
  * When @task has fully cancelled it will be destroyed, unless still referenced
  * elsewhere. Because an #IrisTask has a floating reference until it runs, if
@@ -350,9 +371,9 @@ iris_task_cancel (IrisTask *task)
  * iris_task_work_finished:
  * @task: An #IrisTask
  *
- * Marks the task as finishing the work execution phase. This should be used
- * by asynchronous tasks to signal that the work has completed or signalled an
- * error.
+ * Sends a message to the task to finish the work execution phase. This should
+ * be used by tasks created with the 'async' flag set to signal that the work
+ * has completed or signalled an error.
  *
  * Finishing the work starts the callbacks phase executing. The task is not
  * considered fully executed until the callbacks/errbacks have finished.
@@ -368,6 +389,7 @@ iris_task_work_finished (IrisTask *task)
 	IrisMessage     *msg;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (FLAG_IS_ON (task, IRIS_TASK_FLAG_WORK_ACTIVE));
 
 	priv = task->priv;
 
@@ -383,6 +405,8 @@ iris_task_work_finished (IrisTask *task)
  * Sets the display mode for progress monitors that will watch @task. See
  * #IrisProgressMode for more information. This value is immutable once
  * iris_task_run() is called.
+ *
+ * Unlike other control methods, this function updates the value immediately.
  */
 void
 iris_task_set_progress_mode (IrisTask         *task,
@@ -391,6 +415,7 @@ iris_task_set_progress_mode (IrisTask         *task,
 	IrisTaskPrivate *priv;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED));
 
 	priv = task->priv;
 
@@ -428,6 +453,8 @@ iris_task_get_progress_mode (IrisTask *task)
  * Adds a callback to the callbacks phase.  The callback will be executed
  * in the order it was added.  If the task has an error when the callback
  * is reached, it will not be executed at all.
+ *
+ * Callbacks cannot be added once the task has started executing.
  */
 void
 iris_task_add_callback (IrisTask       *task,
@@ -438,6 +465,7 @@ iris_task_add_callback (IrisTask       *task,
 	GClosure *closure;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED));
 
 	closure = g_cclosure_new (G_CALLBACK (callback),
 	                          user_data,
@@ -457,6 +485,8 @@ iris_task_add_callback (IrisTask       *task,
  * Adds an errback to the callbacks phase.  The errback will be executed
  * in the order it was added.  If errback will only execute if the task
  * has an error when the errback is reached.
+ *
+ * Callbacks cannot be added once the task has started executing.
  */
 void
 iris_task_add_errback (IrisTask       *task,
@@ -467,6 +497,7 @@ iris_task_add_errback (IrisTask       *task,
 	GClosure *closure;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED));
 
 	closure = g_cclosure_new (G_CALLBACK (errback),
 	                          user_data,
@@ -488,6 +519,8 @@ iris_task_add_errback (IrisTask       *task,
  * is in an errored state when the handler is reached, @errback will be
  * invoked.  Otherwise, @callback will be invoked.  One, and only one, of
  * these functions is guaranteed to be invoked.
+ *
+ * Callbacks cannot be added once the task has started executing.
  */
 void
 iris_task_add_both (IrisTask       *task,
@@ -502,6 +535,7 @@ iris_task_add_both (IrisTask       *task,
 	g_return_if_fail (IRIS_IS_TASK (task));
 	g_return_if_fail (callback != NULL);
 	g_return_if_fail (errback != NULL);
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED));
 
 	callback_closure = g_cclosure_new (G_CALLBACK (callback), user_data, (GClosureNotify)notify);
 	errback_closure = g_cclosure_new (G_CALLBACK (errback), user_data, (GClosureNotify)notify);
@@ -517,7 +551,8 @@ iris_task_add_both (IrisTask       *task,
  * @task: An #IrisTask
  * @closure: A #GClosure
  *
- * Adds a callback closure to be executed in the callbacks phase.
+ * Adds a callback closure to be executed in the callbacks phase. Callbacks
+ * cannot be added once the task has started executing.
  *
  * See iris_task_add_callback().
  */
@@ -531,6 +566,7 @@ iris_task_add_callback_closure (IrisTask *task,
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 	g_return_if_fail (closure != NULL);
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED));
 
 	priv = task->priv;
 
@@ -547,7 +583,8 @@ iris_task_add_callback_closure (IrisTask *task,
  * @task: An #IrisTask
  * @closure: A #GClosure
  *
- * Adds an errback closure to be executed in the callbacks phase.
+ * Adds an errback closure to be executed in the callbacks phase. Callbacks
+ * cannot be added once the task has started executing.
  *
  * See iris_task_add_errback().
  */
@@ -561,6 +598,7 @@ iris_task_add_errback_closure  (IrisTask *task,
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 	g_return_if_fail (closure != NULL);
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED));
 
 	priv = task->priv;
 
@@ -582,6 +620,8 @@ iris_task_add_errback_closure  (IrisTask *task,
  * in an errored state when the task handler is reached, @errback will be
  * invoked.  Otherwise, @callback will be invoked.  One, and only one, of
  * the closures is guaranteed to be invoked.
+ *
+ * Callbacks cannot be added once the task has started executing.
  */
 void
 iris_task_add_both_closure (IrisTask *task,
@@ -594,6 +634,7 @@ iris_task_add_both_closure (IrisTask *task,
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 	g_return_if_fail (callback != NULL || errback != NULL);
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED));
 
 	priv = task->priv;
 
@@ -611,8 +652,8 @@ iris_task_add_both_closure (IrisTask *task,
  * @task: An #IrisTask
  * @dependency: An #IrisTask
  *
- * Prevents further execution of the task or callbacks phase until
- * the @dependency task has completed.
+ * Prevents execution of the task until @dependency has completed. This function
+ * can only be called before the task has started executing.
  */
 void
 iris_task_add_dependency (IrisTask *task,
@@ -623,6 +664,7 @@ iris_task_add_dependency (IrisTask *task,
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 	g_return_if_fail (IRIS_IS_TASK (dependency));
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED));
 
 	priv = task->priv;
 
@@ -632,36 +674,11 @@ iris_task_add_dependency (IrisTask *task,
 }
 
 /**
- * iris_task_remove_dependency:
- * @task: An #IrisTask
- * @dependency: An #IrisTask
- *
- * Removes @dependency from preventing the tasks execution.  If the task is
- * ready to execute it will be scheduled for execution.
- */
-void
-iris_task_remove_dependency    (IrisTask *task,
-                                IrisTask *dependency)
-{
-	IrisTaskPrivate *priv;
-	IrisMessage     *msg;
-
-	g_return_if_fail (IRIS_IS_TASK (task));
-	g_return_if_fail (IRIS_IS_TASK (dependency));
-
-	priv = task->priv;
-
-	msg = iris_message_new_data (IRIS_TASK_MESSAGE_REMOVE_DEPENDENCY,
-	                             IRIS_TYPE_TASK, dependency);
-	iris_port_post (priv->port, msg);
-}
-
-/**
  * iris_task_is_async:
  * @task: An #IrisTask
  *
  * Checks if the task is an asynchronous task, meaning it will not complete
- * when the tasks execute method returns.
+ * automatically when the tasks execute method returns.
  *
  * Return value: %TRUE if the task is asynchronous
  */
@@ -945,9 +962,8 @@ iris_task_set_result_gtype (IrisTask *task,
  * @task: An #IrisTask
  * @context: A #GMainContext
  *
- * Sets a #GMainContext to use to perform the errbacks and callbacks
- * from.  All future callbacks and errbacks will be executed from within
- * the context.
+ * Sends a message to @task with a #GMainContext to run the errbacks and
+ * callbacks from. This must be called before @task has begun execution.
  *
  * This function will <emphasis>not</emphasis> cause the actual task to execute
  * in the GMainContext; if you do want to achieve this you should use
@@ -964,6 +980,7 @@ iris_task_set_main_context (IrisTask     *task,
 	IrisMessage     *msg;
 
 	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED));
 
 	priv = task->priv;
 
@@ -1148,6 +1165,58 @@ iris_task_progress_callbacks_or_finish (IrisTask *task)
 	}
 	else {
 		iris_task_progress_callbacks (task);
+	}
+}
+
+static void
+iris_task_remove_dependency (IrisTask *task,
+                             IrisTask *dependency)
+{
+	IrisTaskPrivate *priv;
+	IrisMessage     *msg;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (IRIS_IS_TASK (dependency));
+
+	priv = task->priv;
+
+	msg = iris_message_new_data (IRIS_TASK_MESSAGE_REMOVE_DEPENDENCY,
+	                             IRIS_TYPE_TASK, dependency);
+	iris_port_post (priv->port, msg);
+}
+
+void
+iris_task_remove_dependency_sync (IrisTask *task,
+                                  IrisTask *dependency)
+{
+	IrisTaskPrivate *priv;
+	IrisTask        *dep;
+	IrisMessage     *message;
+	GList           *node;
+
+	g_return_if_fail (IRIS_IS_TASK (task));
+	g_return_if_fail (IRIS_IS_TASK (dependency));
+
+	priv = task->priv;
+
+	if ((node = g_list_find (priv->dependencies, dependency)) != NULL) {
+		dep = IRIS_TASK (node->data);
+
+		if (FLAG_IS_OFF (dep, IRIS_TASK_FLAG_FINISHED)) {
+			message = iris_message_new_data (IRIS_TASK_MESSAGE_REMOVE_OBSERVER,
+			                                 IRIS_TYPE_TASK, task);
+			iris_port_post (dep->priv->port, message);
+		}
+
+		priv->dependencies = g_list_delete_link (priv->dependencies, node);
+		g_object_unref (dependency);
+	}
+
+	if (!PROGRESS_BLOCKED (task)) {
+		if (FLAG_IS_ON (task, IRIS_TASK_FLAG_NEED_EXECUTE))
+			iris_task_schedule (task);
+		else if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CALLBACKS_ACTIVE))
+			iris_task_progress_callbacks_or_finish (task);
 	}
 }
 
@@ -1359,7 +1428,6 @@ handle_add_dependency (IrisTask    *task,
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 	g_return_if_fail (message != NULL);
-
 	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED));
 
 	priv = task->priv;
@@ -1388,49 +1456,6 @@ handle_remove_dependency (IrisTask    *task,
 	iris_task_remove_dependency_sync (task, dep);
 }
 
-/**
- * iris_task_remove_dependency_sync:
- * @task: An #IrisTask
- * @dependency: An #IrisTask
- *
- * Synchronously removes @dependency from @task<!-- -->'s list of dependencies.
- * See iris_task_remove_dependency().
- */
-void
-iris_task_remove_dependency_sync (IrisTask *task,
-                                  IrisTask *dependency)
-{
-	IrisTaskPrivate *priv;
-	IrisTask        *dep;
-	IrisMessage     *message;
-	GList           *node;
-
-	g_return_if_fail (IRIS_IS_TASK (task));
-	g_return_if_fail (IRIS_IS_TASK (dependency));
-
-	priv = task->priv;
-
-	if ((node = g_list_find (priv->dependencies, dependency)) != NULL) {
-		dep = IRIS_TASK (node->data);
-
-		if (FLAG_IS_OFF (dep, IRIS_TASK_FLAG_FINISHED)) {
-			message = iris_message_new_data (IRIS_TASK_MESSAGE_REMOVE_OBSERVER,
-			                                 IRIS_TYPE_TASK, task);
-			iris_port_post (dep->priv->port, message);
-		}
-
-		priv->dependencies = g_list_delete_link (priv->dependencies, node);
-		g_object_unref (dependency);
-	}
-
-	if (!PROGRESS_BLOCKED (task)) {
-		if (FLAG_IS_ON (task, IRIS_TASK_FLAG_NEED_EXECUTE))
-			iris_task_schedule (task);
-		else if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CALLBACKS_ACTIVE))
-			iris_task_progress_callbacks_or_finish (task);
-	}
-}
-
 static void
 handle_add_handler (IrisTask    *task,
                     IrisMessage *message)
@@ -1440,6 +1465,7 @@ handle_add_handler (IrisTask    *task,
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 	g_return_if_fail (message != NULL);
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED));
 
 	priv = task->priv;
 
@@ -1467,6 +1493,7 @@ handle_set_main_context (IrisTask    *task,
 
 	g_return_if_fail (IRIS_IS_TASK (task));
 	g_return_if_fail (message != NULL);
+	g_return_if_fail (FLAG_IS_OFF (task, IRIS_TASK_FLAG_STARTED));
 
 	priv = task->priv;
 	context = g_value_get_pointer (iris_message_get_data (message));
@@ -1874,6 +1901,7 @@ iris_task_set_property (GObject      *object,
 	priv = task->priv;
 
 	switch (prop_id) {
+		/* Construct-only properties */
 		case PROP_CONTROL_SCHEDULER:
 			g_warn_if_fail (priv->control_scheduler == NULL);
 
@@ -1913,6 +1941,7 @@ iris_task_get_property (GObject    *object,
 	priv = task->priv;
 
 	switch (prop_id) {
+		/* Construct-only properties */
 		case PROP_CONTROL_SCHEDULER:
 			g_value_set_object (value, priv->control_scheduler);
 			break;

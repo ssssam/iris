@@ -50,13 +50,26 @@
  * possible to run the process while it is still open. Note that the process
  * will never finish while open, even if it is cancelled - in this case the
  * process will remain alive, accepting (but ignoring) new work items until
- * iris_process_close() is called, at which point it will be destroyed.
+ * iris_process_close() is called, at which point it will be destroyed. See the
+ * #IrisTask documentation for more information on the execution reference.
+ *
+ * Like #IrisTask, all #IrisProcess methods that perform actions will not do the
+ * action directly but will send a message to the process asking for it to be
+ * done. For this reason, code such as the following is invalid:
+ * |[
+ *   iris_process_run (process);
+ *
+ *   /&ast; BAD: This will still be FALSE if the 'run' message has not yet been delivered &ast;/
+ *   g_assert (iris_process_is_executing (process));
+ * ]|
+ * See the #IrisTask documentation for more information.
  *
  * The progress of an #IrisProcess, or a chained group of them, can be monitored
  * using some kind of #IrisProgressMonitor, such as an #GtkIrisProgressDialog.
  * If you want to do this you may want to call iris_process_set_title() to give
- * the process a label. Note that progress update messages might not be sent
- * until iris_process_run() is called.
+ * the process a label, and iris_task_set_progress_mode() to change the way that
+ * the progress information is displayed. Note that progress update messages
+ * might not be sent until iris_process_run() is called.
  *
  * <refsect2 id="chaining">
  * <title>Process connections</title>
@@ -88,55 +101,6 @@
  * can currently only have one source and one sink process.
  * </para>
  * </refsect2>
- *
- * <refsect2 id="synchronisation">
- * <title>Synchronisation</title>
- * <para>
- * Because processes run asynchronously in their own threads, the control
- * methods communicate through messages and will normally return before the
- * message has been received by the process and been carried out. You must be
- * very careful to avoid expecting synchronisation where there is none:
- * |[
- *   process = iris_process_new (callback, NULL, NULL);
- *   iris_progress_monitor_watch_process (progress_monitor, process, NULL);
- *
- *   iris_process_run (process);
- *
- *   /&ast; BAD: This will still be FALSE if the 'run' message has not yet been delivered &ast;/
- *   g_assert (iris_process_is_executing (process));
- *
- *   if (! iris_process_is_cancelled (process))
- *     /&ast; BAD: The process could be cancelled from the progress monitor widget
- *      &ast; at any time.
- *      &ast;/
- *     iris_process_enqueue (process, work_item);
- * ]|
- * The assert might fail or pass, because the actual run happens in another
- * thread. Similarly, checking for cancel is normally pointless because the
- * cancel could take place after you have checked - and it is for this reason
- * that a process will still accept work items until you call
- * iris_process_close(), even if it has been cancelled.
- *
- * Messages <emphasis>are</emphasis> executed in the order they are sent, so
- * given that iris_process_connect() can only be called before
- * iris_process_run(), the following code would be valid:
- * |[
- *   IrisProcess *head, *tail;
- *   head = iris_process_new (callback_1, NULL, NULL);
- *   tail = iris_process_new (callback_1, NULL, NULL); *
- *
- *   iris_process_connect (head, tail);
- *   iris_process_run (head);
- *
- *   while (1)
- *     if (iris_process_is_executing (head)) {
- *       g_assert (iris_process_has_sink (head));
- *       break;
- *     }
- * ]|
- * Once the 'run' message has been executed, we know for sure that the
- * 'connect' message has also executed.
- * </para></refsect2>
  */
 
 /* How frequently the process checks for cancellation between try_pop calls. */
@@ -740,6 +704,7 @@ iris_process_get_status (IrisProcess *process,
 	if (p_processed_items != NULL)
 		*p_processed_items = g_atomic_int_get (&priv->processed_items);
 
+	/* Set p_total_items last so that it will never be < p_processed_items. */
 	if (p_total_items != NULL) {
 		*p_total_items = g_atomic_int_get (&priv->estimated_total_items);
 		if (*p_total_items == 0)
@@ -759,7 +724,7 @@ iris_process_get_status (IrisProcess *process,
 gint
 iris_process_get_queue_length (IrisProcess *process) {
 	IrisProcessPrivate *priv;
-	gint               processed_items, total_items;
+	gint                processed_items, total_items;
 
 	g_return_val_if_fail (IRIS_IS_PROCESS (process), 0);
 
@@ -1097,8 +1062,7 @@ handle_work_finished (IrisProcess *process,
 	}
 
 	#ifdef IRIS_TRACE_TASK
-	g_print ("process %lx: work-finished, process has sink\n",
-			 (gulong)process);
+	g_print ("process %lx: work-finished, process has sink\n", (gulong)process);
 	#endif
 
 	/* When chained, we behave differently to normal tasks: tasks will
@@ -1160,13 +1124,13 @@ handle_callbacks_finished (IrisProcess *process,
  */
 static void
 handle_start_cancel (IrisProcess *process,
-                     IrisMessage *start_message)
+                     IrisMessage *in_message)
 {
 	IrisProcessPrivate *priv;
-	IrisMessage        *message;
+	IrisMessage        *out_message;
 
 	g_return_if_fail (IRIS_IS_PROCESS (process));
-	g_return_if_fail (start_message != NULL);
+	g_return_if_fail (in_message != NULL);
 
 	g_return_if_fail (FLAG_IS_OFF (process, IRIS_TASK_FLAG_CANCELLED));
 
@@ -1206,8 +1170,8 @@ handle_start_cancel (IrisProcess *process,
 		if (FLAG_IS_ON (process, IRIS_TASK_FLAG_WORK_ACTIVE));
 			/* FINISH_CANCEL message will be sent when work function exits. */
 		else {
-			message = iris_message_new (IRIS_TASK_MESSAGE_FINISH_CANCEL);
-			iris_port_post (IRIS_TASK (process)->priv->port, message);
+			out_message = iris_message_new (IRIS_TASK_MESSAGE_FINISH_CANCEL);
+			iris_port_post (IRIS_TASK (process)->priv->port, out_message);
 		}
 	}
 
@@ -1215,9 +1179,9 @@ handle_start_cancel (IrisProcess *process,
 		/* Stop ourselves getting messages from the sink since we are
 		 * finishing, and it will finish later
 		 */
-		message = iris_message_new_data (IRIS_TASK_MESSAGE_REMOVE_OBSERVER,
-		                                 IRIS_TYPE_TASK, process);
-		iris_port_post (IRIS_TASK (priv->sink)->priv->port, message);
+		out_message = iris_message_new_data (IRIS_TASK_MESSAGE_REMOVE_OBSERVER,
+		                                     IRIS_TYPE_TASK, process);
+		iris_port_post (IRIS_TASK (priv->sink)->priv->port, out_message);
 	}
 
 	iris_task_notify_observers (IRIS_TASK (process));

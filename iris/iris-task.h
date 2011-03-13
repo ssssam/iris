@@ -227,11 +227,6 @@ void          iris_task_add_both_closure      (IrisTask            *task,
 
 void          iris_task_add_dependency        (IrisTask            *task,
                                                IrisTask            *dependency);
-void          iris_task_remove_dependency     (IrisTask            *task,
-                                               IrisTask            *dependency);
-void          iris_task_remove_dependency_sync
-                                              (IrisTask            *task,
-                                               IrisTask            *dependency);
 
 gboolean      iris_task_is_async              (IrisTask            *task);
 

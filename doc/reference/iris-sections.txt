@@ -64,8 +64,6 @@ iris_task_add_errback_closure
 iris_task_add_both
 iris_task_add_both_closure
 iris_task_add_dependency
-iris_task_remove_dependency
-iris_task_remove_dependency_sync
 iris_task_is_async
 iris_task_is_executing
 iris_task_is_finished
