@@ -1,6 +1,6 @@
 m4_define([iris_major_version], [0])
-m4_define([iris_minor_version], [1])
-m4_define([iris_micro_version], [1])
+m4_define([iris_minor_version], [3])
+m4_define([iris_micro_version], [0])
 m4_define([iris_version], [iris_major_version.iris_minor_version.iris_micro_version])
 m4_define([iris_interface_age], [0])
 m4_define([iris_binary_age], [m4_eval(100 * iris_minor_version + iris_micro_version)])

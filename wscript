@@ -7,7 +7,7 @@
 import sys, os, subprocess
 from waflib import Logs, Options, Errors
 
-VERSION = '0.1.1'
+VERSION = '0.3.0'
 APPNAME = 'iris'
 top = '.'
 out = 'build'
