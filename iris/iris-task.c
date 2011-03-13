@@ -1565,13 +1565,6 @@ handle_dep_cancelled (IrisTask    *task,
 		return;
 
 	task_class->dependency_cancelled (task, dep);
-
-	if (!PROGRESS_BLOCKED (task)) {
-		if (FLAG_IS_ON (task, IRIS_TASK_FLAG_NEED_EXECUTE))
-			iris_task_schedule (task);
-		else if (FLAG_IS_ON (task, IRIS_TASK_FLAG_CALLBACKS_ACTIVE))
-			iris_task_progress_callbacks_or_finish (task);
-	}
 }
 
 static void
