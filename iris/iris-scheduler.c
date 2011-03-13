@@ -342,6 +342,7 @@ iris_scheduler_add_thread_real (IrisScheduler  *scheduler,
 	if (!iris_rrobin_append (priv->rrobin, queue))
 		goto error;
 
+	/* FIXME: No synchronisation !!! */
 	priv->thread_list = g_list_prepend (priv->thread_list, thread);
 
 	/* check if this thread is the leader */

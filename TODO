@@ -2,59 +2,8 @@
 Iris 0.3.0
 ---------------------------------------------------------------------------
 
-Immutability and thread-safety!
-
-iris/gdestructiblepointer.c            iris/iris-port.c
-iris-gtk/gtk-iris-progress-dialog.c    iris/iris-process.c
-iris-gtk/gtk-iris-progress-info-bar.c  iris/iris-progress-monitor.c
-iris/iris-all-task.c                   iris/iris-queue.c
-iris/iris-any-task.c                   iris/iris-receiver.c
-iris/iris-arbiter.c                    iris/iris-rrobin.c
-iris/iris-atomics.c                    iris/iris-scheduler.c
-iris/iris.c                            iris/iris-scheduler-manager.c
-iris/iris-coordination-arbiter.c       iris/iris-service.c
-iris/iris-debug.c                      iris/iris-stack.c
-iris/iris-free-list.c                  iris/iris-task.c
-iris/iris-gmainscheduler.c             iris/iris-thread.c
-iris/iris-gsource.c                    iris/iris-util.c
-iris/iris-lfqueue.c                    iris/iris-wsqueue.c
-iris/iris-lfscheduler.c                iris/iris-wsscheduler.c
-iris/iris-message.c
-
-......................
-* Stress the point that all of libiris is MT-safe and all of libiris-gtk is not
-  We need a constistent story on thread safety ..
-  -> Might also be worth noting which functions complete async and which communicate
-  by message passing ... no that any do I guess. At least make sure the note in task
-   and process mentions this.
-
-* Prevent arbiters from being connected to receivers that have already processed
-  messages.
-
-* Same for ports.
-
-* Fix immutability in general (see chergert mail)
-  -> in task & process, add to both function and message handler, for easier
-  debugging (better if we catch it right when the function was called, but the
-  vagaries of message passing means it won't always work)
-  -> make sure this is reflected in the docs
-
-Should anything be allowed to happen after execution begins? Currently on tasks
-you can add callbacks/errbacks and dependencies, add watches, and it even seems
-you can execute tasks again once they are finished :/ This is a reciple for
-nasty race conditions down the line. It should be handled but not allowed, using
-an assertion or two. For processes you should be allowed to do stuff until BOTH
-iris_process_close() or iris_process_run() are called, for tasks just
-until iris_tasks_run() is called. Need to update:
-  -> the docs
-  -> put in the tests and the assertions
-
 What about chaining together processes that are being cancelled, is this possible?
 The tests could be cancelled before they run; add a testcase for this.
-
-* Check all examples and tests!
-
-..........
 
 * progress-dialog/progress-monitor tests: use wait-func ..
   maybe add a wait_for_task macro to neaten tings up!
@@ -63,14 +12,15 @@ The tests could be cancelled before they run; add a testcase for this.
     where possible and spy on the message channel for what we want when not .. even
     wait_messages in process-1.c is way better than g_usleep()
 
+* IrisMessage is not threadsafe - this is a design flaw I think. It can be
+  fixed by rebasing IrisMessage on GVariant.
+
+* Raising a fatal error in a task should imply iris_task_work_finished().
+  This would mean renaming that function to iris_task_work_succeeded() too.
+
 * Finish docs - README and gtk-doc tutorials, INTERNALS (nice diagram of states) ... :(
 
 * Doc hosting; chergerts is out of date ..
-
-* Remove some of the IrisProcess API? Since it's always going to be a subclass of
-  IrisTask, until GtkWidget becomes an interface I don't think IrisTask will do
-  either !
-  It's useful to be able to attach the docs to the wrapper functions though.
 
 * This is really bikeshedding, but I still don't like 'finished' to mean
   'no longer executing'. A task has three finishing states: failed, succeeded
@@ -85,9 +35,6 @@ The tests could be cancelled before they run; add a testcase for this.
   work *function* completed or was canceled, even if the work *itself* was not
   completed due to a fatal error. Maybe if you stress that point things will be
   a lot cleaner.
-
-* Raising a fatal error in a task should imply iris_task_work_finished().
-  This would mean renaming that function to iris_task_work_succeeded() too.
 
 * Bump version to 0.3, and maybe give Iris a blog post :)
 
@@ -119,6 +66,8 @@ Known bugs
   from the head process to the tail on each run. The solution is to improve
   process scheduling (see above, it's dumb) so that cancels are recognised
   much faster.
+
+* Tutorial docs are unfinished.
 
 ---------------------------------------------------------------------------
 Missing or Incompleteness
@@ -153,7 +102,7 @@ periodically walk the free-list to shutdown old threads.
 
 IrisPort
 
-	It would be cool to add a 'closed' state to ports. On
+	It might be cool to add a 'closed' state to ports. On
 	iris_receiver_destroy() the owner would know not to send any more messages.
 	In particular, in _iris_progress_watch_disconnect(), the task/process has no
 	way of knowing the watch is no longer watching currently. That said, we
@@ -162,10 +111,30 @@ IrisPort
 	a port once its receiver has been destroyed (this is probably too strict
 	though).
 
+	You should not be allowed to attach arbiters to receivers that have already
+	passed a message, because they could get into weird inconsistent states.
+	However, we currently allow 'live' port/receiver connections and
+	disconnections. The main use seems to be 'single-shot' receivers, but to
+	be honest I can't work out what these are for. Perhaps it would be better
+	to remove them, and make it so ports and receivers can only be connected
+	before calls to iris_port_post() as well - before the communication channel
+	becomes active.
+
 IrisScheduler
 
 	iris_scheduler_foreach () is a big bunch of code that should be a lot
 	neater.
+
+	The connection between scheduler and scheduler-manager is inconsistent at
+	the moment. Threads request help from the scheduler, and yield themselves to
+	the scheduler manager when free. Schedulers, when freed, free their threads
+	which give themselves to the scheduler manager. However, scheduler init goes
+	against this pattern and it calls iris_scheduler_manager_prepare() to ask it
+	to assign it some threads. We also have unprepare() which is currently
+	useless. I think it would be better to have the scheduler initialisation
+	request the threads FROM the scheduler manager. While there, fix the
+	potential synchronisation bug that the mutex is not locked in
+	iris_scheduler_add_thread() when the thread is added.
 
 IrisTask
 	I think tasks & processes should gain a state system. The flags are really
@@ -182,6 +151,10 @@ IrisTask
 	  neater code than ::cancelled, ::completed, ::succeeded, ::failed
 	- how many people actually need to connect to all those signals and do
 	  something complicated? The upside of them is the code is far more intuitive
+
+	Some things that are probably useless:
+	  * iris_task_remove_dependency(), I can't think of a convincing use case
+	    which can't be solved by just not adding the dependency
 
 IrisProcess
 
@@ -266,6 +239,9 @@ IrisProcess
 	Make sure that if a chained process throws a fatal error the remaining process also
 	stop..
 
+IrisStack
+
+	What's this useful for? Why make it public?
 
 Progress widgets
 
@@ -361,18 +337,9 @@ Other superfluous stuff:
 Niceties
 ---------------------------------------------------------------------------
 
-IrisProcess source/sink notifications could use the IrisTask observer mechanism,
-without treating the processes as actual dependencies. I guess you need to
-distinguish the two; blocking dependencies (for tasks) and chaining dependencies
-(for process).
-
-IrisMessage could actually become a thin wrapper around a GVariant "(d*)"
-
 Would it be a good idea to prevent progress bars from going backwards? ie.
 if the fraction drops, just wait until it gets back to where it was rather
 than showing a regression.
-
-Stress the point that all of libiris is MT-safe and all of libiris-gtk is not
 
 Processes should be throttleable - for example, say we are indexing the entire
 file system. A directory crawler process searches the FS for files recursively,
@@ -381,14 +348,11 @@ subdirectories not yet touched (to give the user better info) and then wait for
 the next processes to start working.
 
 Make branches of some GNOME apps to use Iris!
-For example: Nautilus, .. who else uses progress bars so much?
+For example: Nautilus, Epiphany, .. who else uses progress bars so much?
 
 This is a GTK+ theme bug, but the 'expander in an infobar' is pretty ugly on hover
 at least with clearlooks. One theme has progress bars in an infobar with a grey
 background behind their rounded corners as well.
-
-In the tests and examples, a lot of tasks are never unreferenced. This isn't
-setting a good example!!
 
 The cancel button is actually in quite an ugly place in GtkIrisProgressDialog.
 This is the best Gtk+ can do without some special case code. The ideal design
