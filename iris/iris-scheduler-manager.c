@@ -50,7 +50,7 @@ G_LOCK_DEFINE (singleton);
 void
 iris_scheduler_manager_yield (IrisThread *thread)
 {
-	/* It's up to the thread to call iris_scheduler_remove_thread etc. */
+	/* It's up to the thread to call iris_scheduler_remove_thread() etc. */
 	g_return_if_fail (thread->scheduler == NULL);
 
 	G_LOCK (singleton);

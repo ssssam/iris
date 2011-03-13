@@ -40,6 +40,7 @@
 /**
  * SECTION:iris-scheduler
  * @short_description: A generic, extendable scheduler for work items
+ * @see_also: #IrisGMainScheduler
  *
  * #IrisScheduler is a base class used for managing the scheduling of
  * work items onto active threads.  The standard scheduler is sufficient
@@ -47,9 +48,10 @@
  * different queuing decisions you can create your own.
  *
  * There are two default schedulers inside Iris. The control scheduler is
- * mused for handling message processing, while the work scheduler is
- * suitable for tasks that will take much longer. The separation prevents slow
- * tasks from ever causing delays to stuff like their own cancel messages.
+ * used for handling message processing, while the work scheduler is
+ * suitable for tasks that will take much longer. This separation prevents slow
+ * tasks from ever causing delays to important messages (the best example being
+ * a slow-running task blocking its own cancel message).
  *
  * The workflow of the scheduler is that it receives "min-threads" threads
  * during startup, and then if a "leader" thread, (typically the first thread
@@ -58,9 +60,14 @@
  * existing threads, or create new threads if no existing threads are
  * available.  Based on the speed of work performed by the scheduler,
  * the manager will try to appropriate a sufficient number of threads.
- *
  * When destroyed, the scheduler will block until all of its threads have
  * worked through their queues.
+ *
+ * The average user should not need to use the functions here; the #IrisTask
+ * and #IrisProcess objects allow a higher-level way to schedule work
+ * asynchronously.
+ *
+ * All #IrisScheduler methods are safe to call from multiple threads.
  */
 
 G_DEFINE_TYPE (IrisScheduler, iris_scheduler, G_TYPE_OBJECT)

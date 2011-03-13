@@ -30,6 +30,8 @@
  * To use it, call iris_rrobin_append() including the data for each slot
  * in your round-robin.  After that, you may use iris_rrobin_apply() to
  * perform a callback using the next data-slot.
+ *
+ * #IrisRRobin is completely multithread-safe.
  */
 
 static void iris_rrobin_free (IrisRRobin *rrobin);
@@ -98,7 +100,7 @@ iris_rrobin_ref (IrisRRobin *rrobin)
  * @rrobin: An #IrisRRobin
  *
  * Atomically decreates the reference count of @rrobin. If the reference
- * count reaches zero, teh object is destroyed and all its allocated
+ * count reaches zero, the object is destroyed and all its allocated
  * resources are freed.
  */
 void
@@ -114,12 +116,12 @@ iris_rrobin_unref (IrisRRobin *rrobin)
 /**
  * iris_rrobin_append:
  * @rrobin: An #IrisRRobin
- * @data: a gpointer to callback data
+ * @data: a pointer to data
  *
  * Appends a new data item to the round-robin structure. The data supplied
  * will be added to the arguments of the callback used in iris_rrobin_apply().
  *
- * Return value: %TRUE if there was enough free-space to append the item.
+ * Return value: %TRUE if there was enough free space to append the item.
  */
 gboolean
 iris_rrobin_append (IrisRRobin *rrobin,
@@ -152,7 +154,7 @@ _try_append:
 /**
  * iris_rrobin_remove:
  * @rrobin: An #IrisRRobin
- * @data: a gpointer to callback data
+ * @data: a pointer to data
  *
  * Removes the first instance of @data within the @rrobin structure.
  */

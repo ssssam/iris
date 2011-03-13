@@ -15,10 +15,24 @@
   </bookinfo>
 
   <part>
-    <title>Iris Fundamentals</title>
+    <title>Iris Overview</title>
     <xi:include href="xml/intro-to-tasks.xml"/>
     <xi:include href="xml/message-passing.xml"/>
     <xi:include href="xml/concurrent-services.xml"/>
+
+    <para>
+Iris is a toolkit that facilitates writing reliable and efficient multithreaded
+applications. It adds to GLib's low-level threading API, as well as providing
+mid-level code for message passing and work scheduling and high level API to
+manage and monitor asynchronous tasks and processes. It is released under the
+GNU Library General Public License.
+    </para>
+    <para>
+The main Iris library is entirely threadsafe, with a few exceptions (noted in
+the manual). The widgets in the Gtk+ integration library iris-gtk is only safe
+to use from the main Gtk+ thread, as is normal for Gtk+ code.
+    </para>
+
   </part>
 
   <part>
@@ -68,9 +82,9 @@
 
     <chapter>
       <title>High-Level Abstractions</title>
-      <xi:include href="xml/iris-service.xml"/>
       <xi:include href="xml/iris-task.xml"/>
       <xi:include href="xml/iris-process.xml"/>
+      <xi:include href="xml/iris-service.xml"/>
     </chapter>
 
     <chapter>

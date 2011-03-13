@@ -534,7 +534,8 @@ iris_thread_work_run (IrisThreadWork *thread_work)
  * iris_thread_work_free:
  * @thread_work: An #IrisThreadWork
  *
- * Frees the resources associated with an #IrisThreadWork.
+ * Frees the resources associated with an #IrisThreadWork. This includes calling
+ * the destroy notify function, if one was set.
  */
 void
 iris_thread_work_free (IrisThreadWork *thread_work)

@@ -43,6 +43,8 @@
  * Technically, using a free-list is like leaking memory. So occasionally
  * it will be a good idea to clean up the memory if it is relatively
  * precious to your user. However, this feature is not yet supported.
+ *
+ * #IrisFreeList is safe to use from multiple threads.
  */
 
 /**

@@ -32,13 +32,17 @@
  * #IrisService is a class to help design concurrent services.  Most
  * services tend to be in one of a couple of states.  Either it can
  * work on requests concurrently, or a state change meaning no concurrency,
- * or the service is no-longer valid.  Because of this, #IrisService
+ * or the service is no longer valid.  Because of this, #IrisService
  * reflects this concept and provides a starting point for writing a
  * new service.
  *
  * By creating a new class with the proper overrides for handling
  * messages, you can let IrisService handle the scaling up and down
  * of message handling.
+ *
+ * All #IrisService methods communicate via message passing, so they are safe
+ * to call from multiple threads and will normally return before the action is
+ * actually completed.
  */
 
 G_DEFINE_ABSTRACT_TYPE (IrisService, iris_service, G_TYPE_OBJECT)

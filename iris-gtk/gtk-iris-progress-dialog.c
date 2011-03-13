@@ -37,6 +37,12 @@
  * #GtkIrisProgressDialog creates a #GtkDialog which shows the status of various
  * #IrisProcess and #IrisTask objects, in a separate window to any application
  * windows. Use the #IrisProgressMonitor interface to control the dialog.
+ *
+ * The tasks being monitored will communicate by passing messages to the
+ * #GtkIrisProgressDialog, which enables the Gtk+ work to be done entirely from
+ * the GLib main loop thread. You may not call any of the #IrisProgressMonitor
+ * interface methods outside of the GLib main loop thread, as with all portable
+ * Gtk+ code.
  */
 
 static void     gtk_iris_progress_dialog_class_init           (GtkIrisProgressDialogClass  *progress_dialog_class);

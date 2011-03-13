@@ -37,6 +37,10 @@
  * or #GtkIrisProgressInfoBar) and call iris_progress_monitor_watch_process()
  * or iris_progress_monitor_watch_process_chain().
  *
+ * The #IrisProgressMonitor interface is <emphasis>not</emphasis> safe to call
+ * from multiple threads. This is down to the nature of the implementations:
+ * no Gtk+ widgets can be manipulated from outside the GLib main loop thread.
+ *
  * <refsect2 id="grouping">
  * <title>Grouping</title>
  * <para>
@@ -164,10 +168,7 @@ iris_progress_monitor_base_init (gpointer g_class)
 	* IrisProgressMonitor::cancel:
 	* @progress_monitor: the #IrisProgressMonitor that received the signal
 	*
-	* Emitted when a 'cancel' button is pressed on a progress widget. Any
-	* #IrisProcess objects being watched are cancelled automatically, but if
-	* you are doing something more advanced you will need to handle this signal
-	* yourself.
+	* Emitted when a 'cancel' button is pressed on a progress widget.
 	*/
 	signals[CANCEL] =
 	  g_signal_new (("cancel"),
@@ -183,7 +184,7 @@ iris_progress_monitor_base_init (gpointer g_class)
 	* @progress_monitor: the #IrisProgressMonitor that received the signal
 	*
 	* Emitted when all watches being monitored have completed. It is not
-	* to add new watches during emission of this signal.
+	* possible to add new watches during emission of this signal.
 	*/
 	signals[FINISHED] =
 	  g_signal_new (("finished"),

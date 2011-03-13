@@ -60,8 +60,9 @@
  * pack the data into the message using iris_message_set_data().  For
  * light-weight messages containing a single value this is preferred.
  *
- * Updating the structure is not thread-safe.  Generally it is not
- * recommended to modify a message after passing it.
+ * Updating the structure is not currently thread-safe (ref/unref is safe). This
+ * may change in future versions of Iris, but right now it is not recommended to
+ * modify a message after passing it.
  */
 
 static GValue*

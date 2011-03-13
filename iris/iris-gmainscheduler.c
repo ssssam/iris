@@ -28,11 +28,16 @@
 /**
  * SECTION:iris-gmainscheduler
  * @short_description: A thread-less scheduler that executes in the main thread
+ * @see_also: #IrisScheduler
  *
  * When writing fully asynchronous applications, it can make sense to have all
  * of your actual work items run from with in the main thread if they are not
  * thread-safe.  This scheduler will execute your work items in the main
  * thread.
+ *
+ * All #IrisGMainScheduler functions are multithread-safe, so you can enqueue
+ * work from other threads to run in the GLib main loop in a similar way to
+ * g_idle_add().
  */
 
 /* GMainScheduler is a little unhappy as a subclass of IrisScheduler, it might
@@ -266,6 +271,7 @@ iris_gmainscheduler_new (GMainContext *context)
  *
  * Return value: The #GMainContext instance for this scheduler
  */
+/* MT-safe because priv->context is only set on creation */
 GMainContext*
 iris_gmainscheduler_get_context (IrisGMainScheduler *gmain_scheduler)
 {

@@ -41,7 +41,12 @@
  * control to show the individual progress bars if the user wishes.
  * individual progress bars.
  *
- * Use the #IrisProgressMonitor interface to control the info bar.
+ * Use the #IrisProgressMonitor interface to control the info bar. The tasks
+ * being monitored will communicate by passing messages to the
+ * #GtkIrisProgressDialog, which enables the Gtk+ work to be done entirely from
+ * the GLib main loop thread. You may not call any of the #IrisProgressMonitor
+ * interface methods outside of the GLib main loop thread, as with all portable
+ * Gtk+ code.
  */
 
 /* Note that iris-progress-dialog.c is better commented where the two share code */

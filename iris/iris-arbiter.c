@@ -31,11 +31,15 @@
  * #IrisArbiter provides a way to control how messages can be
  * received.  The simple arbiter, created using iris_arbiter_receive()
  * does nothing to control when messages can be received.  Messages
- * will be processed as fast as the scheduler can handle them.
+ * will be processed as fast as the scheduler can handle them by default, which
+ * means the message handler function could be called from any number
+ * simultaneous threads.
  *
  * Alternatively, the coordination-arbiter can be used with
- * iris_arbiter_coordinate().  The coordination-arbiter is similar to
- * a reader-writer lock implemented asynchronously.
+ * iris_arbiter_coordinate().  The coordination-arbiter can make a receiver
+ * <firstterm>exclusive</firstterm>, ensuring that only one message is
+ * processed at a time, or can add a <firstterm>concurrent</firstterm> receiver
+ * to provide message processing semantics similar to a reader-writer lock.
  */
 
 G_DEFINE_ABSTRACT_TYPE (IrisArbiter, iris_arbiter, G_TYPE_OBJECT)
