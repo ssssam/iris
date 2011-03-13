@@ -43,7 +43,7 @@ new_full1 (void)
 	g_assert (IRIS_IS_RECEIVER (receiver));
 
 	g_assert (iris_receiver_has_arbiter (receiver));
-	g_assert (iris_receiver_has_scheduler (receiver));
+	g_assert (receiver->priv->scheduler == scheduler);
 }
 
 static void
@@ -110,28 +110,6 @@ many_message_delivered1 (void)
 	g_assert_cmpint (counter, ==, 100);
 }
 
-/*static void
-set_scheduler1_cb (IrisMessage *msg,
-                   gpointer     data)
-{
-}*/
-
-static void
-set_scheduler1 (void)
-{
-	IrisReceiver *r;
-	IrisScheduler *s1, *s2;
-
-	s1 = iris_scheduler_new ();
-	s2 = iris_scheduler_new ();
-
-	r = iris_arbiter_receive (s1, iris_port_new (), message_handler, NULL, NULL);
-	g_assert (iris_receiver_get_scheduler (r) == s1);
-
-	iris_receiver_set_scheduler (r, s2);
-	g_assert (iris_receiver_get_scheduler (r) == s2);
-}
-
 static void
 test_destroy (void)
 {
@@ -194,7 +172,6 @@ main (int   argc,
 	g_test_add_func ("/receiver/new_full1", new_full1);
 	g_test_add_func ("/receiver/message_delivered1", message_delivered1);
 	g_test_add_func ("/receiver/many_message_delivered1", many_message_delivered1);
-	g_test_add_func ("/receiver/set_scheduler1", set_scheduler1);
 	g_test_add_func ("/receiver/destroy()", test_destroy);
 	g_test_add_func ("/receiver/destroy() from message", test_destroy_from_message);
 

@@ -45,6 +45,11 @@
 
 G_DEFINE_TYPE (IrisReceiver, iris_receiver, G_TYPE_OBJECT)
 
+enum {
+	PROP_0,
+	PROP_SCHEDULER,
+};
+
 typedef struct
 {
 	gboolean      executed;
@@ -242,20 +247,77 @@ _post_decision:
 	return status;
 }
 
+
 static void
-iris_receiver_finalize (GObject *object)
+iris_receiver_constructed (GObject *object)
 {
+	IrisReceiver        *receiver;
 	IrisReceiverPrivate *priv;
 
-	priv = IRIS_RECEIVER (object)->priv;
+	/* Chaining up to GObject was broken until GObject 2.27.93 */
+	/*G_OBJECT_CLASS (iris_receiver_parent_class)->constructed (object); */
 
-	if (g_atomic_int_get (&priv->active) > 0)
-		g_warning ("receiver %lx was finalized with messages still active. "
-		           "This is likely to cause a crash. Always use "
-		           "iris_receiver_destroy() to free an IrisReceiver.",
-		           (gulong)object);
+	receiver = IRIS_RECEIVER (object);
+	priv = receiver->priv;
 
-	G_OBJECT_CLASS (iris_receiver_parent_class)->finalize (object);
+	/* This construct-only properties will have been set to the default by
+	 * by set_property() if not explicitly set on construct.
+	 */
+	g_warn_if_fail (priv->scheduler != NULL);
+}
+
+static void
+iris_receiver_set_property (GObject      *object,
+                            guint         prop_id,
+                            const GValue *value,
+                            GParamSpec   *pspec)
+{
+	IrisReceiver        *receiver;
+	IrisReceiverPrivate *priv;
+	IrisScheduler       *scheduler;
+
+	receiver = IRIS_RECEIVER (object);
+	priv = receiver->priv;
+
+	switch (prop_id) {
+		/* Construct-only property */
+		case PROP_SCHEDULER:
+			g_warn_if_fail (priv->scheduler == NULL);
+
+			scheduler = g_value_get_object (value);
+			if (scheduler == NULL)
+				scheduler = iris_get_default_control_scheduler ();
+
+			priv->scheduler = g_object_ref (scheduler);
+			break;
+
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
+}
+
+static void
+iris_receiver_get_property (GObject    *object,
+                            guint       prop_id,
+                            GValue     *value,
+                            GParamSpec *pspec)
+{
+	IrisReceiver        *receiver;
+	IrisReceiverPrivate *priv;
+
+	receiver = IRIS_RECEIVER (object);
+	priv = receiver->priv;
+
+	switch (prop_id) {
+		/* Construct-only properties */
+		case PROP_SCHEDULER:
+			g_value_set_object (value, priv->scheduler);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
 }
 
 static void
@@ -283,13 +345,48 @@ iris_receiver_dispose (GObject *object)
 }
 
 static void
+iris_receiver_finalize (GObject *object)
+{
+	IrisReceiverPrivate *priv;
+
+	priv = IRIS_RECEIVER (object)->priv;
+
+	if (g_atomic_int_get (&priv->active) > 0)
+		g_warning ("receiver %lx was finalized with messages still active. "
+		           "This is likely to cause a crash. Always use "
+		           "iris_receiver_destroy() to free an IrisReceiver.",
+		           (gulong)object);
+
+	G_OBJECT_CLASS (iris_receiver_parent_class)->finalize (object);
+}
+
+static void
 iris_receiver_class_init (IrisReceiverClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
 	klass->deliver = iris_receiver_deliver_real;
-	object_class->finalize = iris_receiver_finalize;
+	object_class->constructed = iris_receiver_constructed;
+	object_class->set_property = iris_receiver_set_property;
+	object_class->get_property = iris_receiver_get_property;
 	object_class->dispose = iris_receiver_dispose;
+	object_class->finalize = iris_receiver_finalize;
+
+	/**
+	 * IrisReceiver:scheduler:
+	 *
+	 * The #IrisScheduler used to deliver messages, ie. where the message
+	 * handler function is called from.
+	 */
+	g_object_class_install_property
+	  (object_class,
+	   PROP_SCHEDULER,
+	   g_param_spec_object ("scheduler",
+	                        "Scheduler",
+	                        "Scheduler used to deliver messages",
+	                        IRIS_TYPE_SCHEDULER,
+	                        G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME |
+	                        G_PARAM_READWRITE));
 
 	g_type_class_add_private (object_class, sizeof (IrisReceiverPrivate));
 }
@@ -306,13 +403,13 @@ iris_receiver_init (IrisReceiver *receiver)
 	receiver->priv->persistent = TRUE;
 }
 
-/**
+/*
  * iris_receiver_deliver:
  * @receiver: An #IrisReceiver
  * @message: An #IrisMessage
  *
  * Delivers a message to the receiver so that the receiver may take an
- * action on the message.
+ * action on the message. Used internally by #IrisPort.
  *
  * Return value: the status code for the delivery.
  */
@@ -324,96 +421,7 @@ iris_receiver_deliver (IrisReceiver *receiver,
 	return IRIS_RECEIVER_GET_CLASS (receiver)->deliver (receiver, message);
 }
 
-/**
- * iris_receiver_has_arbiter:
- * @receiver: An #IrisReceiver
- *
- * Private, used by unit tests and internally only.
- *
- * Determines if the receiver currently has an arbiter attached.
- *
- * Return value: TRUE if an arbiter exists.
- */
-gboolean
-iris_receiver_has_arbiter (IrisReceiver *receiver)
-{
-	IrisReceiverPrivate *priv;
-
-	g_return_val_if_fail (IRIS_IS_RECEIVER (receiver), FALSE);
-
-	priv = receiver->priv;
-
-	return g_atomic_pointer_get (&priv->arbiter) != NULL;
-}
-
-/**
- * iris_receiver_has_scheduler:
- * @receiver: An #IrisReceiver
- *
- * Private, used by unit tests and internally only.
- *
- * Determines if the receiver currently has a scheduler attached.
- *
- * Return value: TRUE if a scheduler exists.
- */
-gboolean
-iris_receiver_has_scheduler (IrisReceiver *receiver)
-{
-	IrisReceiverPrivate *priv;
-
-	g_return_val_if_fail (IRIS_IS_RECEIVER (receiver), FALSE);
-
-	priv = receiver->priv;
-
-	return g_atomic_pointer_get (&priv->scheduler) != NULL;
-}
-
-/**
- * iris_receiver_get_scheduler:
- * @receiver: An #IrisReceiver
- *
- * Retrieves the scheduler instance for the receiver.
- *
- * Return value: An #IrisScheduler instance
- */
-IrisScheduler*
-iris_receiver_get_scheduler (IrisReceiver *receiver)
-{
-	g_return_val_if_fail (IRIS_IS_RECEIVER (receiver), NULL);
-	return g_atomic_pointer_get (&receiver->priv->scheduler);
-}
-
-/**
- * iris_receiver_set_scheduler:
- * @receiver: An #IrisReceiver
- * @scheduler: An #IrisScheduler
- *
- * Sets the scheduler instance used by this receiver to execute work items.
- * Note that it is probably not a good idea to switch schedulers while
- * executing work items.  However, we do make an attempt to support it.
- */
-void
-iris_receiver_set_scheduler (IrisReceiver  *receiver,
-                             IrisScheduler *scheduler)
-{
-	IrisScheduler *old_sched;
-
-	g_return_if_fail (IRIS_IS_RECEIVER (receiver));
-	g_return_if_fail (IRIS_IS_SCHEDULER (scheduler));
-
-	scheduler = g_object_ref (scheduler);
-
-	do {
-		old_sched = iris_receiver_get_scheduler (receiver);
-	} while (!g_atomic_pointer_compare_and_exchange (
-				(gpointer*)&receiver->priv->scheduler,
-				old_sched,
-				scheduler));
-
-	g_object_unref (old_sched);
-}
-
-/**
+/*
  * iris_receiver_resume:
  * @receiver: An #IrisReceiver
  *
@@ -549,4 +557,26 @@ iris_receiver_destroy (IrisReceiver *receiver,
 	 * destruction
 	 */
 	g_object_unref (receiver);
+}
+
+/*
+ * iris_receiver_has_arbiter:
+ * @receiver: An #IrisReceiver
+ *
+ * Private, used by unit tests and internally only.
+ *
+ * Determines if the receiver currently has an arbiter attached.
+ *
+ * Return value: %TRUE if an arbiter exists.
+ */
+gboolean
+iris_receiver_has_arbiter (IrisReceiver *receiver)
+{
+	IrisReceiverPrivate *priv;
+
+	g_return_val_if_fail (IRIS_IS_RECEIVER (receiver), FALSE);
+
+	priv = receiver->priv;
+
+	return g_atomic_pointer_get (&priv->arbiter) != NULL;
 }

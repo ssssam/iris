@@ -112,11 +112,10 @@ struct _IrisReceiverClass
 };
 
 GType              iris_delivery_status_get_type (void) G_GNUC_CONST;
-gboolean           iris_receiver_has_scheduler   (IrisReceiver *receiver);
+IrisDeliveryStatus iris_receiver_deliver         (IrisReceiver *receiver,
+                                                  IrisMessage  *message);
+void               iris_receiver_resume          (IrisReceiver *receiver);
 gboolean           iris_receiver_has_arbiter     (IrisReceiver *receiver);
-IrisDeliveryStatus iris_receiver_deliver         (IrisReceiver  *receiver,
-                                                  IrisMessage   *message);
-void               iris_receiver_resume          (IrisReceiver  *receiver);
 
 G_END_DECLS
 

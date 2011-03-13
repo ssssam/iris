@@ -45,9 +45,6 @@ struct _IrisReceiver
 };
 
 GType          iris_receiver_get_type      (void) G_GNUC_CONST;
-IrisScheduler* iris_receiver_get_scheduler (IrisReceiver  *receiver);
-void           iris_receiver_set_scheduler (IrisReceiver  *receiver,
-                                            IrisScheduler *scheduler);
 
 void           iris_receiver_destroy       (IrisReceiver  *receiver,
                                             gboolean       in_message);

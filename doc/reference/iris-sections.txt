@@ -260,8 +260,6 @@ IrisPortPrivate
 <TITLE>IrisReceiver</TITLE>
 IrisReceiver
 IrisReceiverClass
-iris_receiver_get_scheduler
-iris_receiver_set_scheduler
 iris_receiver_destroy
 <SUBSECTION Standard>
 IRIS_RECEIVER
