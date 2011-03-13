@@ -35,7 +35,6 @@ sources_private_h =						\
 	$(top_srcdir)/iris/iris-gsource.h			\
 	$(top_srcdir)/iris/iris-link.h				\
 	$(top_srcdir)/iris/iris-lfqueue-private.h		\
-	$(top_srcdir)/iris/iris-lfscheduler-private.h		\
 	$(top_srcdir)/iris/iris-port-private.h			\
 	$(top_srcdir)/iris/iris-process-private.h		\
 	$(top_srcdir)/iris/iris-progress-monitor-private.h	\
