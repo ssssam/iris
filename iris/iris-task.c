@@ -338,7 +338,7 @@ iris_task_run_with_async_result (IrisTask            *task,
  *
  * Requests a task to cancel. If the task is already executing, it is up to the
  * executing task to periodically check the cancelled state with
- * iris_task_was_canceled() and quit execution. If the work function has
+ * iris_task_is_cancelled() and quit execution. If the work function has
  * already completed the cancel will be ignored and the callbacks phase will
  * complete in full.
  *
