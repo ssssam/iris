@@ -23,8 +23,6 @@ General test improvements needed:
   * Tests should always use a fresh scheduler
   * Add libtestutils and factor out some of the tests' shared code
 
-Bring wscript up to the same standard as the autotools build system
-
 You should add progress monitor support for tasks and processes that have thrown
 fatal errors as well ...
 
