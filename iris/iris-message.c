@@ -383,7 +383,7 @@ iris_message_copy (IrisMessage *message)
  *
  * Return value: A pointer to a GValue that should not be modified.
  */
-G_CONST_RETURN GValue*
+const GValue*
 iris_message_get_data (IrisMessage *message)
 {
 	g_return_val_if_fail (message != NULL, NULL);
