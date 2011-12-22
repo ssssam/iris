@@ -71,7 +71,7 @@ libiris_gtk_@IRIS_API_VERSION@_la_LIBADD =  \
 	$(top_builddir)/iris/libiris-1.0.la
 
 EXTRA_DIST =							\
-	iris-gtk.h							\
+	iris-gtk.h						\
 	$(NULL)
 
 
@@ -80,18 +80,20 @@ if ENABLE_INTROSPECTION
 IrisGtk-1.0.gir: $(sources_c)
 IrisGtk-1.0.gir: $(sources_public_h)
 IrisGtk-1.0.gir: $(G_IR_SCANNER)
-	$(G_IR_SCANNER) -v --namespace IrisGtk      	\
-		--nsversion=1.0                         	\
-		--add-include-path=$(srcdir)            	\
-		--add-include-path=.                    	\
-		--include=Gio-2.0                       	\
-		--include=Iris-1.0                       	\
-		--library=irisGtk-1.0                   	\
-		--output $@                             	\
-		--pkg gobject-2.0                       	\
-		--pkg gio-2.0                           	\
-		-I$(top_srcdir)                         	\
-		$(sources_c)                            	\
+	$(G_IR_SCANNER) -v --namespace IrisGtk		\
+		--nsversion=1.0				\
+		--add-include-path=$(srcdir)		\
+		--add-include-path=.			\
+		--add-include-path=../iris/		\
+		--include=Gio-2.0			\
+		--include=Iris-1.0			\
+		--library=iris-gtk-1.0			\
+		--output $@				\
+		--pkg gobject-2.0			\
+		--pkg gio-2.0				\
+		--pkg gtk-3.0				\
+		-I$(top_srcdir)				\
+		$(sources_c)				\
 		$(sources_public_h)
 
 girdir = $(GIRDIR)
@@ -103,11 +105,11 @@ typelibsdir = $(TYPELIBDIR)
 typelibs_DATA = IrisGtk-1.0.typelib
 
 IrisGtk-1.0.typelib: IrisGtk-1.0.gir
-	$(G_IR_COMPILER)                                	\
-	--includedir=$(srcdir)                          	\
-	--includedir=.                                  	\
-	--shared-library=iris-gtk-1.0                   	\
-	$(G_IR_COMPILER_OPTS)                           	\
+	$(G_IR_COMPILER)				\
+	--includedir=$(srcdir)				\
+	--includedir=.					\
+	--shared-library=iris-gtk-1.0			\
+	$(G_IR_COMPILER_OPTS)				\
 	$< -o $(top_builddir)/iris/$(@F)
 
 endif # ENABLE_INTROSPECTION
