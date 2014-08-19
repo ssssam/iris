@@ -53,7 +53,7 @@ struct _IrisGMainSchedulerClass
 };
 
 GType          iris_gmainscheduler_get_type    (void) G_GNUC_CONST;
-IrisScheduler* iris_gmainscheduler_new         (GMainContext       *context);;
+IrisScheduler* iris_gmainscheduler_new         (GMainContext       *context);
 GMainContext*  iris_gmainscheduler_get_context (IrisGMainScheduler *gmain_scheduler);
 
 G_END_DECLS

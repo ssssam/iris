@@ -55,13 +55,13 @@ GType                  iris_message_get_type         (void);
 IrisMessage*           iris_message_new              (gint what);
 IrisMessage*           iris_message_new_data         (gint what, GType type, ...);
 IrisMessage*           iris_message_new_items        (gint what, const gchar *first_name, ...);
- 
+
 IrisMessage*           iris_message_ref              (IrisMessage *message);
 IrisMessage*           iris_message_ref_sink         (IrisMessage *message);
 void                   iris_message_unref            (IrisMessage *message);
 IrisMessage*           iris_message_copy             (IrisMessage *message);
 
-G_CONST_RETURN GValue* iris_message_get_data         (IrisMessage *message);
+const GValue*          iris_message_get_data         (IrisMessage *message);
 void                   iris_message_set_data         (IrisMessage *message, const GValue *value);
 
 guint                  iris_message_count_names      (IrisMessage *message);
